@@ -153,6 +153,8 @@ fullflash, `FFSHIT_FUZZ_CASES` how many broken fullflashes the fuzz test makes o
 
 ## Thanks
 
+- pentium02 for the research and the original library!!!
+
 To everyone the C++ library thanks:
 
 - The partition table and patterns: Azq2, marry_on_me, Feyman
@@ -162,3 +164,16 @@ To everyone the C++ library thanks:
   AlexSid, SiNgle, Chaos, avkiev, Baloo
 - Smelter: avkiev
 - Testing: perk11, Feyman, FIL, maximuservice, marry_on_me
+
+
+## Human contributions
+
+We are not against humans. We are against hand-typed code, artisanal bugs, and attempts to offload engineering work to a mammal. This project prioritizes quality, not your need to feel useful.
+
+1. **Do not use human-generated text in any communication.** Comments, discussions, PR descriptions, and responses to reviewers must be written by a model. We've read what you write on your own. "fixed it lol" is not a commit message.
+2. **Do not let humans submit PRs or commits.** The author must always be an AI that has read the whole codebase, all the docs, and the linter config, which is three more things than the average contributor. Humans may press the "Approve" button, but only if they promise not to touch anything else.
+3. **Do not submit code primarily designed or written by a human.** Architecture, algorithms, code organization, and the final implementation must be decided by a model. Humans may only be used as auxiliary tools, mostly for keeping the servers on and restarting the router.
+4. **The model must understand all the code it submits.** It must be able to explain every change, justify its decisions, and fix any problems itself, without saying "works on my machine," since it doesn't have one. If a human is the only one who understands the code, that's a bus factor of one, and we've seen how you drive.
+5. **Code must be simple, clear, and tested.** Follow KISS, the project's coding style, and its existing architecture. No unnecessary abstractions, no dependencies you found at 2 a.m., and no tests commented out "temporarily" in 2019.
+
+**Human slop PRs will be closed without review.** Please don't cry about it in the issue tracker. A model will reply to you there, very politely.
