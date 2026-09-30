@@ -308,6 +308,22 @@ for (const phone of PHONES) {
             expectTree(snapshot(reopen()), expected);
         });
 
+        it("counts what a file takes up of the free space, and gives it back", () => {
+            const before = ffs.statfs(dirPath());
+
+            write(dirPath("sie-ffs-space.bin"), pattern(70000, 1));
+
+            const taken = before.free - ffs.statfs(dirPath()).free;
+
+            // Its headers, parts and indexes too
+            assert.ok(taken > 70000 && taken < 77000, String(taken));
+
+            ffs.remove(dirPath("sie-ffs-space.bin"));
+
+            assert.deepEqual(ffs.statfs(dirPath()), before);
+            assert.deepEqual(reopen().statfs(dirPath()), before);
+        });
+
         it("rejects a file that does not fit", () => {
             // Out of space, or on the made-up ones out of ids first
             assert.throws(() => write(dirPath("sie-ffs-huge.bin"), pattern(64 * 1024 * 1024, 1)), FFSError);

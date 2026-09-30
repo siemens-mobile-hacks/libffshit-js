@@ -89,6 +89,60 @@ describe("FFS", () => {
         assert.deepEqual(ffs.tree("/FFS/Misc").children?.map((entry) => entry.name), ["Photo.JPG"]);
     });
 
+    it("tells what a partition holds, and how much of it is free", () => {
+        const ffs    = open();
+        const before = ffs.statfs("/ffs/misc/photo.jpg");
+
+        // Of 8 blocks the one left alone aside, less their headers and the free entries ending the FITs
+        assert.equal(before.size, 7 * (0x10000 - 32));
+        assert.equal(before.readonly, false);
+        assert.deepEqual(ffs.statfs("/"), { ...before, readonly: true });
+
+        ffs.writeFile("/FFS/b.bin", pattern(2500, 9));
+
+        // Its data in 3 pieces, 2 parts and its header, and an entry in the FIT for each
+        assert.equal(before.free - ffs.statfs("/FFS").free, 2500 + 2 * 16 + 22 + 6 * 16);
+
+        ffs.remove("/FFS/b.bin");
+
+        assert.deepEqual(ffs.statfs("/FFS"), before);
+        assert.throws(() => ffs.statfs("/FFS/nope"), { name: "FFSError", message: "/FFS/nope: no such file or directory" });
+    });
+
+    it("tells how much of every platform's partitions files take up", () => {
+        for (const [scenario, partition] of [["sgold2", "FFS_0"], ["elka", "FFS_0"], ["egold", "FFS"]] as const) {
+            const ffs    = FFS.open(SCENARIOS[scenario](), { experimentalEgoldWrites: true });
+            const before = ffs.statfs(`/${partition}`);
+
+            ffs.writeFile(`/${partition}/b.bin`, pattern(5000, 9));
+
+            const taken = before.free - ffs.statfs(`/${partition}`).free;
+
+            // Its data, and its header, parts and FIT entries, which ELKA keeps in 32 byte slots
+            assert.ok(taken > 5000 && taken < 5000 + 1024, `${scenario}: ${taken}`);
+
+            ffs.remove(`/${partition}/b.bin`);
+
+            assert.deepEqual(ffs.statfs(`/${partition}`), before, scenario);
+            assert.ok(before.free > 0 && before.free < before.size, scenario);
+        }
+    });
+
+    it("tells what a FAT disk holds by its clusters", () => {
+        // 697 clusters of 512 bytes, of which the files and directories take 91, or 348 of 1 KiB,
+        // of which they take 63
+        assert.deepEqual(FFS.open(SCENARIOS["egold lba_fs"]()).statfs("/LBA_FS"), { size: 697 * 512, free: 606 * 512, readonly: true });
+        assert.deepEqual(FFS.open(SCENARIOS["egold lba_fs without a partition table, of 2-sector clusters"]()).statfs("/LBA_FS"), { size: 348 * 1024, free: 285 * 1024, readonly: true });
+    });
+
+    it("tells which partitions it does not write to", () => {
+        assert.equal(FFS.open(SCENARIOS.egold()).statfs("/FFS").readonly, true);
+        assert.equal(FFS.open(SCENARIOS.egold(), { experimentalEgoldWrites: true }).statfs("/FFS").readonly, false);
+        assert.equal(FFS.open(SCENARIOS["egold without card-explorer"](), { experimentalEgoldWrites: true }).statfs("/FFS").readonly, true);
+        assert.equal(FFS.open(SCENARIOS["sgold prototype"]()).statfs("/FFS").readonly, true);
+        assert.equal(FFS.open(SCENARIOS["sgold broken"]()).statfs("/FFS").readonly, true);
+    });
+
     it("finds 8-bit names as the phones do, in CP1252 without the 0x1F", () => {
         const ffs = FFS.open(sgoldImage([
             { name: Uint8Array.of(0x80, 0x8A, 0x9C), data: pattern(1, 1) },

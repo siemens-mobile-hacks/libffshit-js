@@ -41,6 +41,14 @@ export interface FFSTreeEntry extends FFSEntry {
     children?: FFSTreeEntry[];
 }
 
+export interface FFSStatFs {
+    // In bytes, of which files take up more than their size: their headers and indexes too
+    size: number;
+    free: number;
+    // Whether it is not written to
+    readonly: boolean;
+}
+
 // A file or directory a path leads to
 interface Node {
     volume: Filesystem;
@@ -99,6 +107,20 @@ function rootProblem(volume: Filesystem): string | undefined {
     } catch (e) {
         if (e instanceof FFSError) {
             return `its root directory's ${e.message}`;
+        }
+
+        throw e;
+    }
+}
+
+function isWritable(volume: Filesystem): boolean {
+    try {
+        volume.writable();
+
+        return true;
+    } catch (e) {
+        if (e instanceof FFSError) {
+            return false;
         }
 
         throw e;
@@ -266,6 +288,28 @@ export class FFS {
         } catch (e) {
             throw e instanceof FFSError ? new FFSError(`${node.path}: ${e.message}`) : e;
         }
+    }
+
+    // Of the partition the path is in. The root's is of every partition, and read only, since
+    // partitions are neither created nor removed.
+    statfs(path: string): FFSStatFs {
+        const parts = splitPath(path);
+        const node  = this.resolve(parts);
+
+        if (node === undefined) {
+            throw new FFSError(`${joinPath(parts)}: no such file or directory`);
+        }
+
+        const stats: FFSStatFs = { size: 0, free: 0, readonly: !node || !isWritable(node.volume) };
+
+        for (const volume of node ? [node.volume] : this.volumes.values()) {
+            const { size, free } = volume.space();
+
+            stats.size += size;
+            stats.free += free;
+        }
+
+        return stats;
     }
 
     // The directory and everything in it

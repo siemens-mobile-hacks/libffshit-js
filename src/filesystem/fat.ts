@@ -10,7 +10,7 @@ import { fatTimeToDate } from "./fattime.js";
 import { Attributes, type Header } from "./format.js";
 import type { Records } from "./records.js";
 import { foldAscii } from "./sgold.js";
-import type { Child, Filesystem, Volume } from "./volume.js";
+import type { Child, Filesystem, Space, Volume } from "./volume.js";
 
 const SECTOR_SIZE   = 512;
 const ENTRY_SIZE    = 32;
@@ -79,6 +79,20 @@ export class FatVolume implements Filesystem {
 
     root(): Header | undefined {
         return this.geometry && { id: ROOT_ID, parentId: ROOT_ID, dataId: 0, nextPart: 0, fatTime: ROOT_FAT_TIME, attributes: Attributes.DIRECTORY, size: 0, name: new Uint8Array(0) };
+    }
+
+    // Of the clusters, as the FAT has them
+    space(): Space {
+        const { clusters, clusterSectors } = this.geometry!;
+        let   free = 0;
+
+        for (let cluster = 2; cluster < clusters + 2; ++cluster) {
+            if (this.next(cluster) === 0) {
+                ++free;
+            }
+        }
+
+        return { size: clusters * clusterSectors * SECTOR_SIZE, free: free * clusterSectors * SECTOR_SIZE };
     }
 
     size(header: Header): number | string {

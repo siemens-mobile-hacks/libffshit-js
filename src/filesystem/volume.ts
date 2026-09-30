@@ -36,9 +36,17 @@ interface Listing {
 
 const FORBIDDEN = "\\/:*?\"<>|";
 
+// In bytes
+export interface Space {
+    size: number;
+    free: number;
+}
+
 // What is read of a partition's filesystem
 export interface Filesystem {
     readonly name: string;
+    // What it holds, headers and indexes included, and how much of that is free
+    space(): Space;
     // Undefined when there is none. Throws when it is too short.
     root(): Header | undefined;
     // The size of a file's data, or what breaks it
@@ -69,6 +77,10 @@ export class Volume implements Filesystem {
 
     root(): Header | undefined {
         return this.format.header(this.format.rootId);
+    }
+
+    space(): Space {
+        return this.records.space();
     }
 
     private chain(header: Header): Chain {

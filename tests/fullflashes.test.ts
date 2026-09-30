@@ -56,6 +56,14 @@ describe("The phones' fullflashes", { skip: !fullflashes.length && NO_FULLFLASHE
                     assert.equal(ffs.readFile(entry.path).length, entry.size, entry.path);
                 }
             }
+
+            // What is not free holds the files at least
+            for (const partition of ffs.readDir("/")) {
+                const { size, free } = ffs.statfs(partition.path);
+                const files = all.filter((entry) => entry.path.startsWith(`${partition.path}/`)).reduce((sum, entry) => sum + entry.size, 0);
+
+                assert.ok(free >= 0 && size - free >= files, `${partition.path}: ${free} of ${size} free, ${files} in files`);
+            }
         });
     }
 });

@@ -16,6 +16,7 @@ import type { Platform } from "../fullflash/detector.js";
 import { EGOLD_DELETED, EGOLD_FIT_ENTRY_SIZE, EGOLD_HEADER_SIZE, EGOLD_VALID, egoldLayout, type Block, type Partition } from "../fullflash/partitions.js";
 import type { Image } from "../image.js";
 import { EGOLD_ID_OFFSET } from "./egold.js";
+import type { Space } from "./volume.js";
 
 const FLAGS_FREE    = 0xFFFFFFFF;
 const FLAGS_VALID   = 0xFFFFFFC0;
@@ -255,6 +256,31 @@ export abstract class Records {
         return id;
     }
 
+    // What the blocks but the one left alone can hold, and how much of it the valid records leave:
+    // what compacting every block would leave free
+    space(): Space {
+        let size = 0;
+        let used = 0;
+
+        for (let i = 0; i < this.blocks.length; ++i) {
+            if (i === this.spare) {
+                continue;
+            }
+
+            const block = this.blocks[i];
+
+            size += this.capacity(block);
+
+            for (const entry of block.entries) {
+                if (entry.flags === FLAGS_VALID && this.inBlock(block, entry)) {
+                    used += this.cost(entry.size);
+                }
+            }
+        }
+
+        return { size, free: Math.max(size - used, 0) };
+    }
+
     // Everything the operation writes, or on an error nothing
     transaction(operation: () => void): void {
         this.inTransaction = true;
@@ -458,6 +484,9 @@ export abstract class Records {
     // Where byte `offset` of a record is in the fullflash
     protected abstract entryAddress(block: RecordsBlock, entry: Entry, offset: number): number;
     protected abstract fits(block: RecordsBlock, size: number): boolean;
+    // How much of an erased block records can take up, and how much of that one of the size takes
+    protected abstract capacity(block: RecordsBlock): number;
+    protected abstract cost(size: number): number;
     // Writes the record and its FIT entry, and moves fitNext and dataEnd on. `from` is the entry of
     // the record it moves.
     protected abstract append(block: RecordsBlock, id: number, data: Uint8Array, from?: Entry): void;
@@ -523,6 +552,14 @@ class LinearRecords extends Records {
     protected fits(block: RecordsBlock, size: number): boolean {
         // The entry, and the free entry that ends the FIT after it
         return block.dataEnd + size + LINEAR_FIT_ENTRY_SIZE <= block.fitNext;
+    }
+
+    protected capacity(block: RecordsBlock): number {
+        return block.size - LINEAR_HEADER_SIZE - LINEAR_FIT_ENTRY_SIZE;
+    }
+
+    protected cost(size: number): number {
+        return size + LINEAR_FIT_ENTRY_SIZE;
     }
 
     protected append(block: RecordsBlock, id: number, data: Uint8Array): void {
@@ -702,6 +739,14 @@ class ElkaRecords extends Records {
         return fit <= block.fitNext && block.fitNext - fit >= block.dataEnd + dataAreaSize(size);
     }
 
+    protected capacity(block: RecordsBlock): number {
+        return block.size - ELKA_FIT_OFFSET;
+    }
+
+    protected cost(size: number): number {
+        return fitSize(size) + dataAreaSize(size);
+    }
+
     protected append(block: RecordsBlock, id: number, data: Uint8Array): void {
         const size      = data.length;
         const headSize  = head(size);
@@ -803,6 +848,14 @@ class EgoldRecords extends Records {
 
     protected fits(block: RecordsBlock, size: number): boolean {
         return size <= 0xFFFF && block.fitNext - (block.dataEnd + size) >= EGOLD_RESERVE;
+    }
+
+    protected capacity(block: RecordsBlock): number {
+        return block.size - this.firstRecord - EGOLD_RESERVE;
+    }
+
+    protected cost(size: number): number {
+        return align2(size) + EGOLD_FIT_ENTRY_SIZE;
     }
 
     protected append(block: RecordsBlock, id: number, data: Uint8Array, from?: Entry): void {
