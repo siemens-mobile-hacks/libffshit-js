@@ -1,6 +1,5 @@
 import { concat } from "./bytes.js";
 import { FFSError } from "./errors.js";
-import { resolveCodepage } from "./filesystem/codepage.js";
 import { EgoldFormat } from "./filesystem/egold.js";
 import { Attributes, isDirectory, type Header } from "./filesystem/format.js";
 import { NewSgoldFormat } from "./filesystem/newsgold.js";
@@ -15,10 +14,6 @@ import { Log, type Logger } from "./log.js";
 export interface OpenOptions {
     // The platform, when it is not to be detected
     platform?: Platform;
-    // The codepage of SGOLD and EGOLD names, which is the phone's language's: CP1252 (the default)
-    // for Western European languages, CP1251 for Cyrillic ones, CP1250 for Central European ones.
-    // By any name iconv knows it by.
-    codepage?: string;
     // Fails on anything broken, instead of leaving it out with a warning
     strict?: boolean;
     // Writes EGOLD filesystems, as far as they are known from the phones' fullflashes. No phone has
@@ -109,7 +104,7 @@ function rootProblem(volume: Volume): string | undefined {
     }
 }
 
-function createVolume(platform: Platform, name: string, records: Records, options: OpenOptions, codepage: string, log: Log): Volume {
+function createVolume(platform: Platform, name: string, records: Records, options: OpenOptions, log: Log): Volume {
     switch (platform) {
         case "SGOLD": {
             // Prototypes keep the root at 6006
@@ -119,7 +114,7 @@ function createVolume(platform: Platform, name: string, records: Records, option
                 log.debug(`${name} is a prototype's, with ids from ${PROTOTYPE_ID_OFFSET}`);
             }
 
-            const format = new SgoldFormat(records, codepage, prototype ? PROTOTYPE_ID_OFFSET : 0);
+            const format = new SgoldFormat(records, prototype ? PROTOTYPE_ID_OFFSET : 0);
 
             return new Volume(name, records, format, prototype ? "a prototype's filesystem is read only" : undefined);
         }
@@ -130,7 +125,7 @@ function createVolume(platform: Platform, name: string, records: Records, option
         }
 
         case "EGOLD_CE": {
-            return new Volume(name, records, new EgoldFormat(records, codepage), options.experimentalEgoldWrites ? undefined : "writes to EGOLD are experimental, and made with experimentalEgoldWrites only");
+            return new Volume(name, records, new EgoldFormat(records), options.experimentalEgoldWrites ? undefined : "writes to EGOLD are experimental, and made with experimentalEgoldWrites only");
         }
     }
 }
@@ -165,8 +160,7 @@ export class FFS {
     }
 
     static open(data: Uint8Array, options: OpenOptions = {}): FFS {
-        const log       = new Log(options.logger, options.strict);
-        const codepage  = resolveCodepage(options.codepage ?? "CP1252");
+        const log = new Log(options.logger, options.strict);
         let   prefix: Uint8Array = new Uint8Array(0);
 
         if (options.platform !== undefined && !PLATFORMS.includes(options.platform)) {
@@ -204,7 +198,7 @@ export class FFS {
                 log.warn(problem);
             }
 
-            const volume    = createVolume(platform, partition.name, records, options, codepage, log);
+            const volume    = createVolume(platform, partition.name, records, options, log);
             const problem   = rootProblem(volume);
 
             if (problem) {

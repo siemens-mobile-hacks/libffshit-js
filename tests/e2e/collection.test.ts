@@ -25,7 +25,7 @@ function chunkSize(data: Uint8Array, name: string): number {
     const detection                         = detect(data);
     const { platform, partitions, base }    = findPartitions(data, detection.platform!, detection.sl75, new Log());
     const records                           = Records.open(platform, new Image(data), partitions.find((partition) => partition.name === name)!, base);
-    const format                            = platform === "SGOLD" ? new SgoldFormat(records, "CP1252", 0) : new NewSgoldFormat(records);
+    const format                            = platform === "SGOLD" ? new SgoldFormat(records, 0) : new NewSgoldFormat(records);
 
     return format.chunkSize(records.read(0));
 }

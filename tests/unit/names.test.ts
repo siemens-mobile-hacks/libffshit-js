@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { decodeName, encodeName, resolveCodepage } from "../../src/filesystem/codepage.js";
+import { decodeName, encodeName } from "../../src/filesystem/codepage.js";
 import { dateToFatTime, fatTimeToDate } from "../../src/filesystem/fattime.js";
 import { FFSError } from "../../src/index.js";
 
@@ -56,35 +56,65 @@ describe("FAT timestamps", () => {
     }));
 });
 
+// As the emulated SGOLD phones keep and list names, whatever their language
 describe("8-bit names", () => {
-    it("are kept in the codepage when it has every character, else as 0x1F and UTF-8", () => {
-        assert.equal(hex(encodeName("Misc", "CP1252")), "4d697363");
-        assert.equal(hex(encodeName("Ärger", "CP1252")), "c472676572");
-        assert.equal(hex(encodeName("файл", "CP1251")), "f4e0e9eb");
-        assert.equal(hex(encodeName("файл", "CP1252")), "1fd184d0b0d0b9d0bb");
-        assert.equal(hex(encodeName("Ärger", "CP1251")), "1fc38472676572");
-        assert.equal(hex(encodeName("Ärger", "ANSI_X3.4-1968")), "1fc38472676572");
+    it("are kept in CP1252 when it has every character", () => {
+        // Every character it has from 0x80 to 0x9F
+        const upper = "\u20AC\u201A\u0192\u201E\u2026\u2020\u2021\u02C6\u2030\u0160\u2039\u0152\u017D\u2018\u2019\u201C\u201D\u2022\u2013\u2014\u02DC\u2122\u0161\u203A\u0153\u017E\u0178";
+
+        assert.equal(hex(encodeName("Misc")), "4d697363");
+        assert.equal(hex(encodeName("Ärger")), "c472676572");
+        assert.equal(hex(encodeName("ärger")), "e472676572");
+        assert.equal(hex(encodeName(upper)), "8082838485868788898a8b8c8e9192939495969798999a9b9c9e9f");
+        assert.equal(decodeName(encodeName(upper)), upper);
+        assert.equal(hex(encodeName("\u00A0ÿ")), "a0ff");
     });
 
-    it("are read in the codepage, and taken for UTF-8 where it has no character for a byte", () => {
-        assert.equal(decodeName(Uint8Array.of(0xC4, 0x72), "CP1252"), "Är");
-        assert.equal(decodeName(Uint8Array.of(0xF4, 0xE0, 0xE9, 0xEB), "CP1251"), "файл");
-        assert.equal(decodeName(Uint8Array.of(0xF4, 0xE0, 0xE9, 0xEB), "CP1252"), "ôàéë");
-        assert.equal(decodeName(Uint8Array.of(0x1F, 0xD1, 0x84), "CP1252"), "ф");
-        // glibc's CP1252 has no character for 0x81
-        assert.equal(decodeName(Uint8Array.of(0x81, 0x41), "CP1252"), "�A");
-        assert.equal(decodeName(Uint8Array.of(0x1F), "CP1252"), "\x1F");
+    it("are kept as 0x1F and UTF-8, all of them, when CP1252 lacks a character", () => {
+        assert.equal(hex(encodeName("файл")), "1fd184d0b0d0b9d0bb");
+        assert.equal(hex(encodeName("Ärger ф")), "1fc3847267657220d184");
+        assert.equal(hex(encodeName("łódź")), "1fc582c3b364c5ba");
+        assert.equal(hex(encodeName("Ωmega")), "1fcea96d656761");
+        assert.equal(hex(encodeName("😀")), "1ff09f9880");
+        // Latin-1's control characters, where CP1252 has others
+        assert.equal(hex(encodeName("\u0080")), "1fc280");
+        assert.equal(hex(encodeName("\u0081")), "1fc281");
+    });
+
+    it("are read in CP1252 without the 0x1F, even when they are UTF-8", () => {
+        assert.equal(decodeName(Uint8Array.of(0xC4, 0x72)), "Är");
+        assert.equal(decodeName(Uint8Array.of(0x80, 0x8A, 0x9C, 0x84)), "€Šœ„");
+        // "файл" in CP1251, and in UTF-8
+        assert.equal(decodeName(Uint8Array.of(0xF4, 0xE0, 0xE9, 0xEB)), "ôàéë");
+        assert.equal(decodeName(Uint8Array.of(0xD1, 0x84, 0xD0, 0xB0, 0xD0, 0xB9, 0xD0, 0xBB)), "Ñ„Ð°Ð¹Ð»");
+        assert.equal(decodeName(Uint8Array.of(0x1F)), "\x1F");
+    });
+
+    it("read the bytes CP1252 has no characters for as spaces, as the firmware does", () => {
+        assert.equal(decodeName(Uint8Array.of(0x81, 0x41, 0x8D, 0x8F, 0x90, 0x9D)), " A    ");
+        // "с" in UTF-8 is D1 81
+        assert.equal(decodeName(Uint8Array.of(0xD1, 0x81)), "Ñ ");
+    });
+
+    it("are read as UTF-8 after the 0x1F", () => {
+        assert.equal(decodeName(Uint8Array.of(0x1F, 0xD1, 0x84)), "ф");
+        assert.equal(decodeName(Uint8Array.of(0x1F, 0xC3, 0x84)), "Ä");
+        assert.equal(decodeName(Uint8Array.of(0x1F, 0xFF, 0xFE)), "��");
+    });
+
+    it("read back as they were written", () => {
+        for (let byte = 0x20; byte < 0x100; ++byte) {
+            if (![0x81, 0x8D, 0x8F, 0x90, 0x9D].includes(byte)) {
+                assert.equal(hex(encodeName(decodeName(Uint8Array.of(byte)))), hex(Uint8Array.of(byte)));
+            }
+        }
+
+        for (const name of ["Ärger", "€", "файл", "łódź", "中文", "😀"]) {
+            assert.equal(decodeName(encodeName(name)), name);
+        }
     });
 
     it("must be Unicode", () => {
-        assert.throws(() => encodeName("a\uD800", "CP1252"), FFSError);
-    });
-
-    it("are in codepages known by the names iconv knows them by", () => {
-        assert.equal(resolveCodepage("cp1251"), "CP1251");
-        assert.equal(resolveCodepage("Windows-1251"), "CP1251");
-        assert.equal(resolveCodepage("latin1"), "ISO-8859-1");
-        assert.equal(resolveCodepage("utf8"), "UTF-8");
-        assert.throws(() => resolveCodepage("NO-SUCH-CODEPAGE"), { name: "FFSError", message: "Unknown codepage NO-SUCH-CODEPAGE" });
+        assert.throws(() => encodeName("a\uD800"), FFSError);
     });
 });

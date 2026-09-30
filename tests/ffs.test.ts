@@ -89,19 +89,28 @@ describe("FFS", () => {
         assert.deepEqual(ffs.tree("/FFS/Misc").children?.map((entry) => entry.name), ["Photo.JPG"]);
     });
 
-    it("reads SGOLD names in the codepage asked for", () => {
-        const ffs = open({ codepage: "CP1251" });
+    it("finds 8-bit names as the phones do, in CP1252 without the 0x1F", () => {
+        const ffs = FFS.open(sgoldImage([
+            { name: Uint8Array.of(0x80, 0x8A, 0x9C), data: pattern(1, 1) },
+            // "файл" in CP1251, in UTF-8, and in UTF-8 after the 0x1F
+            { name: Uint8Array.of(0xF4, 0xE0, 0xE9, 0xEB), data: pattern(2, 2) },
+            { name: Uint8Array.of(0xD1, 0x84, 0xD0, 0xB0, 0xD0, 0xB9, 0xD0, 0xBB), data: pattern(3, 3) },
+            { name: Uint8Array.of(0x1F, 0xD1, 0x84, 0xD0, 0xB0, 0xD0, 0xB9, 0xD0, 0xBB, 0x2E, 0x74, 0x78, 0x74), data: pattern(4, 4) },
+        ]));
 
-        assert.ok(ffs.stat("/FFS/файл"));
-        // Ä in CP1252 is Д in CP1251
-        assert.ok(ffs.stat("/FFS/Дrger"));
+        assert.deepEqual(ffs.readDir("/FFS").map((entry) => entry.name), ["€Šœ", "ôàéë", "Ñ„Ð°Ð¹Ð»", "файл.txt"]);
+        assert.equal(ffs.stat("/FFS/€Šœ")?.size, 1);
+        assert.equal(ffs.stat("/FFS/ôàéë")?.size, 2);
+        assert.equal(ffs.stat("/FFS/Ñ„Ð°Ð¹Ð»")?.size, 3);
+        assert.equal(ffs.stat("/FFS/файл"), undefined);
+        assert.equal(ffs.stat("/FFS/файл.TXT")?.size, 4);
+        assert.equal(ffs.stat("/FFS/ФАЙЛ.txt"), undefined);
     });
 
     it("throws what it cannot open", () => {
         assert.throws(() => FFS.open(new Uint8Array(0x100000)), { name: "FFSError", message: "The fullflash is of an unknown platform" });
         assert.throws(() => FFS.open(new Uint8Array(0x100000), { platform: "SGOLD" }), { name: "FFSError", message: "No filesystem partitions found" });
         assert.throws(() => FFS.open(new Uint8Array(0)), { name: "FFSError", message: "The fullflash is empty" });
-        assert.throws(() => open({ codepage: "NOPE" }), { name: "FFSError", message: "Unknown codepage NOPE" });
         assert.throws(() => open({ platform: "NOPE" }), { name: "FFSError", message: "Unknown platform NOPE" });
     });
 
@@ -162,12 +171,14 @@ describe("FFS", () => {
         });
 
         it("replaces a file whichever way its name is kept", () => {
-            // "Ärger" as 0x1F and UTF-8, which the codepage could have kept
-            const ffs = FFS.open(sgoldImage([{ name: "Ärger", data: pattern(5, 1) }]));
+            // "Ärger" as 0x1F and UTF-8, which the phones list, but do not find by that name
+            const ffs = FFS.open(sgoldImage([{ name: Uint8Array.of(0x1F, 0xC3, 0x84, 0x72, 0x67, 0x65, 0x72), data: pattern(5, 1) }]));
 
             ffs.writeFile("/FFS/Ärger", pattern(7, 2));
 
             assert.deepEqual(ffs.readDir("/FFS").map((entry) => [entry.name, entry.size]), [["Ärger", 7]]);
+            // In CP1252 now, as they would find it
+            assert.ok(Buffer.from(ffs.save()).includes(Buffer.of(0xC4, 0x72, 0x67, 0x65, 0x72, 0x00)));
         });
 
         it("throws what it cannot do, and changes nothing then", () => {

@@ -112,7 +112,7 @@ function libraryFiles(phone: Phone): TestFile[] {
         { path: `${dir}/sub/nested.txt`, data: text("Written by node-sie-ffs") },
         // Next to what the firmware keeps there
         { path: "Misc/sie-ffs-e2e.txt", data: text("Written by node-sie-ffs into a directory of the firmware") },
-        // SGOLD keeps the first in its codepage, CP1252 on these phones, and the second in UTF-8
+        // SGOLD keeps the first in CP1252, and the second as 0x1F and UTF-8
         { path: `${dir}/Ärger.txt`, data: text("Written by node-sie-ffs, with a name in CP1252") },
         { path: `${dir}/файл.txt`, data: text("Written by node-sie-ffs, with a name beyond CP1252") },
     ];

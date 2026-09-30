@@ -29,8 +29,8 @@ const under = (dir: string, entries: string[]) => [`${dir}/`, ...entries.map((en
 const EXPECTED: Record<Scenario, Expected> = {
     "sgold": {
         platform: "SGOLD", model: "SYN", imei: IMEI,
-        // Bytes CP1252 has no characters for are taken for UTF-8, as is broken UTF-8
-        tree: under("/FFS", [...SAMPLE, ...MISC, "Ärger.bin 5", "�A� 6", "фа 7", "�� 8"]),
+        // Bytes CP1252 has no characters for are spaces, broken UTF-8 after the 0x1F is U+FFFD
+        tree: under("/FFS", [...SAMPLE, ...MISC, "Ärger.bin 5", " A  6", "фа 7", "�� 8"]),
     },
     "sgold2": {
         platform: "SGOLD2", model: "SYN", imei: IMEI,
@@ -112,11 +112,11 @@ const EXPECTED: Record<Scenario, Expected> = {
     },
     "egold": {
         platform: "EGOLD_CE", model: "SYN",
-        tree: [...under("/FFS", [...SAMPLE, ...MISC, "Ärger.bin 5", "�A� 6", "фа 7", "�� 8"]), ...CACHE],
+        tree: [...under("/FFS", [...SAMPLE, ...MISC, "Ärger.bin 5", " A  6", "фа 7", "�� 8"]), ...CACHE],
     },
     "egold 20-byte headers": {
         platform: "EGOLD_CE", model: "SYN",
-        tree: under("/FFS", [...SAMPLE, ...MISC, "Ärger.bin 5", "�A� 6", "фа 7", "�� 8"]),
+        tree: under("/FFS", [...SAMPLE, ...MISC, "Ärger.bin 5", " A  6", "фа 7", "�� 8"]),
     },
     "egold 128 KiB blocks": {
         platform: "EGOLD_CE", model: "SYN",

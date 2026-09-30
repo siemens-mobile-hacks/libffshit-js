@@ -55,8 +55,8 @@ describe("Name hashes", () => {
         assert.equal(nameHash8bit(latin1("s2200.bin")),      0xABDE);
     });
 
-    // As the emulated CX70 v56 stored names made over OBEX: in its codepage, CP1252, and else as
-    // 0x1F and the name in UTF-8. The hash is of the stored bytes.
+    // As the emulated CX70 v56 stored names made over OBEX: in CP1252, and else as 0x1F and the
+    // name in UTF-8. The hash is of the stored bytes.
     it("hash 8-bit names as they are stored", () => {
         assert.equal(nameHash8bit(latin1("\xC4rger")),       0x98DC);
         assert.equal(nameHash8bit(latin1("\xE4rger")),       0xA456);

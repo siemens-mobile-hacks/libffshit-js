@@ -1,83 +1,44 @@
-// SGOLD and EGOLD keep a name in the 8-bit codepage of the phone's language when the codepage has
-// all of its characters, and else as 0x1F followed by the name in UTF-8.
-//
-// The codepages are glibc's single-byte ones, and UTF-8.
+// SGOLD and EGOLD phones keep a name in CP1252 when it has all of its characters, whatever their
+// language, and else as 0x1F followed by the name in UTF-8. A name without the 0x1F they read in
+// CP1252, even one in UTF-8.
 
-import { latin1 } from "../bytes.js";
 import { FFSError } from "../errors.js";
-import { CODEPAGE_ALIASES, CODEPAGE_TABLES } from "./codepages.js";
 
 const UTF8_PREFIX = 0x1F;
-const UTF8 = "UTF-8";
 
-interface Codepage {
-    // Of the bytes from 0x80 on
-    decode: readonly number[];
-    encode: Map<number, number>;
-}
+// The characters of the bytes 0x80 to 0x9F, where Latin-1 has control characters. The firmware
+// reads the five CP1252 has none for as spaces.
+const CP1252_80_9F = [
+    0x20AC, 0x0020, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021,
+    0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0x0020, 0x017D, 0x0020,
+    0x0020, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,
+    0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0x0020, 0x017E, 0x0178,
+];
 
-const codepages = new Map<string, Codepage>();
+// The bytes of the characters CP1252 has there
+const CP1252_BYTES = new Map(CP1252_80_9F.flatMap((c, i) => c === 0x20 ? [] : [[c, 0x80 + i]]));
+
 const utf8Decoder = new TextDecoder("utf-8", { ignoreBOM: true });
-const strictUtf8Decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 const utf8Encoder = new TextEncoder();
 
-function table(name: string): Codepage {
-    let codepage = codepages.get(name);
-
-    if (!codepage) {
-        const decode = CODEPAGE_TABLES[name];
-        const encode = new Map<number, number>();
-
-        decode.forEach((codePoint, i) => {
-            if (codePoint >= 0) {
-                encode.set(codePoint, 0x80 + i);
-            }
-        });
-
-        codepage = { decode, encode };
-        codepages.set(name, codepage);
-    }
-
-    return codepage;
+// Undefined when CP1252 has no such character
+function cp1252Byte(c: number): number | undefined {
+    return c < 0x80 || (c >= 0xA0 && c <= 0xFF) ? c : CP1252_BYTES.get(c);
 }
 
-function isAscii(bytes: Uint8Array): boolean {
-    return bytes.every((byte) => byte < 0x80);
-}
-
-// The canonical name of a codepage, which may be given by any name iconv knows it by, e.g. "cp1251",
-// "windows-1251", "latin1"
-export function resolveCodepage(codepage: string): string {
-    const name = codepage.toUpperCase();
-
-    if (name === UTF8 || name === "UTF8") {
-        return UTF8;
+// The name as a header keeps it
+export function encodeName(name: string): Uint8Array {
+    if (!name.isWellFormed()) {
+        throw new FFSError(`'${name}' is not valid Unicode`);
     }
 
-    const canonical = name in CODEPAGE_TABLES ? name : CODEPAGE_ALIASES[name];
-
-    if (canonical === undefined) {
-        throw new FFSError(`Unknown codepage ${codepage}`);
-    }
-
-    return canonical;
-}
-
-// The name in the codepage, or undefined when the codepage lacks one of its characters
-function encode(name: string, codepage: string): Uint8Array | undefined {
-    if (codepage === UTF8) {
-        return utf8Encoder.encode(name);
-    }
-
-    const { encode } = table(codepage);
     const bytes: number[] = [];
 
-    for (const c of name) {
-        const codePoint = c.codePointAt(0)!;
-        const byte      = codePoint < 0x80 ? codePoint : encode.get(codePoint);
+    for (let i = 0; i < name.length; ++i) {
+        const byte = cp1252Byte(name.charCodeAt(i));
 
         if (byte === undefined) {
-            return undefined;
+            return Uint8Array.from([UTF8_PREFIX, ...utf8Encoder.encode(name)]);
         }
 
         bytes.push(byte);
@@ -86,62 +47,16 @@ function encode(name: string, codepage: string): Uint8Array | undefined {
     return Uint8Array.from(bytes);
 }
 
-// The name from the codepage, or undefined when a byte is not one of its characters
-function decode(stored: Uint8Array, codepage: string): string | undefined {
-    if (codepage === UTF8) {
-        try {
-            return strictUtf8Decoder.decode(stored);
-        } catch {
-            return undefined;
-        }
-    }
-
-    const { decode } = table(codepage);
-    let   name = "";
-
-    for (const byte of stored) {
-        const codePoint = byte < 0x80 ? byte : decode[byte - 0x80];
-
-        if (codePoint < 0) {
-            return undefined;
-        }
-
-        name += String.fromCodePoint(codePoint);
-    }
-
-    return name;
-}
-
-// The name as a header keeps it
-export function encodeName(name: string, codepage: string): Uint8Array {
-    if (!name.isWellFormed()) {
-        throw new FFSError(`'${name}' is not valid Unicode`);
-    }
-
-    const stored = encode(name, codepage);
-
-    if (stored) {
-        return stored;
-    }
-
-    const utf8   = utf8Encoder.encode(name);
-    const result = new Uint8Array(utf8.length + 1);
-
-    result[0] = UTF8_PREFIX;
-    result.set(utf8, 1);
-
-    return result;
-}
-
-// The name as a string. A name the codepage cannot decode is taken for UTF-8.
-export function decodeName(stored: Uint8Array, codepage: string): string {
+export function decodeName(stored: Uint8Array): string {
     if (stored.length >= 2 && stored[0] === UTF8_PREFIX) {
         return utf8Decoder.decode(stored.subarray(1));
     }
 
-    if (isAscii(stored)) {
-        return latin1(stored);
+    let name = "";
+
+    for (const byte of stored) {
+        name += String.fromCharCode(byte >= 0x80 && byte < 0xA0 ? CP1252_80_9F[byte - 0x80] : byte);
     }
 
-    return decode(stored, codepage) ?? utf8Decoder.decode(stored);
+    return name;
 }

@@ -41,11 +41,14 @@ Paths are absolute, the partitions the directories in the root. Names are found 
 them, without regard to case as far as its firmware folds it: SGOLD and EGOLD fold ASCII letters
 only, SGOLD2 and ELKA fold Latin, Greek, Cyrillic, Armenian and more.
 
+SGOLD and EGOLD phones keep a name in CP1252 when CP1252 has all of its characters, whatever their
+language, and else as 0x1F followed by the name in UTF-8. The library writes names as they do, and
+reads them as they do: a name without the 0x1F in CP1252, even one in UTF-8, and the bytes CP1252
+has no characters for as spaces.
+
 `FFS.open()` takes options:
 
 - `platform`, when it is not to be detected: `"SGOLD"`, `"SGOLD2"`, `"SGOLD2_ELKA"` or `"EGOLD_CE"`.
-- `codepage`, the codepage SGOLD and EGOLD names are in, by any name iconv knows it by: CP1252 by
-  default, CP1251 for Cyrillic languages, CP1250 for Central European ones.
 - `strict`: fail on anything broken, instead of leaving it out with a warning.
 - `experimentalEgoldWrites`: write to EGOLD filesystems. The library writes them as the phones'
   fullflashes have them, but no emulator runs EGOLD phones, so none has read what it writes: keep a
@@ -84,7 +87,7 @@ subdirectories included.
 - `tests/fullflashes.test.ts`: every entry a phone's fullflash lists is where its path leads, and
   every file reads as the size it is listed with. The known phones' open without anything broken.
   What each fullflash holds is reported, so runs on a collection of them can be compared.
-- `tests/ffs.test.ts` and `tests/unit`: the API, name hashes, codepages, FAT timestamps.
+- `tests/ffs.test.ts` and `tests/unit`: the API, name hashes, 8-bit names, FAT timestamps.
 
 ### On the phones
 
@@ -115,8 +118,6 @@ survive: their tests that need those run, but do not fail the run.
 
 pmb887x-emu runs no EGOLD phones: what the library writes to them is only checked against the
 phones' fullflashes.
-
-`scripts/gen-codepages.c` generates `src/filesystem/codepages.ts` from glibc's iconv.
 
 ## Thanks
 

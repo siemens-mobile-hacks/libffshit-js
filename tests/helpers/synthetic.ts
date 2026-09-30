@@ -2,6 +2,7 @@
 // table the search finds, formatted blocks, and filesystems with what the loaders have to cope with.
 // They are small, and not the phones' firmware, so they can be part of the repository's tests.
 
+import { encodeName } from "../../src/filesystem/codepage.js";
 import { nameHash7bit, nameHash8bit, nameHashUtf16 } from "../../src/filesystem/hash.js";
 import { Records } from "../../src/filesystem/records.js";
 import type { Platform } from "../../src/fullflash/detector.js";
@@ -401,7 +402,7 @@ export function filesystemRecords(platform: Platform, root: FsFile[], options: F
         }
 
         if (sgold) {
-            return /^[\x00-\x7F]*$/.test(name) ? Uint8Array.from(Buffer.from(name, "latin1")) : concat(Uint8Array.of(0x1F), Uint8Array.from(Buffer.from(name, "utf8")));
+            return encodeName(name);
         }
 
         return Uint8Array.from(Buffer.from(name, "utf16le"));

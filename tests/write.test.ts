@@ -159,7 +159,7 @@ for (const phone of PHONES) {
 
         const dirPath       = (name?: string) => `/${phone.partition}/${phone.dir}${name ? `/${name}` : ""}`;
         const write         = (path: string, data: Uint8Array) => ffs.writeFile(path, data, WRITE_TIME);
-        const reopen        = (codepage?: string) => FFS.open(ffs.save(), { ...phone.options, codepage, strict: true });
+        const reopen        = () => FFS.open(ffs.save(), { ...phone.options, strict: true });
         const unchanged     = () => assert.ok(equalBytes(ffs.save(), image!), "the fullflash changed");
 
         beforeEach(() => {
@@ -335,9 +335,9 @@ for (const phone of PHONES) {
         it("writes names beyond ASCII", () => {
             const expected = snapshot(ffs);
 
-            // On SGOLD in the codepage, and in UTF-8 when the codepage lacks a character. A U+FEFF is
+            // On SGOLD and EGOLD in CP1252, and in UTF-8 when CP1252 lacks a character. A U+FEFF is
             // no byte order mark.
-            for (const name of ["sie-ffs-Ärger.bin", "sie-ffs-файл.bin", "sie-ffs-中文.bin", "sie-ffs-😀.bin", "﻿sie-ffs-bom.bin"]) {
+            for (const name of ["sie-ffs-Ärger.bin", "sie-ffs-€.bin", "sie-ffs-файл.bin", "sie-ffs-中文.bin", "sie-ffs-😀.bin", "﻿sie-ffs-bom.bin"]) {
                 const data = pattern(100, Buffer.byteLength(name));
 
                 write(dirPath(name), data);
@@ -363,23 +363,28 @@ for (const phone of PHONES) {
             expectTree(snapshot(reopen()), expected);
         });
 
-        it("keeps 8-bit names in the phone's codepage", { skip: !eightBit(phone.platform) && "only SGOLD and EGOLD names are 8-bit" }, () => {
-            ffs = FFS.open(image!, { ...phone.options, codepage: "CP1251" });
+        it("keeps 8-bit names as the phones do: in CP1252, else all of them as 0x1F and UTF-8", { skip: !eightBit(phone.platform) && "only SGOLD and EGOLD names are 8-bit" }, () => {
+            const bytes     = (str: string) => Buffer.from(str, "latin1");
+            const utf8      = (name: string) => Buffer.concat([Buffer.of(0x1F), Buffer.from(name, "utf8")]);
+            const stored    = new Map([
+                ["sie-ffs-Ärger.bin",   bytes("sie-ffs-\xC4rger.bin")],
+                ["sie-ffs-€Šœ„.bin",    bytes("sie-ffs-\x80\x8A\x9C\x84.bin")],
+                ["sie-ffs-файл.bin",    utf8("sie-ffs-файл.bin")],
+                ["sie-ffs-Ärger-ф.bin", utf8("sie-ffs-Ärger-ф.bin")],
+                ["sie-ffs-łódź.bin",    utf8("sie-ffs-łódź.bin")],
+            ]);
 
-            write(dirPath("sie-ffs-файл.bin"), pattern(100, 1));
-            // CP1251 has no Ä
-            write(dirPath("sie-ffs-Ärger.bin"), pattern(100, 2));
+            for (const name of stored.keys()) {
+                write(dirPath(name), pattern(100, 1));
+            }
 
-            const cp1251 = reopen("CP1251");
+            const saved     = Buffer.from(ffs.save());
+            const reopened  = reopen();
 
-            assert.ok(cp1251.stat(dirPath("sie-ffs-файл.bin")));
-            assert.ok(cp1251.stat(dirPath("sie-ffs-Ärger.bin")));
-
-            // The bytes of "файл" in CP1251 are "ôàéë" in CP1252, a name in UTF-8 reads the same in both
-            const cp1252 = reopen("CP1252");
-
-            assert.ok(cp1252.stat(dirPath("sie-ffs-ôàéë.bin")));
-            assert.ok(cp1252.stat(dirPath("sie-ffs-Ärger.bin")));
+            for (const [name, name8bit] of stored) {
+                assert.ok(saved.includes(Buffer.concat([name8bit, Buffer.of(0)])), name);
+                assert.equal(reopened.stat(dirPath(name))?.size, 100, name);
+            }
         });
 
         it("writes into every partition", () => {

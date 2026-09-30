@@ -1,4 +1,4 @@
-// The records of an SGOLD filesystem: 16-bit ids, names in the phone's codepage, or 0x1F and UTF-8
+// The records of an SGOLD filesystem: 16-bit ids, names in CP1252, or 0x1F and UTF-8
 //
 // Header: id, parent id (16 bits), FAT time (32), data id (16), attributes with the upper 16 bits
 //         set (32), next part (16), the name ending in a 0
@@ -40,7 +40,7 @@ export class SgoldFormat extends WritableFormat {
     protected readonly nameSizeMax: number = NAME_SIZE_MAX;
 
     // Headers and parts may be longer than 16 bytes, of 0xFF after the fields
-    constructor(records: Records, private readonly codepage: string, private readonly idOffset: number, private readonly headerSize = HEADER_SIZE) {
+    constructor(records: Records, private readonly idOffset: number, private readonly headerSize = HEADER_SIZE) {
         super(records);
 
         this.rootId     = 6 + idOffset;
@@ -89,7 +89,7 @@ export class SgoldFormat extends WritableFormat {
     }
 
     name(header: Header): string {
-        return decodeName(header.name, this.codepage);
+        return decodeName(header.name);
     }
 
     fold(name: string): string {
@@ -101,7 +101,7 @@ export class SgoldFormat extends WritableFormat {
     }
 
     encodeName(name: string): Uint8Array {
-        const stored = encodeName(name, this.codepage);
+        const stored = encodeName(name);
 
         if (stored.length > this.nameSizeMax) {
             throw new FFSError(`Names are up to ${this.nameSizeMax} bytes long`);

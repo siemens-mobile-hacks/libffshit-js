@@ -22,8 +22,8 @@ export class EgoldFormat extends SgoldFormat {
     // Longer than any of the phones' own is not known to work
     protected override readonly nameSizeMax = 62;
 
-    constructor(records: Records, codepage: string) {
-        super(records, codepage, EGOLD_ID_OFFSET, headerSize(records));
+    constructor(records: Records) {
+        super(records, EGOLD_ID_OFFSET, headerSize(records));
     }
 
     protected override nameHash(name: Uint8Array): number {
