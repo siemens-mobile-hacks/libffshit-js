@@ -3,3 +3,4 @@ node_modules/
 tests/fullflashes
 .idea/
 .vscode/
+tests/e2e/.emu

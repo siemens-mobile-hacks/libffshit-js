@@ -86,6 +86,36 @@ subdirectories included.
   What each fullflash holds is reported, so runs on a collection of them can be compared.
 - `tests/ffs.test.ts` and `tests/unit`: the API, name hashes, codepages, FAT timestamps.
 
+### On the phones
+
+`pnpm test:e2e` has the phones' own firmware check the library, in
+[pmb887x-emu](https://github.com/siemens-mobile-hacks/pmb887x-emu):
+
+- The library writes files and directories into the fullflash, and over one file until blocks get
+  compacted. The phone boots on it, and lists and downloads them over OBEX with the client of
+  [@sie-js/serial](https://github.com/siemens-mobile-hacks/node-sie-serial). After the phone has run
+  on the flash, the library reads them back.
+- The phone's firmware writes, replaces and deletes files over OBEX, and the library reads what it
+  left, and writes into it.
+
+It runs on the CX70's, SL65's, S75's and EL71's fullflashes in `tests/fullflashes`, or where
+`FFSHIT_TEST_FULLFLASHES` says: `CX70v56lg3.bin`, `SL65v49lg1_TIM.bin`, `S75v40lg1.bin` and
+`EL71v41lg91.bin`. `FFSHIT_E2E_FULLFLASHES` lists more directories, whose every fullflash of an
+SGOLD, SGOLD2 or ELKA phone gets the same tests. Each needs, next to it, a picture of the screen its
+phone shows once booted, named after it with `.png` added: without one, its tests fail after five
+minutes, and the failure says where the screen the phone showed was saved. The emulator is `FFSHIT_E2E_EMU`, else
+`tests/e2e/.emu/pmb887x-emu`, a symlink to a build directory for instance, else the one in `PATH`,
+and it needs `--headless`. Without it the tests skip themselves.
+
+The phones boot one at a time. Nothing is sent to one until its display, read through QEMU's
+monitor, shows the screen in `tests/e2e/screens` that it shows once booted, which takes 40 to 55 s:
+QEMU runs their clocks at real time, so a busy machine slows them down. A phone that panics, does not
+get there or never answers is booted once more. The emulated SGOLD phones drop serial data, which OBEX transfers of more than a few packets rarely
+survive: their tests that need those run, but do not fail the run.
+
+pmb887x-emu runs no EGOLD phones: what the library writes to them is only checked against the
+phones' fullflashes.
+
 `scripts/gen-codepages.c` generates `src/filesystem/codepages.ts` from glibc's iconv.
 
 ## Thanks

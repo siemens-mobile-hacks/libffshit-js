@@ -20,7 +20,8 @@
     "scripts": {
         "build": "tsc -p tsconfig.build.json",
         "typecheck": "tsc --noEmit",
-        "test": "tsx --test --test-reporter=spec \"tests/**/*.test.ts\""
+        "test": "tsx --test --test-reporter=spec \"tests/*.test.ts\" \"tests/unit/*.test.ts\"",
+        "test:e2e": "tsx --test --test-concurrency=1 --test-reporter=spec \"tests/e2e/*.test.ts\""
     },
     "keywords": [],
     "author": "Siemens Mobile Hackers",
@@ -30,7 +31,10 @@
     },
     "packageManager": "pnpm@10.12.4",
     "devDependencies": {
+        "@serialport/stream": "^13.0.0",
+        "@sie-js/serial": "^1.6.0",
         "@types/node": "^24.0.10",
+        "serialport-bindings-socket": "^1.0.4",
         "tsx": "^4.20.3",
         "typescript": "^5.8.3"
     }
