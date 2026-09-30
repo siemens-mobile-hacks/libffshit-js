@@ -1,5 +1,5 @@
 // The phones' fullflashes, which are their firmware and not part of the repository:
-// FFSHIT_TEST_FULLFLASHES lists directories holding them, separated by the path delimiter, else
+// SIE_FFS_TEST_FULLFLASHES lists directories holding them, separated by the path delimiter, else
 // tests/fullflashes, which may be a symlink. They are known by their paths in the directories.
 
 import fs from "node:fs";
@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 
 function directories(): string[] {
-    const dirs = process.env.FFSHIT_TEST_FULLFLASHES?.split(path.delimiter).filter(Boolean) ?? [];
+    const dirs = process.env.SIE_FFS_TEST_FULLFLASHES?.split(path.delimiter).filter(Boolean) ?? [];
 
     dirs.push(path.join(ROOT, "tests", "fullflashes"));
 
@@ -38,4 +38,4 @@ export function allFullflashes(dirs = directories()): string[] {
     return [...new Set(names)].sort();
 }
 
-export const NO_FULLFLASHES = "not found: set FFSHIT_TEST_FULLFLASHES";
+export const NO_FULLFLASHES = "not found: set SIE_FFS_TEST_FULLFLASHES";

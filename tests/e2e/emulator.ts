@@ -17,8 +17,8 @@ import { parsePpm, writePng, type Screen } from "./screen.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
-// FFSHIT_E2E_EMU, else a gitignored symlink to a build directory, else the one in PATH
-const EMULATORS = [process.env.FFSHIT_E2E_EMU, path.join(HERE, ".emu", "pmb887x-emu")].filter((candidate): candidate is string => !!candidate);
+// SIE_FFS_E2E_EMU, else a gitignored symlink to a build directory, else the one in PATH
+const EMULATORS = [process.env.SIE_FFS_E2E_EMU, path.join(HERE, ".emu", "pmb887x-emu")].filter((candidate): candidate is string => !!candidate);
 
 export function findEmulator(): string | undefined {
     for (const candidate of EMULATORS) {
@@ -35,7 +35,7 @@ export function emulatorMissing(): string | undefined {
     const emulator = findEmulator();
 
     if (!emulator) {
-        return `pmb887x-emu not found in ${EMULATORS.join(", ")} or PATH: build https://github.com/siemens-mobile-hacks/pmb887x-emu and set FFSHIT_E2E_EMU`;
+        return `pmb887x-emu not found in ${EMULATORS.join(", ")} or PATH: build https://github.com/siemens-mobile-hacks/pmb887x-emu and set SIE_FFS_E2E_EMU`;
     }
 
     if (!spawnSync(emulator, ["--help"], { encoding: "utf8" }).stdout?.includes("--headless")) {
@@ -177,7 +177,7 @@ class Monitor {
 // nothing is sent until the phone is talked to
 export async function emulate(fullflash: string, device?: string): Promise<Emulated> {
     const tcpPort   = await freePort();
-    const dir       = fs.mkdtempSync(path.join(os.tmpdir(), "ffshit-emu-"));
+    const dir       = fs.mkdtempSync(path.join(os.tmpdir(), "sie-ffs-emu-"));
     const emu       = spawn(findEmulator()!, [
         ...(device ? ["--device", device] : []),
         "--fullflash", fullflash,

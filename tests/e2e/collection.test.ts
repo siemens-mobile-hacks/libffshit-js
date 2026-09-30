@@ -1,8 +1,8 @@
-// Every fullflash in the directories FFSHIT_E2E_FULLFLASHES lists, separated by the path delimiter,
-// that the library writes to: the suites of the phones, on what the library finds in them. The
-// emulator picks the board, and fails the suites of the phones it has none for. The phone is talked
-// to once it shows the screen of the PNG next to the fullflash, named after it with ".png" added,
-// which a phone without one saves where the failure says.
+// Every fullflash in the directories SIE_FFS_E2E_FULLFLASHES lists, separated by the path
+// delimiter, that the library writes to: the suites of the phones, on what the library finds in
+// them. The emulator picks the board, and fails the suites of the phones it has none for. The phone
+// is talked to once it shows the screen of the PNG next to the fullflash, named after it with ".png"
+// added, which a phone without one saves where the failure says.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -19,7 +19,7 @@ import { allFullflashes, readFullflash } from "../helpers/fullflashes.js";
 import { SGOLD_OBEX, type Phone } from "./phone.js";
 import { phoneSuite } from "./suites.js";
 
-const DIRS = process.env.FFSHIT_E2E_FULLFLASHES?.split(path.delimiter).filter(Boolean) ?? [];
+const DIRS = process.env.SIE_FFS_E2E_FULLFLASHES?.split(path.delimiter).filter(Boolean) ?? [];
 
 function chunkSize(data: Uint8Array, name: string): number {
     const detection                         = detect(data);
@@ -52,7 +52,7 @@ function phoneOf(fullflash: string): Phone | string {
     }
 
     try {
-        FFS.open(data).mkdir(`/${partition}/Misc/ffshit-check`);
+        FFS.open(data).mkdir(`/${partition}/Misc/sie-ffs-check`);
     } catch (e) {
         return (e as Error).message;
     }

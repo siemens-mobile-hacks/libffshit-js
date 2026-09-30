@@ -101,7 +101,7 @@ function assertFile(ffs: FFS, partition: string, file: TestFile): void {
 
 // The library's files, which the phone reads
 function libraryFiles(phone: Phone): TestFile[] {
-    const dir = "Misc/ffshit-e2e";
+    const dir = "Misc/sie-ffs-e2e";
 
     return [
         { path: `${dir}/small.bin`, data: pattern(100, 1) },
@@ -109,24 +109,24 @@ function libraryFiles(phone: Phone): TestFile[] {
         { path: `${dir}/one piece.bin`, data: pattern(phone.chunkSize, 2) },
         { path: `${dir}/two pieces.bin`, data: pattern(phone.chunkSize + 1, 3) },
         { path: `${dir}/replaced.bin`, data: pattern(3000, 6) },
-        { path: `${dir}/sub/nested.txt`, data: text("Written by libffshit-js") },
+        { path: `${dir}/sub/nested.txt`, data: text("Written by node-sie-ffs") },
         // Next to what the firmware keeps there
-        { path: "Misc/ffshit-e2e.txt", data: text("Written by libffshit-js into a directory of the firmware") },
+        { path: "Misc/sie-ffs-e2e.txt", data: text("Written by node-sie-ffs into a directory of the firmware") },
         // SGOLD keeps the first in its codepage, CP1252 on these phones, and the second in UTF-8
-        { path: `${dir}/Ärger.txt`, data: text("Written by libffshit-js, with a name in CP1252") },
-        { path: `${dir}/файл.txt`, data: text("Written by libffshit-js, with a name beyond CP1252") },
+        { path: `${dir}/Ärger.txt`, data: text("Written by node-sie-ffs, with a name in CP1252") },
+        { path: `${dir}/файл.txt`, data: text("Written by node-sie-ffs, with a name beyond CP1252") },
     ];
 }
 
 export function phoneSuite(name: string, phone: Phone): void {
-    const dir       = "Misc/ffshit-e2e";
+    const dir       = "Misc/sie-ffs-e2e";
     const files     = libraryFiles(phone);
     // Long enough for the emulated SGOLD phones to lose the session
     const big       = { path: `${dir}/big.bin`, data: pattern(50000, 4) };
     const removed   = `${dir}/removed.bin`;
 
     // What the phone changes of the library's files, and writes
-    const phoneDir                  = "Misc/ffshit-phone";
+    const phoneDir                  = "Misc/sie-ffs-phone";
     const kept: TestFile            = { path: `${phoneDir}/kept.bin`, data: pattern(3000, 11) };
     const replaced: TestFile        = { path: `${phoneDir}/replaced.bin`, data: pattern(300, 12) };
     const deleted: TestFile[]       = [

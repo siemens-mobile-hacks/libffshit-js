@@ -2,7 +2,7 @@
 // the filesystem should hold after each: in the directory written to, and in the whole filesystem
 // at the end, as it is and saved and opened again.
 //
-// FFSHIT_MODEL_SEEDS sets how many sequences run on each fullflash.
+// SIE_FFS_MODEL_SEEDS sets how many sequences run on each fullflash.
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
@@ -12,7 +12,7 @@ import { equalBytes, pattern, random } from "./helpers/data.js";
 import { NO_FULLFLASHES, readFullflash } from "./helpers/fullflashes.js";
 import { SCENARIOS } from "./helpers/scenarios.js";
 
-const SEEDS = Number(process.env.FFSHIT_MODEL_SEEDS ?? 2);
+const SEEDS = Number(process.env.SIE_FFS_MODEL_SEEDS ?? 2);
 const OPS   = 200;
 
 interface Entry {
@@ -80,8 +80,8 @@ function listing(entries: { path: string, isDirectory: boolean, size: number }[]
 function randomOps(dir: string, firmware: string[], seed: number): Op[] {
     const next  = random(seed);
     const pick  = <T>(items: readonly T[]): T => items[Math.floor(next() * items.length)];
-    const dirs  = [dir, `${dir}/ffshit-r1`, `${dir}/ffshit-r1/ffshit-r2`, `${dir}/FFSHIT-R3`];
-    const names = ["a.bin", "A.BIN", "b.bin", "long name with spaces.txt", "ж.txt", "Ж.TXT", "Ä.dat", "ä.dat", "ffshit-r1", "ffshit-R3", "😀"];
+    const dirs  = [dir, `${dir}/sie-ffs-r1`, `${dir}/sie-ffs-r1/sie-ffs-r2`, `${dir}/SIE-FFS-R3`];
+    const names = ["a.bin", "A.BIN", "b.bin", "long name with spaces.txt", "ж.txt", "Ж.TXT", "Ä.dat", "ä.dat", "sie-ffs-r1", "sie-ffs-R3", "😀"];
     const sizes = [0, 1, 511, 512, 513, 1024, 1025, 2048, 4096, 4097];
     const ops: Op[] = [];
 

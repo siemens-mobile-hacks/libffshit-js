@@ -2,7 +2,7 @@
 // it makes of them, it may only throw FFSErrors: the files it lists read as the size it lists them
 // with, and writes either happen, or fail and change nothing.
 //
-// FFSHIT_FUZZ_CASES sets the number of cases per fullflash, FFSHIT_FUZZ_SEED the first seed.
+// SIE_FFS_FUZZ_CASES sets the number of cases per fullflash, SIE_FFS_FUZZ_SEED the first seed.
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
@@ -14,8 +14,8 @@ import { equalBytes, pattern, random } from "./helpers/data.js";
 import { allFullflashes, readFullflash } from "./helpers/fullflashes.js";
 import { SCENARIOS } from "./helpers/scenarios.js";
 
-const CASES      = Number(process.env.FFSHIT_FUZZ_CASES ?? 20);
-const FIRST_SEED = Number(process.env.FFSHIT_FUZZ_SEED ?? 1);
+const CASES      = Number(process.env.SIE_FFS_FUZZ_CASES ?? 20);
+const FIRST_SEED = Number(process.env.SIE_FFS_FUZZ_SEED ?? 1);
 
 interface Region {
     addr: number;

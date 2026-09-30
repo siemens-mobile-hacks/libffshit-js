@@ -1,4 +1,4 @@
-# libffshit-js
+# node-sie-ffs
 
 The filesystem in Siemens phones' fullflashes, in TypeScript: reading, and writing — creating and
 replacing files, creating directories, removing files and empty directories. It started as a
@@ -17,7 +17,7 @@ It has no dependencies and runs wherever JavaScript does.
 
 ```ts
 import fs from "node:fs";
-import { FFS } from "@sie-js/libffshit-js";
+import { FFS } from "@sie-js/ffs";
 
 const ffs = FFS.open(fs.readFileSync("EL71.bin"));
 
@@ -70,17 +70,17 @@ pnpm test
 ```
 
 They run on made-up fullflashes of every platform, and on the phones' fullflashes where there are
-any: `FFSHIT_TEST_FULLFLASHES` lists the directories holding them, else `tests/fullflashes`, their
+any: `SIE_FFS_TEST_FULLFLASHES` lists the directories holding them, else `tests/fullflashes`, their
 subdirectories included.
 
 - `tests/scenarios.test.ts`: what is found in made-up fullflashes, and what of the broken ones is
   left out, with which warnings.
 - `tests/write.test.ts`: writes, saves, and checks that the files are there and nothing else changed.
 - `tests/model.test.ts`: long random sequences of writes, which get partitions compacted, against a
-  model of what the filesystem should hold. `FFSHIT_MODEL_SEEDS` sets how many per fullflash.
+  model of what the filesystem should hold. `SIE_FFS_MODEL_SEEDS` sets how many per fullflash.
 - `tests/fuzz.test.ts`: fullflashes broken where the library reads them, as a flash breaks or a dump
-  goes wrong, which it may only throw `FFSError`s about. `FFSHIT_FUZZ_CASES` sets the cases per
-  fullflash, `FFSHIT_FUZZ_SEED` the first seed.
+  goes wrong, which it may only throw `FFSError`s about. `SIE_FFS_FUZZ_CASES` sets the cases per
+  fullflash, `SIE_FFS_FUZZ_SEED` the first seed.
 - `tests/fullflashes.test.ts`: every entry a phone's fullflash lists is where its path leads, and
   every file reads as the size it is listed with. The known phones' open without anything broken.
   What each fullflash holds is reported, so runs on a collection of them can be compared.
@@ -99,13 +99,13 @@ subdirectories included.
   left, and writes into it.
 
 It runs on the CX70's, SL65's, S75's and EL71's fullflashes in `tests/fullflashes`, or where
-`FFSHIT_TEST_FULLFLASHES` says: `CX70v56lg3.bin`, `SL65v49lg1_TIM.bin`, `S75v40lg1.bin` and
-`EL71v41lg91.bin`. `FFSHIT_E2E_FULLFLASHES` lists more directories, whose every fullflash of an
+`SIE_FFS_TEST_FULLFLASHES` says: `CX70v56lg3.bin`, `SL65v49lg1_TIM.bin`, `S75v40lg1.bin` and
+`EL71v41lg91.bin`. `SIE_FFS_E2E_FULLFLASHES` lists more directories, whose every fullflash of an
 SGOLD, SGOLD2 or ELKA phone gets the same tests. Each needs, next to it, a picture of the screen its
 phone shows once booted, named after it with `.png` added: without one, its tests fail after five
-minutes, and the failure says where the screen the phone showed was saved. The emulator is `FFSHIT_E2E_EMU`, else
-`tests/e2e/.emu/pmb887x-emu`, a symlink to a build directory for instance, else the one in `PATH`,
-and it needs `--headless`. Without it the tests skip themselves.
+minutes, and the failure says where the screen the phone showed was saved. The emulator is
+`SIE_FFS_E2E_EMU`, else `tests/e2e/.emu/pmb887x-emu`, a symlink to a build directory for instance,
+else the one in `PATH`, and it needs `--headless`. Without it the tests skip themselves.
 
 The phones boot one at a time. Nothing is sent to one until its display, read through QEMU's
 monitor, shows the screen in `tests/e2e/screens` that it shows once booted, which takes 40 to 55 s:

@@ -64,7 +64,7 @@ export interface Session {
 // A directory holding the fullflash for the emulator to run on, and the ESN the emulator recovered
 // from the original, which spares it doing that again
 export function workDir(phone: Phone, data: Uint8Array): { dir: string, fullflash: string } {
-    const dir       = fs.mkdtempSync(path.join(os.tmpdir(), "ffshit-e2e-"));
+    const dir       = fs.mkdtempSync(path.join(os.tmpdir(), "sie-ffs-e2e-"));
     const fullflash = path.join(dir, path.basename(phone.fullflash));
     const esn       = `${findFullflash(phone.fullflash)}.esn`;
 

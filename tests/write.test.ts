@@ -176,7 +176,7 @@ for (const phone of PHONES) {
         it("leaves the buffer it was given alone", () => {
             const copy = image!.slice();
 
-            write(dirPath("ffshit.bin"), pattern(5000, 1));
+            write(dirPath("sie-ffs.bin"), pattern(5000, 1));
 
             assert.ok(equalBytes(image!, copy));
         });
@@ -188,7 +188,7 @@ for (const phone of PHONES) {
             const expected  = snapshot(ffs);
 
             sizes.forEach((size, i) => {
-                const path = dirPath(`ffshit-${size}.bin`);
+                const path = dirPath(`sie-ffs-${size}.bin`);
                 const data = pattern(size, i);
 
                 write(path, data);
@@ -202,15 +202,15 @@ for (const phone of PHONES) {
         it("creates directories", () => {
             const expected = snapshot(ffs);
 
-            ffs.mkdir(dirPath("ffshit-dir"), WRITE_TIME);
-            ffs.mkdir(dirPath("ffshit-dir/sub"), WRITE_TIME);
-            write(dirPath("ffshit-dir/a.bin"), pattern(3000, 1));
-            write(dirPath("ffshit-dir/sub/b.bin"), pattern(5, 2));
+            ffs.mkdir(dirPath("sie-ffs-dir"), WRITE_TIME);
+            ffs.mkdir(dirPath("sie-ffs-dir/sub"), WRITE_TIME);
+            write(dirPath("sie-ffs-dir/a.bin"), pattern(3000, 1));
+            write(dirPath("sie-ffs-dir/sub/b.bin"), pattern(5, 2));
 
-            expected.set(dirPath("ffshit-dir"), dirEntry());
-            expected.set(dirPath("ffshit-dir/sub"), dirEntry());
-            expected.set(dirPath("ffshit-dir/a.bin"), fileEntry(pattern(3000, 1)));
-            expected.set(dirPath("ffshit-dir/sub/b.bin"), fileEntry(pattern(5, 2)));
+            expected.set(dirPath("sie-ffs-dir"), dirEntry());
+            expected.set(dirPath("sie-ffs-dir/sub"), dirEntry());
+            expected.set(dirPath("sie-ffs-dir/a.bin"), fileEntry(pattern(3000, 1)));
+            expected.set(dirPath("sie-ffs-dir/sub/b.bin"), fileEntry(pattern(5, 2)));
 
             expectTree(snapshot(reopen()), expected);
         });
@@ -218,10 +218,10 @@ for (const phone of PHONES) {
         it("replaces a file", () => {
             const expected = snapshot(ffs);
 
-            write(dirPath("ffshit-replaced.bin"), pattern(5000, 1));
-            write(dirPath("ffshit-replaced.bin"), pattern(300, 2));
+            write(dirPath("sie-ffs-replaced.bin"), pattern(5000, 1));
+            write(dirPath("sie-ffs-replaced.bin"), pattern(300, 2));
 
-            expected.set(dirPath("ffshit-replaced.bin"), fileEntry(pattern(300, 2)));
+            expected.set(dirPath("sie-ffs-replaced.bin"), fileEntry(pattern(300, 2)));
 
             expectTree(snapshot(reopen()), expected);
         });
@@ -241,11 +241,11 @@ for (const phone of PHONES) {
         it("matches names without case", () => {
             const expected = snapshot(ffs);
 
-            write(dirPath("ffshit-Case.bin"), pattern(100, 1));
-            write(dirPath("FFSHIT-CASE.BIN"), pattern(200, 2));
+            write(dirPath("sie-ffs-Case.bin"), pattern(100, 1));
+            write(dirPath("SIE-FFS-CASE.BIN"), pattern(200, 2));
 
             // Under the name it was written with last
-            expected.set(dirPath("FFSHIT-CASE.BIN"), fileEntry(pattern(200, 2)));
+            expected.set(dirPath("SIE-FFS-CASE.BIN"), fileEntry(pattern(200, 2)));
 
             expectTree(snapshot(reopen()), expected);
         });
@@ -256,11 +256,11 @@ for (const phone of PHONES) {
 
             assert.ok(firmware);
 
-            ffs.mkdir(dirPath("ffshit-empty"), WRITE_TIME);
-            write(dirPath("ffshit-removed.bin"), pattern(4000, 1));
+            ffs.mkdir(dirPath("sie-ffs-empty"), WRITE_TIME);
+            write(dirPath("sie-ffs-removed.bin"), pattern(4000, 1));
 
-            ffs.remove(dirPath("ffshit-empty"));
-            ffs.remove(dirPath("ffshit-removed.bin"));
+            ffs.remove(dirPath("sie-ffs-empty"));
+            ffs.remove(dirPath("sie-ffs-removed.bin"));
             ffs.remove(firmware);
 
             expected.delete(firmware);
@@ -280,11 +280,11 @@ for (const phone of PHONES) {
         it("grows a directory beyond its first record", () => {
             const expected = snapshot(ffs);
 
-            ffs.mkdir(dirPath("ffshit-many"), WRITE_TIME);
-            expected.set(dirPath("ffshit-many"), dirEntry());
+            ffs.mkdir(dirPath("sie-ffs-many"), WRITE_TIME);
+            expected.set(dirPath("sie-ffs-many"), dirEntry());
 
             for (let i = 0; i < 100; ++i) {
-                const path = dirPath(`ffshit-many/file-${String(i).padStart(3, "0")}.txt`);
+                const path = dirPath(`sie-ffs-many/file-${String(i).padStart(3, "0")}.txt`);
                 const data = pattern(i * 13, i);
 
                 write(path, data);
@@ -300,17 +300,17 @@ for (const phone of PHONES) {
             // More than any of these partitions holds, so the space of the replaced copies has to
             // be reclaimed
             for (let i = 0; i < 48; ++i) {
-                write(dirPath("ffshit-churn.bin"), pattern(phone.churnSize, i));
+                write(dirPath("sie-ffs-churn.bin"), pattern(phone.churnSize, i));
             }
 
-            expected.set(dirPath("ffshit-churn.bin"), fileEntry(pattern(phone.churnSize, 47)));
+            expected.set(dirPath("sie-ffs-churn.bin"), fileEntry(pattern(phone.churnSize, 47)));
 
             expectTree(snapshot(reopen()), expected);
         });
 
         it("rejects a file that does not fit", () => {
             // Out of space, or on the made-up ones out of ids first
-            assert.throws(() => write(dirPath("ffshit-huge.bin"), pattern(64 * 1024 * 1024, 1)), FFSError);
+            assert.throws(() => write(dirPath("sie-ffs-huge.bin"), pattern(64 * 1024 * 1024, 1)), FFSError);
 
             unchanged();
         });
@@ -320,13 +320,13 @@ for (const phone of PHONES) {
 
             assert.ok(firmware);
 
-            for (const path of ["/FFS_NOPE/ffshit.bin", dirPath("ffshit-missing/ffshit.bin"), `${firmware}/ffshit.bin`, dirPath(), `/${phone.partition}`, dirPath("ffshit\\x.bin"), dirPath("x".repeat(256))]) {
+            for (const path of ["/FFS_NOPE/sie-ffs.bin", dirPath("sie-ffs-missing/sie-ffs.bin"), `${firmware}/sie-ffs.bin`, dirPath(), `/${phone.partition}`, dirPath("sie-ffs\\x.bin"), dirPath("x".repeat(256))]) {
                 assert.throws(() => write(path, pattern(1, 1)), FFSError, path);
             }
 
             assert.throws(() => ffs.mkdir(dirPath(), WRITE_TIME), FFSError);
             assert.throws(() => ffs.mkdir(firmware, WRITE_TIME), FFSError);
-            assert.throws(() => ffs.remove(dirPath("ffshit-missing.bin")), FFSError);
+            assert.throws(() => ffs.remove(dirPath("sie-ffs-missing.bin")), FFSError);
             assert.throws(() => ffs.remove(`/${phone.partition}`), FFSError);
 
             unchanged();
@@ -337,7 +337,7 @@ for (const phone of PHONES) {
 
             // On SGOLD in the codepage, and in UTF-8 when the codepage lacks a character. A U+FEFF is
             // no byte order mark.
-            for (const name of ["ffshit-Ärger.bin", "ffshit-файл.bin", "ffshit-中文.bin", "ffshit-😀.bin", "﻿ffshit-bom.bin"]) {
+            for (const name of ["sie-ffs-Ärger.bin", "sie-ffs-файл.bin", "sie-ffs-中文.bin", "sie-ffs-😀.bin", "﻿sie-ffs-bom.bin"]) {
                 const data = pattern(100, Buffer.byteLength(name));
 
                 write(dirPath(name), data);
@@ -350,15 +350,15 @@ for (const phone of PHONES) {
         it("folds the case of what the firmware folds", () => {
             const expected = snapshot(ffs);
 
-            write(dirPath("ffshit-ärger.bin"), pattern(100, 1));
-            write(dirPath("ffshit-Ärger.bin"), pattern(200, 2));
+            write(dirPath("sie-ffs-ärger.bin"), pattern(100, 1));
+            write(dirPath("sie-ffs-Ärger.bin"), pattern(200, 2));
 
             // SGOLD and EGOLD fold ASCII letters only: both files are there
             if (eightBit(phone.platform)) {
-                expected.set(dirPath("ffshit-ärger.bin"), fileEntry(pattern(100, 1)));
+                expected.set(dirPath("sie-ffs-ärger.bin"), fileEntry(pattern(100, 1)));
             }
 
-            expected.set(dirPath("ffshit-Ärger.bin"), fileEntry(pattern(200, 2)));
+            expected.set(dirPath("sie-ffs-Ärger.bin"), fileEntry(pattern(200, 2)));
 
             expectTree(snapshot(reopen()), expected);
         });
@@ -366,27 +366,27 @@ for (const phone of PHONES) {
         it("keeps 8-bit names in the phone's codepage", { skip: !eightBit(phone.platform) && "only SGOLD and EGOLD names are 8-bit" }, () => {
             ffs = FFS.open(image!, { ...phone.options, codepage: "CP1251" });
 
-            write(dirPath("ffshit-файл.bin"), pattern(100, 1));
+            write(dirPath("sie-ffs-файл.bin"), pattern(100, 1));
             // CP1251 has no Ä
-            write(dirPath("ffshit-Ärger.bin"), pattern(100, 2));
+            write(dirPath("sie-ffs-Ärger.bin"), pattern(100, 2));
 
             const cp1251 = reopen("CP1251");
 
-            assert.ok(cp1251.stat(dirPath("ffshit-файл.bin")));
-            assert.ok(cp1251.stat(dirPath("ffshit-Ärger.bin")));
+            assert.ok(cp1251.stat(dirPath("sie-ffs-файл.bin")));
+            assert.ok(cp1251.stat(dirPath("sie-ffs-Ärger.bin")));
 
             // The bytes of "файл" in CP1251 are "ôàéë" in CP1252, a name in UTF-8 reads the same in both
             const cp1252 = reopen("CP1252");
 
-            assert.ok(cp1252.stat(dirPath("ffshit-ôàéë.bin")));
-            assert.ok(cp1252.stat(dirPath("ffshit-Ärger.bin")));
+            assert.ok(cp1252.stat(dirPath("sie-ffs-ôàéë.bin")));
+            assert.ok(cp1252.stat(dirPath("sie-ffs-Ärger.bin")));
         });
 
         it("writes into every partition", () => {
             const expected = snapshot(ffs);
 
             for (const partition of ffs.readDir("/")) {
-                const path = `${partition.path}/ffshit-${partition.name}.bin`;
+                const path = `${partition.path}/sie-ffs-${partition.name}.bin`;
 
                 write(path, pattern(10000, 1));
                 expected.set(path, fileEntry(pattern(10000, 1)));

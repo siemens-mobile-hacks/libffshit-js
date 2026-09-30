@@ -1,9 +1,9 @@
 {
-    "name": "@sie-js/libffshit-js",
+    "name": "@sie-js/ffs",
     "version": "0.1.0",
     "description": "Reads and writes the filesystem of Siemens phones' fullflashes",
     "repository": {
-        "url": "git+https://github.com/siemens-mobile-hacks/libffshit-js.git"
+        "url": "git+https://github.com/siemens-mobile-hacks/node-sie-ffs.git"
     },
     "type": "module",
     "main": "dist/index.js",
