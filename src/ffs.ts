@@ -2,7 +2,6 @@ import { concat } from "./bytes.js";
 import { FFSError } from "./errors.js";
 import { resolveCodepage } from "./filesystem/codepage.js";
 import { EgoldFormat } from "./filesystem/egold.js";
-import { dateToFatTime, fatTimeToDate } from "./filesystem/fattime.js";
 import { Attributes, isDirectory, type Header } from "./filesystem/format.js";
 import { NewSgoldFormat } from "./filesystem/newsgold.js";
 import { Records } from "./filesystem/records.js";
@@ -22,6 +21,9 @@ export interface OpenOptions {
     codepage?: string;
     // Fails on anything broken, instead of leaving it out with a warning
     strict?: boolean;
+    // Writes EGOLD filesystems, as far as they are known from the phones' fullflashes. No phone has
+    // read what the library writes to them.
+    experimentalEgoldWrites?: boolean;
     logger?: Logger;
 }
 
@@ -107,7 +109,7 @@ function rootProblem(volume: Volume): string | undefined {
     }
 }
 
-function createVolume(platform: Platform, name: string, records: Records, codepage: string, log: Log): Volume {
+function createVolume(platform: Platform, name: string, records: Records, options: OpenOptions, codepage: string, log: Log): Volume {
     switch (platform) {
         case "SGOLD": {
             // Prototypes keep the root at 6006
@@ -128,7 +130,7 @@ function createVolume(platform: Platform, name: string, records: Records, codepa
         }
 
         case "EGOLD_CE": {
-            return new Volume(name, records, new EgoldFormat(records, codepage, (problem) => log.warn(problem)), "EGOLD filesystems are read only");
+            return new Volume(name, records, new EgoldFormat(records, codepage), options.experimentalEgoldWrites ? undefined : "writes to EGOLD are experimental, and made with experimentalEgoldWrites only");
         }
     }
 }
@@ -191,18 +193,18 @@ export class FFS {
             throw new FFSError("The fullflash is of an unknown platform");
         }
 
-        const { platform, partitions }  = findPartitions(data, detection.platform, detection.sl75, log);
+        const { platform, partitions, base } = findPartitions(data, detection.platform, detection.sl75, log);
         const image                     = new Image(data);
         const volumes                   = new Map<string, Volume>();
 
         for (const partition of partitions) {
-            const records = Records.open(platform, image, partition);
+            const records = Records.open(platform, image, partition, base);
 
             for (const problem of records.problems) {
                 log.warn(problem);
             }
 
-            const volume    = createVolume(platform, partition.name, records, codepage, log);
+            const volume    = createVolume(platform, partition.name, records, options, codepage, log);
             const problem   = rootProblem(volume);
 
             if (problem) {
@@ -275,7 +277,7 @@ export class FFS {
         const target = this.parentOf(path);
         const { volume, parent, name } = target;
 
-        const fatTime   = dateToFatTime(timestamp);
+        const fatTime   = volume.fatTime(timestamp);
         const stored    = volume.encodeName(name);
         const existing  = volume.find(parent.header, name);
 
@@ -297,7 +299,7 @@ export class FFS {
         const target = this.parentOf(path);
         const { volume, parent, name } = target;
 
-        const fatTime   = dateToFatTime(timestamp);
+        const fatTime   = volume.fatTime(timestamp);
         const stored    = volume.encodeName(name);
 
         if (volume.find(parent.header, name)) {
@@ -459,7 +461,7 @@ export class FFS {
             path:           node.path,
             isDirectory:    isDirectory(header),
             size,
-            timestamp:      fatTimeToDate(header.fatTime),
+            timestamp:      volume.timestamp(header),
             readonly:       (header.attributes & Attributes.READONLY) !== 0,
             hidden:         (header.attributes & Attributes.HIDDEN) !== 0,
             system:         (header.attributes & Attributes.SYSTEM) !== 0,

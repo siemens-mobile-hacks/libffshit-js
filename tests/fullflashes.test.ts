@@ -1,5 +1,6 @@
-// The phones' fullflashes, where there are any: they open without anything broken, and every file
-// they list reads as the size they list it with
+// The phones' fullflashes, where there are any: every entry they list is found by its path as it is
+// listed, and every file reads as the size it is listed with. The ones of known phones open without
+// anything broken. What each holds is reported, to compare runs on collections of them by.
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
@@ -13,38 +14,47 @@ const KNOWN: Record<string, [Platform, string]> = {
     "EL71v41lg91.bin":      ["SGOLD2_ELKA", "EL71"],
 };
 
-function files(entry: FFSTreeEntry): FFSTreeEntry[] {
-    return (entry.children ?? []).flatMap((child) => child.isDirectory ? files(child) : [child]);
+function entries(entry: FFSTreeEntry): FFSTreeEntry[] {
+    return (entry.children ?? []).flatMap((child) => [child, ...entries(child)]);
 }
 
 const fullflashes = allFullflashes();
 
 describe("The phones' fullflashes", { skip: !fullflashes.length && NO_FULLFLASHES }, () => {
     for (const name of fullflashes) {
-        it(name, () => {
-            const data = readFullflash(name)!;
+        it(name, (t) => {
+            const data  = readFullflash(name)!;
+            const known = KNOWN[name];
+            let   ffs: FFS;
 
-            if (!KNOWN[name]) {
+            try {
+                ffs = FFS.open(data, { strict: !!known });
+            } catch (e) {
                 // Of a phone of another platform, or of none
-                try {
-                    FFS.open(data);
-                } catch (e) {
-                    assert.ok(e instanceof FFSError, String(e));
-                }
+                assert.ok(!known && e instanceof FFSError, String(e));
+
+                t.diagnostic(`not opened: ${e.message}`);
 
                 return;
             }
 
-            const ffs = FFS.open(data, { strict: true });
+            const all = entries(ffs.tree());
 
-            assert.deepEqual([ffs.platform, ffs.model], KNOWN[name]);
+            t.diagnostic(`${ffs.platform} ${ffs.model}: ${all.length} entries, ${ffs.warnings.length} warnings`);
 
-            const all = files(ffs.tree());
+            if (known) {
+                assert.deepEqual([ffs.platform, ffs.model], known);
+                assert.ok(all.length > 100);
+            }
 
-            assert.ok(all.length > 100);
+            for (const entry of all) {
+                const { children: _, ...listed } = entry;
 
-            for (const file of all) {
-                assert.equal(ffs.readFile(file.path).length, file.size, file.path);
+                assert.deepEqual(ffs.stat(entry.path), listed, entry.path);
+
+                if (!entry.isDirectory) {
+                    assert.equal(ffs.readFile(entry.path).length, entry.size, entry.path);
+                }
             }
         });
     }

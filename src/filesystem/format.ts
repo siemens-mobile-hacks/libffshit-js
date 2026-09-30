@@ -42,6 +42,8 @@ export abstract class Format {
     // The id that is none: no next part, a free directory entry
     abstract readonly none: number;
     abstract readonly entrySize: number;
+    // Whether the timestamps are in UTC, or in the phone's local time
+    abstract readonly utc: boolean;
 
     constructor(protected readonly records: Records) {
     }
@@ -76,6 +78,8 @@ export abstract class Format {
 export abstract class WritableFormat extends Format {
     // The first id that is neither the firmware's own record nor the root's
     abstract readonly firstId: number;
+    // The record that keeps the size of the pieces
+    abstract readonly configId: number;
     // Where headers and parts keep the next part
     abstract readonly nextOffset: number;
     abstract readonly directoryRecordSize: number;

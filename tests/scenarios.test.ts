@@ -34,13 +34,14 @@ const EXPECTED: Record<Scenario, Expected> = {
     },
     "sgold2": {
         platform: "SGOLD2", model: "SYN", imei: IMEI,
-        // An odd byte is left out, a lone surrogate is U+FFFD, the name ends at a 0
-        tree: [...under("/FFS_0", [...SAMPLE, ...MISC, "😀 emoji.txt 5", "A 6", "�A 7", "中中中 8", "name 10"]), ...CACHE],
+        // An odd byte is left out, a lone surrogate is U+FFFD, a 0 and a leading U+FEFF are part of
+        // the name
+        tree: [...under("/FFS_0", [...SAMPLE, ...MISC, "😀 emoji.txt 5", "A 6", "�A 7", "中中中 8", "name\0after 10", "\uFEFFbom.txt 11", "inbox.lst 0", "inbox.lst\0 426"]), ...CACHE],
     },
     "elka": {
         platform: "SGOLD2_ELKA", model: "SYN", imei: IMEI,
         tree: [
-            ...under("/FFS_0", [...SAMPLE, ...MISC, "😀 emoji.txt 5", "A 6", "�A 7", "中中中 8", "name 10",
+            ...under("/FFS_0", [...SAMPLE, ...MISC, "😀 emoji.txt 5", "A 6", "�A 7", "中中中 8", "name\0after 10", "\uFEFFbom.txt 11", "inbox.lst 0", "inbox.lst\0 426",
                 ...[0x200, 0x201, 0x400, 0x401, 0x600, 0x601, 0x7FF, 0x800, 0xC00, 0xE00].map((size) => `size-${size}.bin ${size}`)]),
             ...CACHE,
         ],
@@ -110,20 +111,32 @@ const EXPECTED: Record<Scenario, Expected> = {
         warnings: ["/FFS_0/strange.bin: its data record 15 is missing"],
     },
     "egold": {
-        platform: "EGOLD_CE", model: "SYNE",
-        tree: under("/FFS", ["a.txt 100", "parts.bin 5010", "ф.t 5", "Dir/", "Dir/inner.bin 64", "Ä.t 0"]),
+        platform: "EGOLD_CE", model: "SYN",
+        tree: [...under("/FFS", [...SAMPLE, ...MISC, "Ärger.bin 5", "�A� 6", "фа 7", "�� 8"]), ...CACHE],
     },
-    "egold new": {
-        platform: "EGOLD_CE", model: "SYNE",
-        tree: under("/FFS", ["a.txt 60000"]),
+    "egold 20-byte headers": {
+        platform: "EGOLD_CE", model: "SYN",
+        tree: under("/FFS", [...SAMPLE, ...MISC, "Ärger.bin 5", "�A� 6", "фа 7", "�� 8"]),
+    },
+    "egold 128 KiB blocks": {
+        platform: "EGOLD_CE", model: "SYN",
+        tree: under("/FFS", SAMPLE),
+    },
+    "egold at another address": {
+        platform: "EGOLD_CE", model: "SYN",
+        tree: under("/FFS", SAMPLE),
+    },
+    "egold without a table": {
+        platform: "EGOLD_CE", model: "SYN",
+        tree: [...under("/FFS", SAMPLE), ...CACHE],
     },
     "egold broken": {
-        platform: "EGOLD_CE", model: "SYNE",
-        tree: under("/FFS", ["a.txt 10"]),
-        warnings: ["FFS: two records with id 2", "FFS: two files with id 7", "/FFS: record 99 is missing"],
+        platform: "EGOLD_CE", model: "SYN",
+        tree: under("/FFS", ["fine.bin 100", "missing header 10"]),
+        warnings: ["FFS: two records with id 6010", "/FFS: record 6018 is missing", "/FFS/broken part.bin: its part 36583 is missing"],
     },
     "egold without root": {
-        platform: "EGOLD_CE", model: "SYNE",
+        platform: "EGOLD_CE", model: "SYN",
         tree: [],
         warnings: ["FFS: no root directory"],
     },
@@ -179,7 +192,7 @@ describe("Made-up fullflashes", () => {
     }
 
     it("have the files' content", () => {
-        for (const name of ["sgold", "sgold2", "elka", "sgold prototype"] as const) {
+        for (const name of ["sgold", "sgold2", "elka", "sgold prototype", "egold", "egold 20-byte headers", "egold 128 KiB blocks", "egold at another address", "egold without a table"] as const) {
             const ffs  = FFS.open(SCENARIOS[name]());
             const root = ffs.readDir("/")[0].path;
 
@@ -187,18 +200,27 @@ describe("Made-up fullflashes", () => {
             assert.ok(equalBytes(ffs.readFile(`${root}/big.bin`), pattern(20000, 6)), name);
         }
 
-        assert.ok(equalBytes(FFS.open(SCENARIOS.sgold2()).readFile("/FFS_0/Misc/sub/deep.txt"), pattern(60, 11)));
+        const sgold2 = FFS.open(SCENARIOS.sgold2());
+
+        assert.ok(equalBytes(sgold2.readFile("/FFS_0/Misc/sub/deep.txt"), pattern(60, 11)));
+        assert.equal(sgold2.readFile("/FFS_0/INBOX.LST").length, 0);
+        assert.ok(equalBytes(sgold2.readFile("/FFS_0/inbox.lst\0"), pattern(426, 18)));
 
         const elka = FFS.open(SCENARIOS.elka());
 
         [0x200, 0x201, 0x400, 0x401, 0x600, 0x601, 0x7FF, 0x800, 0xC00, 0xE00].forEach((size, i) => {
             assert.ok(equalBytes(elka.readFile(`/FFS_0/size-${size}.bin`), pattern(size, 20 + i)), `size-${size}.bin`);
         });
+    });
 
-        const egold = FFS.open(SCENARIOS.egold());
+    it("have the timestamps in local time, on SGOLD2 and ELKA in UTC", () => {
+        for (const name of ["sgold", "egold"] as const) {
+            assert.deepEqual(FFS.open(SCENARIOS[name]()).stat("/FFS/parts.bin")?.timestamp, new Date(2107, 11, 31, 23, 59, 58), name);
+        }
 
-        assert.ok(equalBytes(egold.readFile("/FFS/parts.bin"), Uint8Array.from([...pattern(3000, 2), ...pattern(2000, 3), ...pattern(10, 4)])));
-        assert.ok(equalBytes(FFS.open(SCENARIOS["egold new"]()).readFile("/FFS/a.txt"), pattern(60000, 1)));
+        for (const name of ["sgold2", "elka"] as const) {
+            assert.deepEqual(FFS.open(SCENARIOS[name]()).stat("/FFS_0/parts.bin")?.timestamp, new Date(Date.UTC(2107, 11, 31, 23, 59, 58)), name);
+        }
     });
 
     it("keep what comes before the fullflash when they are saved", () => {
@@ -213,10 +235,14 @@ describe("Made-up fullflashes", () => {
         assert.ok(equalBytes(FFS.open(ffs.save()).readFile("/FFS/new.bin"), pattern(10, 1)));
     });
 
-    it("can be taken for another platform", () => {
-        const ffs = FFS.open(SCENARIOS.egold(), { platform: "EGOLD_CE" });
+    it("can be given a platform the detector does not find", () => {
+        const image = SCENARIOS.sgold();
 
-        assert.equal(ffs.readDir("/FFS").length, 5);
+        // The boot core's name
+        image.fill(0, 0x870, 0x874);
+
+        assert.throws(() => FFS.open(image), { name: "FFSError", message: "The fullflash is of an unknown platform" });
+        assert.equal(FFS.open(image, { platform: "SGOLD" }).readDir("/FFS").length, 12);
         assert.throws(() => FFS.open(new Uint8Array(0x100000), { platform: "EGOLD_CE" }), { name: "FFSError", message: "No filesystem partitions found" });
     });
 });

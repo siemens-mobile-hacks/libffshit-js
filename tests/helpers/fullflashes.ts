@@ -1,6 +1,6 @@
 // The phones' fullflashes, which are their firmware and not part of the repository:
 // FFSHIT_TEST_FULLFLASHES lists directories holding them, separated by the path delimiter, else
-// tests/fullflashes, which may be a symlink.
+// tests/fullflashes, which may be a symlink. They are known by their paths in the directories.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -16,15 +16,24 @@ function directories(): string[] {
     return dirs.filter((dir) => fs.existsSync(dir));
 }
 
+// By its path in the directories, or by an absolute one
+export function findFullflash(name: string): string | undefined {
+    const files = path.isAbsolute(name) ? [name] : directories().map((dir) => path.join(dir, name));
+
+    return files.find((file) => fs.existsSync(file));
+}
+
 export function readFullflash(name: string): Uint8Array | undefined {
-    const file = directories().map((dir) => path.join(dir, name)).find((file) => fs.existsSync(file));
+    const file = findFullflash(name);
 
     return file ? new Uint8Array(fs.readFileSync(file)) : undefined;
 }
 
-// The names of all there are
-export function allFullflashes(): string[] {
-    const names = directories().flatMap((dir) => fs.readdirSync(dir).filter((name) => name.toLowerCase().endsWith(".bin")));
+// All there are, in subdirectories too: raw dumps, and x65flasher's
+export function allFullflashes(dirs = directories()): string[] {
+    const names = dirs.flatMap((dir) => fs.readdirSync(dir, { recursive: true, encoding: "utf8" })
+        .filter((name) => /\.(bin|fls|fbk)$/i.test(name) && fs.statSync(path.join(dir, name)).isFile())
+        .map((name) => name.split(path.sep).join("/")));
 
     return [...new Set(names)].sort();
 }

@@ -18,6 +18,7 @@ interface Codepage {
 
 const codepages = new Map<string, Codepage>();
 const utf8Decoder = new TextDecoder("utf-8", { ignoreBOM: true });
+const strictUtf8Decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 const utf8Encoder = new TextEncoder();
 
 function table(name: string): Codepage {
@@ -89,7 +90,7 @@ function encode(name: string, codepage: string): Uint8Array | undefined {
 function decode(stored: Uint8Array, codepage: string): string | undefined {
     if (codepage === UTF8) {
         try {
-            return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(stored);
+            return strictUtf8Decoder.decode(stored);
         } catch {
             return undefined;
         }

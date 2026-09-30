@@ -3,11 +3,11 @@ import { describe, it } from "node:test";
 import { FFS, FFSError } from "../src/index.js";
 import { equalBytes, pattern } from "./helpers/data.js";
 import { SCENARIOS } from "./helpers/scenarios.js";
-import { egoldDirectory, egoldImage, fatTime, filesystemRecords, formattedImage, RecordsBuilder, type FsFile } from "./helpers/synthetic.js";
+import { fatTime, filesystemRecords, RecordsBuilder, type FsFile } from "./helpers/synthetic.js";
 
 function sgoldImage(files: FsFile[]): Uint8Array {
     const layout  = { platform: "SGOLD" as const, size: 0x800000, blockSize: 0x10000, partitions: [{ name: "FFS", blocks: 8 }] };
-    const builder = new RecordsBuilder(formattedImage(layout), "SGOLD");
+    const builder = new RecordsBuilder(layout);
 
     for (const [id, data] of filesystemRecords("SGOLD", files, { chunkSize: 1024 })) {
         builder.add("FFS", id, data);
@@ -106,21 +106,12 @@ describe("FFS", () => {
     });
 
     it("collects the warnings, or in strict mode throws them", () => {
-        const image = egoldImage({
-            size: 0x800000,
-            blocks: 1,
-            files: [
-                { id: 6, parentId: 6, name: new Uint8Array(0), attributes: 0x10, fat: 0, data: egoldDirectory([7]) },
-                { id: 7, parentId: 6, name: Buffer.from("a"), attributes: 0, fat: 0, data: pattern(10, 1) },
-                { id: 7, parentId: 6, name: Buffer.from("b"), attributes: 0, fat: 0, data: pattern(10, 2) },
-            ],
-        });
+        const image = SCENARIOS["egold broken"]();
+        const ffs   = FFS.open(image);
 
-        const ffs = FFS.open(image);
-
-        assert.deepEqual(ffs.warnings, ["FFS: two files with id 7"]);
-        assert.deepEqual(ffs.readDir("/FFS").map((entry) => entry.name), ["a"]);
-        assert.throws(() => FFS.open(image, { strict: true }), { name: "FFSError", message: "FFS: two files with id 7" });
+        assert.deepEqual(ffs.warnings, ["FFS: two records with id 6010", "/FFS: record 6018 is missing", "/FFS/broken part.bin: its part 36583 is missing"]);
+        assert.deepEqual(ffs.readDir("/FFS").map((entry) => entry.name), ["fine.bin", "missing header"]);
+        assert.throws(() => FFS.open(image, { strict: true }), { name: "FFSError", message: "FFS: two records with id 6010" });
     });
 
     it("logs to the logger it is given", () => {
@@ -197,10 +188,18 @@ describe("FFS", () => {
             assert.ok(equalBytes(ffs.save(), sgoldImage(FILES)));
         });
 
-        it("not to EGOLD", () => {
+        it("not to EGOLD, unless asked to", () => {
             const ffs = FFS.open(SCENARIOS.egold());
 
-            assert.throws(() => ffs.writeFile("/FFS/a", pattern(1, 1)), { name: "FFSError", message: "FFS: EGOLD filesystems are read only" });
+            assert.throws(() => ffs.writeFile("/FFS/a", pattern(1, 1)), { name: "FFSError", message: "FFS: writes to EGOLD are experimental, and made with experimentalEgoldWrites only" });
+
+            const asked = FFS.open(SCENARIOS.egold(), { experimentalEgoldWrites: true });
+
+            asked.writeFile("/FFS/a", pattern(1, 1));
+
+            assert.ok(equalBytes(FFS.open(asked.save()).readFile("/FFS/a"), pattern(1, 1)));
+            // No longer than the phones' own
+            assert.throws(() => asked.writeFile(`/FFS/${"x".repeat(63)}`, pattern(1, 1)), { name: "FFSError", message: "Names are up to 62 bytes long" });
         });
 
         it("not to a prototype's filesystem", () => {

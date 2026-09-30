@@ -5,14 +5,17 @@
 // Records are only ever appended, deleted by clearing bits of their FIT entry's flags, or changed
 // in place where that only clears bits, which is what the flash allows. When no block has room
 // left, a block is compacted: rewritten with its valid records only, as the firmware's reclaim
-// would, with its erase counter incremented. One block without valid records is left alone, for
-// the firmware to reclaim into.
+// would, with its erase counter incremented. So are the blocks an operation wrote to once it is
+// done, as the firmware leaves next to no deleted records: an ELKA phone reclaims them all when it
+// boots, which takes it minutes. One block without valid records is left alone, for the firmware
+// to reclaim into.
 
-import { concat, hex, le32, u16, u32 } from "../bytes.js";
+import { concat, hex, le16, le32, u16, u32 } from "../bytes.js";
 import { FFSError } from "../errors.js";
 import type { Platform } from "../fullflash/detector.js";
-import type { Block, Partition } from "../fullflash/partitions.js";
+import { EGOLD_DELETED, EGOLD_FIRST_RECORD, EGOLD_FIT_ENTRY_SIZE, EGOLD_HEADER_OFFSET, EGOLD_VALID, type Block, type Partition } from "../fullflash/partitions.js";
 import type { Image } from "../image.js";
+import { EGOLD_ID_OFFSET } from "./egold.js";
 
 const FLAGS_FREE    = 0xFFFFFFFF;
 const FLAGS_VALID   = 0xFFFFFFC0;
@@ -27,6 +30,8 @@ interface Entry {
     size: number;
     // where its data is: in the block, or on EGOLD in the fullflash
     offset: number;
+    // EGOLD's byte after the id, which a moved record keeps
+    tag?: number;
 }
 
 interface RecordsBlock {
@@ -63,16 +68,19 @@ export abstract class Records {
     // the original content of the blocks the operation wrote to, by block
     private readonly savedBlocks = new Map<number, Uint8Array>();
 
-    static open(platform: Platform, image: Image, partition: Partition): Records {
+    // `base` is where the fullflash starts in the phone's address space, by which EGOLD's FITs
+    // address records
+    static open(platform: Platform, image: Image, partition: Partition, base: number): Records {
         switch (platform) {
             case "SGOLD":
             case "SGOLD2":      return new LinearRecords(image, partition);
             case "SGOLD2_ELKA": return new ElkaRecords(image, partition);
-            case "EGOLD_CE":    return new EgoldRecords(image, partition);
+            case "EGOLD_CE":    return new EgoldRecords(image, partition, base);
         }
     }
 
-    protected constructor(protected readonly image: Image, readonly partition: string, blocks: readonly Block[]) {
+    // The firmware's own records are the first ids from `idOffset` on
+    protected constructor(protected readonly image: Image, private readonly partition: string, blocks: readonly Block[], private readonly idOffset = 0) {
         this.blocks = blocks.map((block) => ({ addr: block.addr, size: block.size, entries: [], fitNext: 0, dataEnd: 0 }));
     }
 
@@ -94,7 +102,7 @@ export abstract class Records {
 
         // The firmware's own records list ids: of the operations it logged, of the files it keeps
         // open. Whatever they mention is never handed out.
-        for (let id = 1; id <= 5; ++id) {
+        for (let id = this.idOffset + 1; id <= this.idOffset + 5; ++id) {
             if (!this.has(id)) {
                 continue;
             }
@@ -102,7 +110,11 @@ export abstract class Records {
             const data = this.read(id);
 
             for (let offset = 0; offset + 2 <= data.length; offset += 2) {
-                this.excluded[u16(data, offset)] = 1;
+                const mentioned = u16(data, offset) + this.idOffset;
+
+                if (mentioned <= MAX_ID) {
+                    this.excluded[mentioned] = 1;
+                }
             }
         }
 
@@ -160,11 +172,6 @@ export abstract class Records {
         return this.index.has(id);
     }
 
-    // The ids of the valid records, in the order of the blocks and their FITs
-    ids(): IterableIterator<number> {
-        return this.index.keys();
-    }
-
     // The record's data, which may be a view of the fullflash: it is only valid until the next write
     read(id: number): Uint8Array {
         const [block, entry] = this.locate(id);
@@ -217,7 +224,7 @@ export abstract class Records {
         const [block, entry] = this.locate(id);
 
         this.touch(this.index.get(id)![0]);
-        this.write(block.addr + entry.fitOffset, le32(FLAGS_DELETED));
+        this.markDeleted(block, entry);
 
         entry.flags = FLAGS_DELETED;
 
@@ -254,6 +261,7 @@ export abstract class Records {
 
         try {
             operation();
+            this.tidy();
         } catch (e) {
             for (const [blockIndex, saved] of this.savedBlocks) {
                 this.image.writable().set(saved, this.blocks[blockIndex].addr);
@@ -367,23 +375,40 @@ export abstract class Records {
         throw new FFSError(`Not enough free space in ${this.partition}`);
     }
 
+    // Leaves no deleted records in the blocks the operation wrote to
+    private tidy(): void {
+        for (const i of this.savedBlocks.keys()) {
+            const block = this.blocks[i];
+
+            if (block.entries.every((entry) => entry.flags === FLAGS_VALID)) {
+                continue;
+            }
+
+            if (block.entries.some((entry) => entry.flags === FLAGS_VALID)) {
+                this.compact(i);
+            } else {
+                this.erase(block);
+            }
+        }
+    }
+
     private compact(blockIndex: number): void {
         const block = this.blocks[blockIndex];
-        const valid: [number, Uint8Array][] = [];
+        const valid: [Entry, Uint8Array][] = [];
 
         for (const entry of block.entries) {
             if (entry.flags === FLAGS_VALID) {
-                valid.push([entry.id, this.readEntry(block, entry).slice()]);
+                valid.push([entry, this.readEntry(block, entry).slice()]);
             }
         }
 
         this.touch(blockIndex);
         this.erase(block);
 
-        for (const [id, data] of valid) {
-            this.append(block, id, data);
+        for (const [entry, data] of valid) {
+            this.append(block, entry.id, data, entry);
 
-            this.index.set(id, [blockIndex, block.entries.length - 1]);
+            this.index.set(entry.id, [blockIndex, block.entries.length - 1]);
         }
     }
 
@@ -393,6 +418,10 @@ export abstract class Records {
 
     protected fill(address: number, size: number): void {
         this.image.writable().fill(0xFF, address, address + size);
+    }
+
+    protected markDeleted(block: RecordsBlock, entry: Entry): void {
+        this.write(block.addr + entry.fitOffset, le32(FLAGS_DELETED));
     }
 
     protected incrementEraseCounter(address: number): void {
@@ -428,8 +457,9 @@ export abstract class Records {
     // Where byte `offset` of a record is in the fullflash
     protected abstract entryAddress(block: RecordsBlock, entry: Entry, offset: number): number;
     protected abstract fits(block: RecordsBlock, size: number): boolean;
-    // Writes the record and its FIT entry, and moves fitNext and dataEnd on
-    protected abstract append(block: RecordsBlock, id: number, data: Uint8Array): void;
+    // Writes the record and its FIT entry, and moves fitNext and dataEnd on. `from` is the entry of
+    // the record it moves.
+    protected abstract append(block: RecordsBlock, id: number, data: Uint8Array, from?: Entry): void;
     // Everything but the block's header back to 0xFF, as an erase leaves it
     protected abstract erase(block: RecordsBlock): void;
 }
@@ -699,18 +729,22 @@ class ElkaRecords extends Records {
 
 // =========================================================================
 
-const EGOLD_FIT_ENTRY_SIZE = 12;
+// Of the records the firmware writes, what it does with this is not known
+const EGOLD_NEW_TAG         = 0x02;
+// What the firmware leaves free between the data and the FIT at the least, its free entry included
+const EGOLD_RESERVE         = 32;
 
-// EGOLD, which is only read: FIT entries of 12 bytes, whose records are anywhere in the fullflash,
-// by their address in the phone's
+function align2(size: number): number {
+    return (size + 1) & ~1;
+}
+
+// EGOLD: a 16 byte header at 0x80, the data packed from 0x90 on at 2 byte boundaries, and the FIT's
+// 12 byte entries growing down from the block's end: the state, 0, the size, the address in the
+// phone, the id, a tag and the state again. An erase leaves the header as it is: what the
+// firmware keeps in it besides the partition's name and the block's number is not known.
 class EgoldRecords extends Records {
-    // The fullflash ends at 16 MiB in the phone's address space
-    private readonly base: number;
-
-    constructor(image: Image, partition: Partition) {
-        super(image, partition.name, partition.blocks);
-
-        this.base = 0x1000000 - image.data.length;
+    constructor(image: Image, partition: Partition, private readonly base: number) {
+        super(image, partition.name, partition.blocks, EGOLD_ID_OFFSET);
 
         this.scan();
     }
@@ -719,46 +753,86 @@ class EgoldRecords extends Records {
         const data = this.image.data;
 
         block.entries = [];
+        block.dataEnd = EGOLD_FIRST_RECORD;
 
-        for (let offset = block.size - EGOLD_FIT_ENTRY_SIZE; offset > 0; offset -= EGOLD_FIT_ENTRY_SIZE) {
-            const addr  = block.addr + offset;
-            const flags = u16(data, addr);
+        let offset = block.size - EGOLD_FIT_ENTRY_SIZE;
 
-            if (flags === 0xFFFF) {
+        for (; offset > 0; offset -= EGOLD_FIT_ENTRY_SIZE) {
+            const addr = block.addr + offset;
+
+            if (u16(data, addr) === 0xFFFF) {
                 break;
             }
 
-            block.entries.push({
+            const entry: Entry = {
                 fitOffset:  offset,
-                flags:      (flags & 0xFF) === 0xFC ? FLAGS_VALID : FLAGS_DELETED,
+                flags:      data[addr] === EGOLD_VALID ? FLAGS_VALID : FLAGS_DELETED,
                 size:       u16(data, addr + 2),
                 offset:     u32(data, addr + 4) - this.base,
                 id:         u16(data, addr + 8),
-            });
+                tag:        data[addr + 10],
+            };
+
+            block.entries.push(entry);
+
+            if (this.inBlock(block, entry)) {
+                block.dataEnd = Math.max(block.dataEnd, align2(entry.offset - block.addr + entry.size));
+            }
         }
+
+        block.fitNext = Math.max(offset, 0);
     }
 
-    protected inBlock(_block: RecordsBlock, entry: Entry): boolean {
-        return entry.offset >= 0 && entry.offset + entry.size <= this.image.data.length;
+    protected inBlock(block: RecordsBlock, entry: Entry): boolean {
+        return entry.offset >= block.addr + EGOLD_FIRST_RECORD && entry.offset + entry.size <= block.addr + block.size;
     }
 
     protected readEntry(_block: RecordsBlock, entry: Entry): Uint8Array {
         return this.image.data.subarray(entry.offset, entry.offset + entry.size);
     }
 
-    protected entryAddress(): number {
-        throw new FFSError("EGOLD records are read only");
+    protected entryAddress(_block: RecordsBlock, entry: Entry, offset: number): number {
+        return entry.offset + offset;
     }
 
-    protected fits(): boolean {
-        throw new FFSError("EGOLD records are read only");
+    protected fits(block: RecordsBlock, size: number): boolean {
+        return size <= 0xFFFF && block.fitNext - (block.dataEnd + size) >= EGOLD_RESERVE;
     }
 
-    protected append(): void {
-        throw new FFSError("EGOLD records are read only");
+    protected append(block: RecordsBlock, id: number, data: Uint8Array, from?: Entry): void {
+        const entry: Entry = {
+            fitOffset:  block.fitNext,
+            flags:      FLAGS_VALID,
+            size:       data.length,
+            offset:     block.addr + block.dataEnd,
+            id,
+            tag:        from?.tag ?? EGOLD_NEW_TAG,
+        };
+
+        const addr = block.addr + entry.fitOffset;
+
+        this.write(entry.offset, data);
+        this.write(addr + 1, concat([Uint8Array.of(0), le16(entry.size), le32(entry.offset + this.base), le16(id), Uint8Array.of(entry.tag!)]));
+        // Valid only once the rest is written
+        this.write(addr, Uint8Array.of(EGOLD_VALID));
+        this.write(addr + 11, Uint8Array.of(EGOLD_VALID));
+
+        block.entries.push(entry);
+        block.dataEnd = align2(block.dataEnd + data.length);
+        block.fitNext -= EGOLD_FIT_ENTRY_SIZE;
     }
 
-    protected erase(): void {
-        throw new FFSError("EGOLD records are read only");
+    protected override markDeleted(block: RecordsBlock, entry: Entry): void {
+        this.write(block.addr + entry.fitOffset, Uint8Array.of(EGOLD_DELETED));
+        this.write(block.addr + entry.fitOffset + 11, Uint8Array.of(EGOLD_DELETED));
+    }
+
+    protected erase(block: RecordsBlock): void {
+        this.fill(block.addr, EGOLD_HEADER_OFFSET);
+        this.fill(block.addr + EGOLD_FIRST_RECORD, block.size - EGOLD_FIRST_RECORD);
+
+        block.entries = [];
+        block.dataEnd = EGOLD_FIRST_RECORD;
+        block.fitNext = block.size - EGOLD_FIT_ENTRY_SIZE;
     }
 }

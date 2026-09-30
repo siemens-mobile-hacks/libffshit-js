@@ -189,3 +189,21 @@ export function nameHashUtf16(name: string): number {
 export function nameHash8bit(name: Uint8Array): number {
     return hash(Array.from(name, foldCase8bit));
 }
+
+// EGOLD: of the name as it is stored, taken to 7 bits and upper-cased, up to the first byte that is
+// 0 then. 7 counts as 15, as the firmware's hashes of names with a "ч" in UTF-8 have it.
+export function nameHash7bit(name: Uint8Array): number {
+    const codes: number[] = [];
+
+    for (const byte of name) {
+        const c = byte & 0x7F;
+
+        if (!c) {
+            break;
+        }
+
+        codes.push(c === 0x07 ? 0x0F : foldCase8bit(c));
+    }
+
+    return hash(codes);
+}

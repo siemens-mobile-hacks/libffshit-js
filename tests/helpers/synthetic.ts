@@ -2,14 +2,10 @@
 // table the search finds, formatted blocks, and filesystems with what the loaders have to cope with.
 // They are small, and not the phones' firmware, so they can be part of the repository's tests.
 
-import { nameHash8bit, nameHashUtf16 } from "../../src/filesystem/hash.js";
+import { nameHash7bit, nameHash8bit, nameHashUtf16 } from "../../src/filesystem/hash.js";
 import { Records } from "../../src/filesystem/records.js";
-import { detect } from "../../src/fullflash/detector.js";
-import { findPartitions, type Partition } from "../../src/fullflash/partitions.js";
+import type { Platform } from "../../src/fullflash/detector.js";
 import { Image } from "../../src/image.js";
-import { Log } from "../../src/log.js";
-
-type RecordPlatform = "SGOLD" | "SGOLD2" | "SGOLD2_ELKA";
 
 function setU16(data: Uint8Array, offset: number, value: number): void {
     data[offset]     = value & 0xFF;
@@ -49,10 +45,12 @@ export interface PartitionLayout {
     blocks: number;
     // indexes of blocks left unformatted
     unformatted?: number[];
+    // EGOLD: a multiple of 64 KiB, else the layout's
+    blockSize?: number;
 }
 
 export interface ImageLayout {
-    platform: RecordPlatform;
+    platform: Platform;
     size: number;
     blockSize: number;
     partitions: PartitionLayout[];
@@ -65,6 +63,8 @@ export interface ImageLayout {
     blockAddressOffset?: number;
     // the model and the IMEI written somewhere else than the detector reads them first
     detectorFallbacks?: boolean;
+    // EGOLD: where the image starts in the phone's address space, 16 MiB before its end by default
+    base?: number;
 }
 
 const POINTER_ADDR  = 0x1000;
@@ -96,6 +96,17 @@ export function formattedImage(layout: ImageLayout): Uint8Array {
             setString(data, 0x660, imei);
 
             break;
+        }
+
+        case "EGOLD_CE": {
+            // The flash configuration block: the language pack, the model and the vendor
+            setString(data, 0x80000 - 0xA0, "lg1");
+            setString(data, 0x80000 - 0x90, model);
+            setString(data, 0x80000 - 0x80, "SIEMENS");
+
+            egoldTable(data, layout);
+
+            return data;
         }
 
         case "SGOLD2_ELKA": {
@@ -172,22 +183,75 @@ export function formattedImage(layout: ImageLayout): Uint8Array {
     return data;
 }
 
-// Adds records to a formatted image's partitions, where the library would write them
+function egoldBase(layout: ImageLayout): number {
+    return layout.base ?? 0x1000000 - layout.size;
+}
+
+// EGOLD's: a pointer to a table of records of blocks, each with where the block's address is, whose
+// header names the partition
+function egoldTable(data: Uint8Array, layout: ImageLayout): void {
+    const base      = egoldBase(layout);
+    const blocks    = layout.partitions.flatMap((partition) => Array.from({ length: partition.blocks }, (_, i) => ({ name: partition.name, number: i, size: partition.blockSize ?? layout.blockSize })));
+    let   blockAddr = layout.blocksAddr ?? BLOCKS_ADDR;
+
+    // Addresses are segment:offset, with 16 KiB segments
+    const segment = (offset: number): number => {
+        const page = base + offset;
+
+        return ((Math.floor(page / 0x4000) << 16) | (page % 0x4000)) >>> 0;
+    };
+
+    setU32(data, POINTER_ADDR, blocks.length);
+    setU16(data, POINTER_ADDR + 4, 1);
+    setU32(data, POINTER_ADDR + 6, segment(TABLE_ADDR));
+
+    blocks.forEach((block, i) => {
+        // Of 128 KiB sectors, or of 64 KiB ones
+        const wide = block.size % 0x20000 === 0;
+
+        setU16(data, TABLE_ADDR + i * 6, block.size / (wide ? 0x20000 : 0x10000));
+        setU32(data, TABLE_ADDR + i * 6 + 2, segment(LISTS_ADDR + i * 6));
+        setU32(data, LISTS_ADDR + i * 6, base + blockAddr);
+        setU16(data, LISTS_ADDR + i * 6 + 4, wide ? 0x80 : 0);
+
+        data.fill(0xFF, blockAddr, blockAddr + block.size);
+
+        // FE FE, the name, 1, the block's number, what the phones have there, FE FE
+        setU16(data, blockAddr + 0x80, 0xFEFE);
+        data.fill(0, blockAddr + 0x82, blockAddr + 0x88);
+        setString(data, blockAddr + 0x82, block.name);
+        setU16(data, blockAddr + 0x88, 1);
+        setU16(data, blockAddr + 0x8A, block.number);
+        setU16(data, blockAddr + 0x8C, 0xFFA0);
+        setU16(data, blockAddr + 0x8E, 0xFEFE);
+
+        blockAddr += block.size;
+    });
+}
+
+// Of an EGOLD image made by formattedImage(), as a dump of the flash from after it has it
+export function removeEgoldTable(data: Uint8Array): void {
+    data.fill(0, POINTER_ADDR, POINTER_ADDR + 10);
+}
+
+// An image made by formattedImage(), and records added to its partitions' formatted blocks, where
+// the library would write them
 export class RecordsBuilder {
     private readonly image: Image;
-    private readonly partitions: Partition[];
     private readonly records = new Map<string, Records>();
 
-    constructor(data: Uint8Array, private readonly platform: RecordPlatform) {
-        this.image      = new Image(data);
-        this.partitions = findPartitions(data, platform, detect(data, platform).sl75, new Log()).partitions;
+    constructor(private readonly layout: ImageLayout) {
+        this.image = new Image(formattedImage(layout));
     }
 
     add(partition: string, id: number, data: Uint8Array): void {
         let records = this.records.get(partition);
 
         if (!records) {
-            records = Records.open(this.platform, this.image, this.partitions.find((p) => p.name === partition)!);
+            const unformatted   = this.layout.partitions.find((p) => p.name === partition)?.unformatted ?? [];
+            const blocks        = layoutBlocks(this.layout, partition).filter((_, i) => !unformatted.includes(i));
+
+            records = Records.open(this.layout.platform, this.image, { name: partition, blocks }, egoldBase(this.layout));
             this.records.set(partition, records);
         }
 
@@ -201,8 +265,30 @@ export class RecordsBuilder {
 
 // Changes a FIT entry of a record in any of the blocks: its flags, or its id, e.g. to one another
 // record has
-export function patchFitEntry(image: Uint8Array, platform: RecordPlatform, blocks: { addr: number, size: number }[], id: number, field: "flags" | "id" | "size", value: number): void {
+export function patchFitEntry(image: Uint8Array, platform: Platform, blocks: { addr: number, size: number }[], id: number, field: "flags" | "id" | "size", value: number): void {
     const elka = platform === "SGOLD2_ELKA";
+
+    // The state, 0, the size, the address, the id, a tag and the state again
+    if (platform === "EGOLD_CE") {
+        for (const block of blocks) {
+            for (let at = block.addr + block.size - 12; at > block.addr && image[at] !== 0xFF; at -= 12) {
+                if ((image[at + 8] | (image[at + 9] << 8)) !== id || image[at] !== 0xFC) {
+                    continue;
+                }
+
+                if (field === "flags") {
+                    image[at]      = value;
+                    image[at + 11] = value;
+                } else {
+                    setU16(image, at + (field === "id" ? 8 : 2), value);
+                }
+
+                return;
+            }
+        }
+
+        throw new Error(`No record ${id}`);
+    }
 
     for (const block of blocks) {
         let offset = block.size - (elka ? 64 : 16);
@@ -234,11 +320,13 @@ export function layoutBlocks(layout: ImageLayout, partition: string): { addr: nu
     let addr = layout.blocksAddr ?? BLOCKS_ADDR;
 
     for (const p of layout.partitions) {
+        const size = p.blockSize ?? layout.blockSize;
+
         if (p.name === partition) {
-            return Array.from({ length: p.blocks }, (_, i) => ({ addr: addr + i * layout.blockSize, size: layout.blockSize }));
+            return Array.from({ length: p.blocks }, (_, i) => ({ addr: addr + i * size, size }));
         }
 
-        addr += p.blocks * layout.blockSize;
+        addr += p.blocks * size;
     }
 
     throw new Error(`No partition ${partition}`);
@@ -276,8 +364,10 @@ export interface FsOptions {
     rootFat?: number;
     // what the root's header names it, nothing by default
     rootName?: Uint8Array;
-    // added to every record's id, as SGOLD prototypes have them
+    // added to every record's id, as SGOLD prototypes and EGOLD have them
     idOffset?: number;
+    // EGOLD's headers and parts, of 16 bytes or of 20
+    headerSize?: number;
 }
 
 interface Ids {
@@ -285,9 +375,13 @@ interface Ids {
 }
 
 // The records of a filesystem, id by id, in the format of the platform
-export function filesystemRecords(platform: RecordPlatform, root: FsFile[], options: FsOptions): Map<number, Uint8Array> {
+export function filesystemRecords(platform: Platform, root: FsFile[], options: FsOptions): Map<number, Uint8Array> {
     const records   = new Map<number, Uint8Array>();
-    const sgold     = platform === "SGOLD";
+    const egold     = platform === "EGOLD_CE";
+    const sgold     = platform === "SGOLD" || egold;
+    // EGOLD's headers and parts end in 0xFF
+    const padding   = new Uint8Array((options.headerSize ?? 16) - 16).fill(0xFF);
+    const idOffset  = options.idOffset ?? (egold ? 6000 : 0);
     const rootId    = sgold ? 6 : 10;
     const ids: Ids  = { next: sgold ? 10 : 12 };
     const none      = sgold ? 0xFFFF : 0xFFFFFFFF;
@@ -315,7 +409,7 @@ export function filesystemRecords(platform: RecordPlatform, root: FsFile[], opti
 
     const header = (id: number, parentId: number, dataId: number, nextPart: number, size: number, fat: number, attributes: number, name: Uint8Array): Uint8Array => {
         if (sgold) {
-            return concat(u16(id), u16(parentId), u32(fat), u16(dataId), u32((0xFFFF0000 | attributes) >>> 0), u16(nextPart), name, Uint8Array.of(0));
+            return concat(u16(id), u16(parentId), u32(fat), u16(dataId), u32((0xFFFF0000 | attributes) >>> 0), u16(nextPart), padding, name, Uint8Array.of(0));
         }
 
         return concat(u32(id), u32(0xFFFFFFFF), u32(nextPart), u32(parentId), u32(size), u32(fat), u16(attributes), u16(name.length >> 1), name);
@@ -323,7 +417,7 @@ export function filesystemRecords(platform: RecordPlatform, root: FsFile[], opti
 
     const part = (id: number, dataId: number, prev: number, next: number, owner: { parentId: number, fat: number, attributes: number }): Uint8Array => {
         if (sgold) {
-            return concat(u16(id), u16(owner.parentId), u32(owner.fat), u16(dataId), u16(owner.attributes), u16(prev), u16(next));
+            return concat(u16(id), u16(owner.parentId), u32(owner.fat), u16(dataId), u16(owner.attributes), u16(prev), u16(next), padding);
         }
 
         return concat(u32(id), u32(prev), u32(next));
@@ -355,7 +449,7 @@ export function filesystemRecords(platform: RecordPlatform, root: FsFile[], opti
         for (const child of children) {
             const childId = child.headerId ?? allocate();
             const stored  = storedName(child.name);
-            const hash    = sgold ? nameHash8bit(stored) : nameHashUtf16(String.fromCharCode(...Array.from({ length: stored.length >> 1 }, (_, i) => stored[i * 2] | (stored[i * 2 + 1] << 8))));
+            const hash    = egold ? nameHash7bit(stored) : sgold ? nameHash8bit(stored) : nameHashUtf16(String.fromCharCode(...Array.from({ length: stored.length >> 1 }, (_, i) => stored[i * 2] | (stored[i * 2 + 1] << 8))));
 
             entries.push(sgold ? concat(u16(childId), u16(hash)) : concat(u32(childId), u32((0xFFFF0000 | hash) >>> 0)));
 
@@ -387,156 +481,19 @@ export function filesystemRecords(platform: RecordPlatform, root: FsFile[], opti
         records.set(id, header(id, parentId, id + 1, nextPart, 0, fat, attributes, name));
     };
 
-    // The configuration record: the chunk size
-    records.set(0, sgold ? concat(u16(1), u16(chunk), new Uint8Array(12)) : concat(u32(1), u32(chunk), new Uint8Array(8)));
+    // The configuration record: the chunk size, and EGOLD's the other sizes as the phones have them
+    if (egold) {
+        records.set(0, concat(u16(0x200), u16(chunk), u16(0x20), u16(0x80), u16(options.headerSize ?? 16), u16(0x3C), u16(0x80)));
+        records.set(1, new Uint8Array(0x3C).fill(0xFF));
+    } else {
+        records.set(0, sgold ? concat(u16(1), u16(chunk), new Uint8Array(12)) : concat(u32(1), u32(chunk), new Uint8Array(8)));
+    }
 
     directory(rootId, rootId, root, options.rootFat ?? fatTime(2007, 6, 5, 4, 3, 2), 0x10, options.rootName ?? new Uint8Array(0));
 
-    if (options.idOffset) {
-        return new Map([...records].map(([id, data]) => [id + options.idOffset!, data]));
+    if (idOffset) {
+        return new Map([...records].map(([id, data]) => [id + idOffset, data]));
     }
 
     return records;
 }
-
-// =========================================================================
-// EGOLD: FIT entries of 12 bytes at the end of 64 KiB blocks, found through a table of blocks
-// that a pointer in the firmware leads to
-
-export interface EgoldFile {
-    id: number;
-    parentId: number;
-    name: Uint8Array;
-    attributes: number;
-    fat: number;
-    data?: Uint8Array;
-    // the id of the file record of the next part, and that part's data
-    parts?: Uint8Array[];
-    wtfField?: boolean;
-}
-
-export interface EgoldLayout {
-    size: number;
-    blocks: number;
-    model?: string;
-    // wtf 0x80: blocks of 128 KiB
-    newEgold?: boolean;
-    files: EgoldFile[];
-    // broken FIT entries: [block id, size]
-    extraEntries?: { blockId: number, size: number, marker1?: number, marker2?: number, data?: Uint8Array }[];
-}
-
-export function egoldImage(layout: EgoldLayout): Uint8Array {
-    const data          = new Uint8Array(layout.size);
-    const base          = 16777216 - layout.size;
-    const infoOffset    = 0x400300;
-    const blockSize     = layout.newEgold ? 0x20000 : 0x10000;
-    const blocksAddr    = 0x100000;
-
-    setString(data, infoOffset + 0x0C, layout.model ?? "SYNE");
-    setString(data, infoOffset + 0x1C, "SIEMENS");
-
-    const segment = (offset: number): number => {
-        const page = (base + offset) >>> 0;
-
-        return (((Math.floor(page / 0x4000) & 0xFFFF) << 16) | (page % 0x4000)) >>> 0;
-    };
-
-    // The pointer: the number of records, the first record's blocks count and where the table is
-    const pointer   = 0x1000;
-    const table     = 0x2000;
-    const pages     = 0x3000;
-
-    setU32(data, pointer, layout.blocks);
-    setU16(data, pointer + 4, 1);
-    setU32(data, pointer + 6, segment(table));
-
-    for (let i = 0; i < layout.blocks; ++i) {
-        const blockAddr = blocksAddr + i * blockSize;
-
-        setU16(data, table + i * 6, 1);
-        setU32(data, table + i * 6 + 2, segment(pages + i * 6));
-        setU32(data, pages + i * 6, (base + blockAddr) >>> 0);
-        setU16(data, pages + i * 6 + 4, layout.newEgold ? 0x80 : 0);
-
-        data.fill(0xFF, blockAddr, blockAddr + blockSize);
-        // Between FE FE and FE FE, where the old search finds it
-        setU16(data, blockAddr + 0x80, 0xFEFE);
-        setString(data, blockAddr + 0x82, "FFS\0\0\0");
-        setU16(data, blockAddr + 0x88, i);
-        setU16(data, blockAddr + 0x8A, 0);
-        setU16(data, blockAddr + 0x8C, 0);
-        setU16(data, blockAddr + 0x8E, 0xFEFE);
-    }
-
-    // Records go into the blocks one after the other, after the header, their FIT entries down
-    // from the block's end
-    let block       = 0;
-    let dataOffset  = 0x100;
-    let fitOffset   = blockSize - 12;
-
-    const add = (blockId: number, record: Uint8Array, marker1 = 0x00FC, marker2 = 0xFC00): void => {
-        if (dataOffset + record.length + 0x100 > fitOffset) {
-            ++block;
-            dataOffset  = 0x100;
-            fitOffset   = blockSize - 12;
-        }
-
-        const blockAddr = blocksAddr + block * blockSize;
-
-        data.set(record, blockAddr + dataOffset);
-        setU16(data, blockAddr + fitOffset, marker1);
-        setU16(data, blockAddr + fitOffset + 2, record.length);
-        setU32(data, blockAddr + fitOffset + 4, (base + blockAddr + dataOffset) >>> 0);
-        setU16(data, blockAddr + fitOffset + 8, blockId);
-        setU16(data, blockAddr + fitOffset + 10, marker2);
-
-        dataOffset  += (record.length + 3) & ~3;
-        fitOffset   -= 12;
-    };
-
-    let headerBlockId = 2;
-    let dataBlockId   = 6001;
-
-    for (const file of layout.files) {
-        const pieces = file.data ? [file.data, ...(file.parts ?? [])] : [];
-        // The file records of the parts after the first, and their data
-        const partIds = pieces.slice(1).map((_, i) => 0x4000 + file.id * 16 + i);
-        const dataId  = pieces.length ? dataBlockId - 6000 : 0x7000;
-
-        if (pieces.length) {
-            add(dataBlockId, pieces[0]);
-            dataBlockId += 2;
-        }
-
-        const record = concat(
-            u16(file.id), u16(file.parentId), u32(file.fat), u16(dataId), u16(file.attributes), u16(0xFFFF),
-            u16(partIds.length ? partIds[0] : 0xFFFF),
-            ...(file.wtfField ? [u32(0xFFFFFFFF)] : []),
-            file.name, Uint8Array.of(0),
-        );
-
-        add(headerBlockId, record);
-        headerBlockId += 2;
-
-        partIds.forEach((partId, i) => {
-            const partRecord = concat(u16(partId), u16(file.id), u32(file.fat), u16(0), u16(0), u16(0xFFFF), u16(i + 1 < partIds.length ? partIds[i + 1] : 0xFFFF));
-
-            add(headerBlockId, partRecord);
-            add(headerBlockId + 1, pieces[i + 1]);
-            headerBlockId += 2;
-        });
-    }
-
-    for (const entry of layout.extraEntries ?? []) {
-        add(entry.blockId, entry.data ?? new Uint8Array(entry.size), entry.marker1, entry.marker2);
-    }
-
-    return data;
-}
-
-// A directory's data on EGOLD: the ids of its entries, each with a name hash
-export function egoldDirectory(ids: number[]): Uint8Array {
-    return concat(...ids.map((id) => concat(u16(id), u16(0x1234))), new Uint8Array(8).fill(0xFF));
-}
-

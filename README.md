@@ -11,7 +11,7 @@ It has no dependencies and runs wherever JavaScript does.
 - SGOLD
 - SGOLD2
 - SGOLD2 ELKA
-- EGOLD with Card-Explorer, read only
+- EGOLD with Card-Explorer, where writing is experimental
 
 ## Usage
 
@@ -38,8 +38,8 @@ fs.writeFileSync("EL71-new.bin", ffs.save());
 ```
 
 Paths are absolute, the partitions the directories in the root. Names are found as the phone finds
-them, without regard to case as far as its firmware folds it: SGOLD folds ASCII letters only,
-SGOLD2 and ELKA fold Latin, Greek, Cyrillic, Armenian and more.
+them, without regard to case as far as its firmware folds it: SGOLD and EGOLD fold ASCII letters
+only, SGOLD2 and ELKA fold Latin, Greek, Cyrillic, Armenian and more.
 
 `FFS.open()` takes options:
 
@@ -47,7 +47,14 @@ SGOLD2 and ELKA fold Latin, Greek, Cyrillic, Armenian and more.
 - `codepage`, the codepage SGOLD and EGOLD names are in, by any name iconv knows it by: CP1252 by
   default, CP1251 for Cyrillic languages, CP1250 for Central European ones.
 - `strict`: fail on anything broken, instead of leaving it out with a warning.
+- `experimentalEgoldWrites`: write to EGOLD filesystems. The library writes them as the phones'
+  fullflashes have them, but no emulator runs EGOLD phones, so none has read what it writes: keep a
+  backup of the fullflash.
 - `logger`: `{ debug?(message), warn?(message) }`.
+
+Timestamps are kept to 2 seconds. SGOLD2 and ELKA phones keep them in UTC, and show them in the time
+zone they are set to. SGOLD and EGOLD phones keep them in their local time, which the library takes
+for the local time where it runs.
 
 Everything the library throws about a fullflash, a path or an operation is an `FFSError`.
 
@@ -63,7 +70,8 @@ pnpm test
 ```
 
 They run on made-up fullflashes of every platform, and on the phones' fullflashes where there are
-any: `FFSHIT_TEST_FULLFLASHES` lists the directories holding them, else `tests/fullflashes`.
+any: `FFSHIT_TEST_FULLFLASHES` lists the directories holding them, else `tests/fullflashes`, their
+subdirectories included.
 
 - `tests/scenarios.test.ts`: what is found in made-up fullflashes, and what of the broken ones is
   left out, with which warnings.
@@ -73,7 +81,9 @@ any: `FFSHIT_TEST_FULLFLASHES` lists the directories holding them, else `tests/f
 - `tests/fuzz.test.ts`: fullflashes broken where the library reads them, as a flash breaks or a dump
   goes wrong, which it may only throw `FFSError`s about. `FFSHIT_FUZZ_CASES` sets the cases per
   fullflash, `FFSHIT_FUZZ_SEED` the first seed.
-- `tests/fullflashes.test.ts`: the phones' fullflashes open without anything broken.
+- `tests/fullflashes.test.ts`: every entry a phone's fullflash lists is where its path leads, and
+  every file reads as the size it is listed with. The known phones' open without anything broken.
+  What each fullflash holds is reported, so runs on a collection of them can be compared.
 - `tests/ffs.test.ts` and `tests/unit`: the API, name hashes, codepages, FAT timestamps.
 
 `scripts/gen-codepages.c` generates `src/filesystem/codepages.ts` from glibc's iconv.

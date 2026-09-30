@@ -33,6 +33,8 @@ export interface Partitions {
     // The filesystem's, which the partition table may tell apart from the detected one
     platform: Platform;
     partitions: Partition[];
+    // Where the fullflash starts in the phone's address space, by which EGOLD's FITs address records
+    base: number;
 }
 
 // The partitions found, and what was wrong with the blocks, which is only reported if they are used
@@ -61,6 +63,13 @@ const EGOLD_TABLE_POINTER = new Pattern("?? 00 00 00  0? 00  ?? ?? ?? 0?");
 
 // A block header between FE FE and FE FE
 const EGOLD_BLOCK = new Pattern("FE FE ?? ??  ?? ?? ?? ??  ?? ?? ?? ??  ?? ?? FE FE");
+// Where an EGOLD block has its header, after which its records are
+export const EGOLD_HEADER_OFFSET    = 0x80;
+export const EGOLD_FIRST_RECORD     = 0x90;
+export const EGOLD_FIT_ENTRY_SIZE   = 12;
+// The state a FIT entry begins and ends with
+export const EGOLD_VALID            = 0xFC;
+export const EGOLD_DELETED          = 0xF0;
 
 const ADDRESS_MASK      = 0x0FFFFFFF;
 const BLOCK_HEADER_SIZE = 16;
@@ -115,7 +124,8 @@ class Search {
     constructor(readonly data: Uint8Array, readonly log: Log) {
     }
 
-    add(name: string, block: Block): void {
+    // With the address of its header when it has to be formatted
+    add(name: string, block: Block, header?: number): void {
         if (block.size === 0) {
             this.problems.push(`The block of ${name} at ${hex(block.addr)} is empty`);
 
@@ -124,6 +134,12 @@ class Search {
 
         if (block.addr + block.size > this.data.length) {
             this.problems.push(`The block of ${name} at ${hex(block.addr)} of ${hex(block.size)} bytes ends past the end of the fullflash`);
+
+            return;
+        }
+
+        if (header !== undefined && !isFormatted(this.data, header)) {
+            this.problems.push(`The block of ${name} at ${hex(block.addr)} is not formatted`);
 
             return;
         }
@@ -204,16 +220,9 @@ function parseTable(data: Uint8Array, table: number, layout: TableLayout, sl75: 
                 addr -= 0x2000000;
             }
 
-            const block  = { addr: addr & ADDRESS_MASK, size: blockSize & ADDRESS_MASK };
-            const header = layout.headerAtEnd ? block.addr + block.size - 0x20 : block.addr;
+            const block = { addr: addr & ADDRESS_MASK, size: blockSize & ADDRESS_MASK };
 
-            if (!isFormatted(data, header)) {
-                search.problems.push(`The block of ${name} at ${hex(block.addr)} is not formatted`);
-
-                continue;
-            }
-
-            search.add(name, block);
+            search.add(name, block, layout.headerAtEnd ? block.addr + block.size - 0x20 : block.addr);
         }
     }
 
@@ -265,14 +274,70 @@ function segmentToPage(segmentAddr: number): number {
     return (segmentAddr >>> 16) * 0x4000 + (segmentAddr & 0xFFFF);
 }
 
-// The fullflash ends at 16 MiB in the phone's address space
+function isEgoldBlock(data: Uint8Array, addr: number): boolean {
+    return EGOLD_BLOCK.matches(data, addr + EGOLD_HEADER_OFFSET) && isFsName(cString(data, addr + EGOLD_HEADER_OFFSET + 2, 6));
+}
+
+// Whether there are blocks of an EGOLD filesystem, which start at 64 KiB boundaries
+export function hasEgoldBlocks(data: Uint8Array): boolean {
+    for (let addr = 0; addr + EGOLD_FIRST_RECORD <= data.length; addr += 0x10000) {
+        if (isEgoldBlock(data, addr)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// A block ends 64 KiB on, or a multiple of it, where its FIT ends with the entry of its first record,
+// which is right after the block's header: the block's size, and where the phone has that record.
+// Undefined for an erased block.
+function egoldFirstRecord(data: Uint8Array, addr: number): { size: number, address: number } | undefined {
+    for (let size = 0x10000; addr + size <= data.length; size += 0x10000) {
+        const entry = addr + size - EGOLD_FIT_ENTRY_SIZE;
+        const state = data[entry];
+
+        if ((state === EGOLD_VALID || state === EGOLD_DELETED) && data[entry + 11] === state) {
+            return { size, address: peek32(data, entry + 4)! };
+        }
+
+        // Of any block, of the filesystem or not
+        if (EGOLD_BLOCK.matches(data, addr + size + EGOLD_HEADER_OFFSET)) {
+            return undefined;
+        }
+    }
+
+    return undefined;
+}
+
+// Where the fullflash starts in the phone's address space, which depends on the phone and on what
+// the dump was made of. Most of the blocks tell. Without any, the fullflash is taken to end at 16
+// MiB.
 function egoldBase(data: Uint8Array): number {
-    return 0x1000000 - data.length;
+    const votes = new Map<number, number>();
+
+    for (let addr = 0; addr + EGOLD_FIRST_RECORD <= data.length; addr += 0x10000) {
+        const first = isEgoldBlock(data, addr) ? egoldFirstRecord(data, addr) : undefined;
+
+        if (!first) {
+            continue;
+        }
+
+        // Of a mirror of the flash, where the addresses are of the other copy, it is negative
+        const base = first.address - (addr + EGOLD_FIRST_RECORD);
+
+        if (base >= 0 && !(base & 0xFFFF)) {
+            votes.set(base, (votes.get(base) ?? 0) + 1);
+        }
+    }
+
+    const [best] = [...votes].sort((a, b) => b[1] - a[1]);
+
+    return best ? best[0] : 0x1000000 - data.length;
 }
 
 // The record of a block in a table: its number of blocks, and where its address is
-function egoldRecord(data: Uint8Array, offset: number): { blocks: number, addr: number, wide: boolean, name: Uint8Array } | undefined {
-    const base      = egoldBase(data);
+function egoldRecord(data: Uint8Array, base: number, offset: number): { blocks: number, addr: number, wide: boolean, name: Uint8Array } | undefined {
     const blocks    = peek16(data, offset);
     const segment   = peek32(data, offset + 2);
 
@@ -297,20 +362,20 @@ function egoldRecord(data: Uint8Array, offset: number): { blocks: number, addr: 
     return { blocks, addr, wide: flags === 0x80, name: cString(data, (addr + 2) | 0x80, 6) };
 }
 
-function searchEgoldTables(data: Uint8Array, log: Log): Found | undefined {
+function searchEgoldTables(data: Uint8Array, base: number, log: Log): Found | undefined {
     const search = new Search(data, log);
     const tables = new Set<number>();
 
     for (const pointer of [...EGOLD_TABLE_POINTER.find(data, 2)].reverse()) {
         const records   = peek32(data, pointer)!;
         const blocks    = peek16(data, pointer + 4)!;
-        const table     = segmentToPage(peek32(data, pointer + 6)!) - egoldBase(data);
+        const table     = segmentToPage(peek32(data, pointer + 6)!) - base;
 
         if (!records || !blocks || blocks > 4 || table <= 0 || table >= data.length || tables.has(table)) {
             continue;
         }
 
-        const entries = Array.from({ length: records }, (_, i) => egoldRecord(data, table + i * 6));
+        const entries = Array.from({ length: records }, (_, i) => egoldRecord(data, base, table + i * 6));
 
         if (entries.some((entry) => !entry || !isPrintable(entry.name))) {
             continue;
@@ -336,24 +401,37 @@ function searchEgoldTables(data: Uint8Array, log: Log): Found | undefined {
 // =========================================================================
 // Without a partition table: the blocks by their headers
 
-function searchEgoldBlocks(data: Uint8Array, log: Log): Found | undefined {
+// A partition's blocks are of one size, which their FITs tell: a dump may lack some of the blocks,
+// and have others of the flash in between
+function searchEgoldBlocks(data: Uint8Array, base: number, log: Log): Found | undefined {
     const search = new Search(data, log);
-    const blocks: [number, string][] = [];
+    const blocks: { addr: number, name: string, size?: number }[] = [];
 
     for (const addr of EGOLD_BLOCK.find(data, 4)) {
         const name = cString(data, addr + 2, 6);
 
-        if ((addr & 0xFFF) === 0x80 && isFsName(name)) {
-            blocks.push([addr - 0x80, latin1(name)]);
+        if ((addr & 0xFFF) === EGOLD_HEADER_OFFSET && isFsName(name)) {
+            blocks.push({ addr: addr - EGOLD_HEADER_OFFSET, name: latin1(name) });
         }
     }
 
-    // What lies between the first two
-    const blockSize = blocks.length >= 2 ? blocks[1][0] - blocks[0][0] : 0x10000;
+    // Up to the next block
+    const limits = blocks.map((block, i) => (blocks[i + 1]?.addr ?? data.length) - block.addr);
 
-    for (const [addr, name] of blocks) {
-        search.add(name, { addr, size: blockSize });
-    }
+    blocks.forEach((block, i) => {
+        const first = egoldFirstRecord(data, block.addr);
+
+        if (first && first.size <= limits[i] && first.address === base + block.addr + EGOLD_FIRST_RECORD) {
+            block.size = first.size;
+        }
+    });
+
+    blocks.forEach((block, i) => {
+        // An erased block is of the size of its partition's others
+        const other = blocks.find((other) => other.name === block.name && other.size);
+
+        search.add(block.name, { addr: block.addr, size: block.size ?? Math.min(other?.size ?? 0x10000, limits[i]) });
+    });
 
     return search.found("EGOLD_CE");
 }
@@ -393,13 +471,15 @@ function searchElkaBlocks(data: Uint8Array, log: Log): Found | undefined {
 // =========================================================================
 
 export function findPartitions(data: Uint8Array, platform: Platform, sl75: boolean, log: Log): Partitions {
+    const base = platform === "EGOLD_CE" ? egoldBase(data) : 0;
+
     let found: Found | undefined;
 
     switch (platform) {
         case "SGOLD":       found = searchTables(data, SGOLD_LAYOUT, sl75, log); break;
         case "SGOLD2":      found = searchTables(data, SGOLD2_LAYOUT, sl75, log); break;
         case "SGOLD2_ELKA": found = searchTables(data, SGOLD2_ELKA_LAYOUT, sl75, log); break;
-        case "EGOLD_CE":    found = searchEgoldTables(data, log); break;
+        case "EGOLD_CE":    found = searchEgoldTables(data, base, log); break;
     }
 
     if (!found) {
@@ -409,7 +489,7 @@ export function findPartitions(data: Uint8Array, platform: Platform, sl75: boole
             case "SGOLD":
             case "SGOLD2":      found = searchSgoldBlocks(data, platform, log); break;
             case "SGOLD2_ELKA": found = searchElkaBlocks(data, log); break;
-            case "EGOLD_CE":    found = searchEgoldBlocks(data, log); break;
+            case "EGOLD_CE":    found = searchEgoldBlocks(data, base, log); break;
         }
     }
 
@@ -421,8 +501,13 @@ export function findPartitions(data: Uint8Array, platform: Platform, sl75: boole
         log.warn(problem);
     }
 
+    if (platform === "EGOLD_CE") {
+        log.debug(`The fullflash starts at ${hex(base)} in the phone`);
+    }
+
     return {
         platform:   found.platform,
         partitions: [...found.partitions].map(([name, blocks]) => ({ name, blocks })),
+        base,
     };
 }

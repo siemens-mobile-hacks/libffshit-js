@@ -20,7 +20,7 @@ const FIRST_SEED = Number(process.env.FFSHIT_FUZZ_SEED ?? 1);
 interface Region {
     addr: number;
     size: number;
-    elka: boolean;
+    layout: "linear" | "elka" | "egold";
 }
 
 function view(data: Uint8Array): DataView {
@@ -42,7 +42,9 @@ function blocks(data: Uint8Array): Region[] {
         const detection             = detect(data);
         const { platform, partitions } = findPartitions(data, detection.platform!, detection.sl75, new Log());
 
-        return partitions.flatMap((partition) => partition.blocks.map((block) => ({ ...block, elka: platform === "SGOLD2_ELKA" })));
+        const layout = platform === "SGOLD2_ELKA" ? "elka" : platform === "EGOLD_CE" ? "egold" : "linear";
+
+        return partitions.flatMap((partition) => partition.blocks.map((block) => ({ ...block, layout })));
     } catch {
         return [];
     }
@@ -79,8 +81,12 @@ function mutate(original: Uint8Array, regions: Region[], seed: number): { data: 
             case 0:
             case 1:
             case 2: {
-                const entry = block!.elka ? block!.size - 64 - 32 * int(80) : block!.size - 16 * (1 + int(200));
-                const field = block!.addr + entry + 4 * int(4);
+                const entry = {
+                    elka:   () => block!.size - 64 - 32 * int(80),
+                    egold:  () => block!.size - 12 * (1 + int(200)),
+                    linear: () => block!.size - 16 * (1 + int(200)),
+                }[block!.layout]();
+                const field = block!.addr + entry + (block!.layout === "egold" ? 2 * int(5) : 4 * int(4));
 
                 writeU32(data, field, interesting(readU32(data, field)));
                 what.push(`FIT field at 0x${field.toString(16)}`);
@@ -101,9 +107,9 @@ function mutate(original: Uint8Array, regions: Region[], seed: number): { data: 
                 break;
             }
 
-            // A block's header, at its start or, on ELKA, its end
+            // A block's header: at its start, on ELKA at its end, on EGOLD at 0x80
             case 4: {
-                const offset = (block!.elka ? block!.addr + block!.size - 32 : block!.addr) + int(16);
+                const offset = { elka: block!.addr + block!.size - 32, egold: block!.addr + 0x80, linear: block!.addr }[block!.layout] + int(16);
 
                 data[offset] = int(256);
                 what.push(`block header byte at 0x${offset.toString(16)}`);

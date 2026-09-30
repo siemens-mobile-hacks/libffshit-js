@@ -1,10 +1,11 @@
 // The hashes the phones keep next to these names in their
 // directories, of the S75 v40 and the EL71 v41 for UTF-16 names, of the CX70 v56 and the SL65 v49
-// for 8-bit names. The uploads are what the emulated phones stored for files sent to them over OBEX.
+// for 8-bit names, of EGOLD phones for the names they hash as 7-bit. The uploads are what the
+// emulated phones stored for files sent to them over OBEX.
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { nameHash8bit, nameHashUtf16 } from "../../src/filesystem/hash.js";
+import { nameHash7bit, nameHash8bit, nameHashUtf16 } from "../../src/filesystem/hash.js";
 
 const latin1 = (str: string) => Uint8Array.from(Buffer.from(str, "latin1"));
 const stored = (str: string) => Uint8Array.from([0x1F, ...Buffer.from(str, "utf8")]);
@@ -30,6 +31,18 @@ describe("Name hashes", () => {
         assert.equal(nameHashUtf16("Логические"),            0xD999);
         assert.equal(nameHashUtf16("призрак.mid"),           0x693A);
         assert.equal(nameHashUtf16("будильник.mp3"),         0xAF7F);
+    });
+
+    it("hash 8-bit names like the EGOLD firmware, as 7-bit ones", () => {
+        assert.equal(nameHash7bit(latin1("t952ruls.ldb")),   0x73E0);
+        assert.equal(nameHash7bit(latin1("\xA5")),           0x04FE);
+        assert.equal(nameHash7bit(stored("Тема.bmp")),       0x859F);
+        // Up to the 0x80 of "р"
+        assert.equal(nameHash7bit(stored("Шпора")),          0x652F);
+        assert.equal(nameHash7bit(stored("Шпора_TXT")),      0x652F);
+        // With the 0x87 of "ч"
+        assert.equal(nameHash7bit(stored("Мяч.BMP")),        0x9669);
+        assert.equal(nameHash7bit(stored("Ночной дозор.mid")), 0x6CFF);
     });
 
     it("hash 8-bit names like the SGOLD firmware", () => {

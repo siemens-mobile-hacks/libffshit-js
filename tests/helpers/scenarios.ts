@@ -1,6 +1,6 @@
 // Made-up fullflashes of every platform, with the files and the breakage the library has to cope with
 import { pattern } from "./data.js";
-import { egoldDirectory, egoldImage, fatTime, filesystemRecords, formattedImage, layoutBlocks, patchFitEntry, RecordsBuilder, type FsFile, type ImageLayout } from "./synthetic.js";
+import { fatTime, filesystemRecords, layoutBlocks, patchFitEntry, RecordsBuilder, removeEgoldTable, type FsFile, type ImageLayout } from "./synthetic.js";
 
 export const bytes = (...values: number[]) => Uint8Array.from(values);
 export const utf16 = (str: string) => Uint8Array.from(Buffer.from(str, "utf16le"));
@@ -33,22 +33,27 @@ export function sampleTree(sgold: boolean): FsFile[] {
             { name: bytes(0x1F, 0xD1, 0x84, 0xD0, 0xB0), data: pattern(7, 14) },
             { name: bytes(0x1F, 0xFF, 0xFE), data: pattern(8, 15) },
         ] : [
-            // A surrogate pair, an odd byte, a lone surrogate, more UTF-8 than UTF-16 bytes, zeros
+            // A surrogate pair, an odd byte, a lone surrogate, more UTF-8 than UTF-16 bytes, zeros,
+            // a U+FEFF that is no byte order mark
             { name: utf16("😀 emoji.txt"), data: pattern(5, 12) },
             { name: bytes(0x41, 0x00, 0x42), data: pattern(6, 13) },
             { name: bytes(0x00, 0xD8, 0x41, 0x00), data: pattern(7, 14) },
             { name: utf16("中中中"), data: pattern(8, 15) },
             { name: concat(utf16("name"), bytes(0, 0), utf16("after")), data: pattern(10, 17) },
+            { name: utf16("﻿bom.txt"), data: pattern(11, 19) },
+            // As the firmware's data exchange leaves them: two names, which it hashes apart
+            { name: "inbox.lst", data: new Uint8Array(0) },
+            { name: concat(utf16("inbox.lst"), bytes(0, 0)), data: pattern(426, 18) },
         ]),
     ];
 }
 
 // A filesystem of the platform in a formatted image, its records added where the library would
-export function recordImage(layout: ImageLayout, trees: Record<string, { files: FsFile[], idOffset?: number, rootName?: Uint8Array }>, patch?: (image: Uint8Array) => void): Uint8Array {
-    const builder = new RecordsBuilder(formattedImage(layout), layout.platform);
+export function recordImage(layout: ImageLayout, trees: Record<string, { files: FsFile[], idOffset?: number, rootName?: Uint8Array, headerSize?: number }>, patch?: (image: Uint8Array) => void): Uint8Array {
+    const builder = new RecordsBuilder(layout);
 
     for (const [partition, tree] of Object.entries(trees)) {
-        for (const [id, data] of filesystemRecords(layout.platform, tree.files, { chunkSize: 1024, idOffset: tree.idOffset, rootName: tree.rootName })) {
+        for (const [id, data] of filesystemRecords(layout.platform, tree.files, { chunkSize: 1024, idOffset: tree.idOffset, rootName: tree.rootName, headerSize: tree.headerSize })) {
             builder.add(partition, id, data);
         }
     }
@@ -63,6 +68,7 @@ export function recordImage(layout: ImageLayout, trees: Record<string, { files: 
 export const SGOLD_LAYOUT: ImageLayout  = { platform: "SGOLD", size: 0x800000, blockSize: 0x10000, partitions: [{ name: "FFS", blocks: 8 }] };
 export const SGOLD2_LAYOUT: ImageLayout = { platform: "SGOLD2", size: 0x800000, blockSize: 0x10000, partitions: [{ name: "FFS_0", blocks: 8 }, { name: "FFS_C", blocks: 3 }] };
 export const ELKA_LAYOUT: ImageLayout   = { platform: "SGOLD2_ELKA", size: 0x800000, blockSize: 0x20000, partitions: [{ name: "FFS_0", blocks: 6 }, { name: "FFS_C", blocks: 3 }] };
+export const EGOLD_LAYOUT: ImageLayout  = { platform: "EGOLD_CE", size: 0x800000, blockSize: 0x10000, partitions: [{ name: "FFS", blocks: 8 }] };
 
 const CACHE = [{ name: "cache.bin", data: pattern(2000, 1) }];
 
@@ -95,7 +101,7 @@ export const SCENARIOS = {
         patchFitEntry(image, "SGOLD", layoutBlocks(SGOLD_LAYOUT, "FFS"), 6, "id", 0x1234);
     }),
     "sgold root without the directory attribute": () => {
-        const builder = new RecordsBuilder(formattedImage(SGOLD_LAYOUT), "SGOLD");
+        const builder = new RecordsBuilder(SGOLD_LAYOUT);
 
         for (const [id, data] of filesystemRecords("SGOLD", [{ name: "a.bin", data: pattern(10, 1) }], { chunkSize: 1024 })) {
             // Its attributes are 0xFFFF0010
@@ -132,40 +138,30 @@ export const SCENARIOS = {
         patchFitEntry(image, "SGOLD2_ELKA", layoutBlocks(ELKA_LAYOUT, "FFS_0"), 13, "flags", 0xFFFFFF00);
         patchFitEntry(image, "SGOLD2_ELKA", layoutBlocks(ELKA_LAYOUT, "FFS_0"), 15, "flags", 0xFFFFFFFE);
     }),
-    "egold": () => egoldImage({
-        size: 0x800000,
-        blocks: 3,
-        files: [
-            { id: 6, parentId: 6, name: bytes(), attributes: 0x10, fat: fatTime(2005, 1, 1, 0, 0, 0), data: egoldDirectory([7, 8, 9, 10, 11]) },
-            { id: 7, parentId: 6, name: Buffer.from("a.txt"), attributes: 0x01, fat: fatTime(2005, 2, 3, 4, 5, 6), data: pattern(100, 1) },
-            { id: 8, parentId: 6, name: Buffer.from("parts.bin"), attributes: 0, fat: fatTime(2006, 2, 3, 4, 5, 6), data: pattern(3000, 2), parts: [pattern(2000, 3), pattern(10, 4)] },
-            { id: 9, parentId: 6, name: bytes(0x1F, 0xD1, 0x84, 0x2E, 0x74), attributes: 0x06, fat: 0, data: pattern(5, 5), wtfField: true },
-            { id: 10, parentId: 6, name: Buffer.from("Dir"), attributes: 0x10, fat: fatTime(2007, 2, 3, 4, 5, 6), data: egoldDirectory([12]) },
-            { id: 11, parentId: 6, name: bytes(0xC4, 0x2E, 0x74), attributes: 0, fat: 0 },
-            { id: 12, parentId: 10, name: Buffer.from("inner.bin"), attributes: 0, fat: 0, data: pattern(64, 6) },
-        ],
-        extraEntries: [{ blockId: 3000, size: 20, marker1: 0x00F0, marker2: 0xF000 }],
+    "egold": () => recordImage({ ...EGOLD_LAYOUT, partitions: [{ name: "FFS", blocks: 8 }, { name: "FFS_C", blocks: 3 }] }, { FFS: { files: sampleTree(true) }, FFS_C: { files: CACHE } }),
+    // As the A31's, AF51's, AL21's, AX72's and C110's
+    "egold 20-byte headers": () => recordImage(EGOLD_LAYOUT, { FFS: { files: sampleTree(true), headerSize: 20 } }),
+    "egold 128 KiB blocks": () => recordImage({ ...EGOLD_LAYOUT, size: 0x1000000, blockSize: 0x20000, partitions: [{ name: "FFS", blocks: 4 }] }, { FFS: { files: sampleTree(true).slice(0, 7) } }),
+    // Of an 8 MiB flash at the start of the address space, as the A60's
+    "egold at another address": () => recordImage({ ...EGOLD_LAYOUT, base: 0 }, { FFS: { files: sampleTree(true).slice(0, 7) } }),
+    // Of the flash from after its partition table, as a C60's with blocks of three 64 KiB sectors
+    // in one partition and of one in another
+    "egold without a table": () => recordImage({ ...EGOLD_LAYOUT, base: 0x200000, partitions: [{ name: "FFS", blocks: 4, blockSize: 0x30000 }, { name: "FFS_C", blocks: 3 }] }, {
+        FFS: { files: sampleTree(true).slice(0, 7) },
+        FFS_C: { files: CACHE },
+    }, removeEgoldTable),
+    "egold broken": () => recordImage(EGOLD_LAYOUT, { FFS: { files: [
+        { name: "fine.bin", data: pattern(100, 1) },
+        { name: "broken part.bin", data: pattern(3000, 3), brokenPart: true },
+        { name: "missing header", data: pattern(10, 4), headerId: 0x2222 },
+        { name: "dup.bin", data: pattern(10, 6) },
+    ] } }, (image) => {
+        // dup.bin's header takes the id of fine.bin's
+        patchFitEntry(image, "EGOLD_CE", layoutBlocks(EGOLD_LAYOUT, "FFS"), 6018, "id", 6010);
     }),
-    "egold new": () => egoldImage({
-        size: 0x1000000,
-        blocks: 2,
-        newEgold: true,
-        files: [
-            { id: 6, parentId: 6, name: bytes(), attributes: 0x10, fat: 0, data: egoldDirectory([7]) },
-            { id: 7, parentId: 6, name: Buffer.from("a.txt"), attributes: 0, fat: fatTime(2005, 2, 3, 4, 5, 6), data: pattern(60000, 1) },
-        ],
+    "egold without root": () => recordImage(EGOLD_LAYOUT, { FFS: { files: [{ name: "a.bin", data: pattern(10, 1) }] } }, (image) => {
+        patchFitEntry(image, "EGOLD_CE", layoutBlocks(EGOLD_LAYOUT, "FFS"), 6006, "id", 0x1234);
     }),
-    "egold broken": () => egoldImage({
-        size: 0x800000,
-        blocks: 2,
-        files: [
-            { id: 6, parentId: 6, name: bytes(), attributes: 0x10, fat: 0, data: egoldDirectory([7, 99]) },
-            { id: 7, parentId: 6, name: Buffer.from("a.txt"), attributes: 0, fat: 0, data: pattern(10, 1) },
-            { id: 7, parentId: 6, name: Buffer.from("again.txt"), attributes: 0, fat: 0, data: pattern(10, 2) },
-        ],
-        extraEntries: [{ blockId: 2, size: 20 }],
-    }),
-    "egold without root": () => egoldImage({ size: 0x800000, blocks: 1, files: [{ id: 7, parentId: 6, name: Buffer.from("a.txt"), attributes: 0, fat: 0, data: pattern(10, 1) }] }),
     "x65flasher": () => concat(Buffer.from("FBK\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D"), recordImage(SGOLD_LAYOUT, { FFS: { files: sampleTree(true).slice(0, 6) } })),
 } satisfies Record<string, () => Uint8Array>;
 

@@ -1,5 +1,6 @@
 import { concat } from "../bytes.js";
 import { FFSError } from "../errors.js";
+import { dateToFatTime, fatTimeToDate } from "./fattime.js";
 import { isDirectory, WritableFormat, type Format, type Header, type Part } from "./format.js";
 import type { Records } from "./records.js";
 
@@ -192,6 +193,14 @@ export class Volume {
         return this.list(dir).entries.length === 0;
     }
 
+    timestamp(header: Header): Date {
+        return fatTimeToDate(header.fatTime, this.format.utc);
+    }
+
+    fatTime(timestamp: Date | number): number {
+        return dateToFatTime(timestamp, this.format.utc);
+    }
+
     // =========================================================================
     // Writing
 
@@ -211,11 +220,11 @@ export class Volume {
             throw new FFSError(`${this.name} is broken, not writing to it: ${this.records.problems[0]}`);
         }
 
-        if (!this.records.has(0)) {
+        if (!this.records.has(format.configId)) {
             throw new FFSError(`${this.name} has no configuration record, not writing to it`);
         }
 
-        const chunkSize = format.chunkSize(this.records.read(0));
+        const chunkSize = format.chunkSize(this.records.read(format.configId));
 
         if (chunkSize < 256 || chunkSize > 4096 || (chunkSize & (chunkSize - 1))) {
             throw new FFSError(`${this.name}: unknown chunk size ${chunkSize}, not writing to it`);

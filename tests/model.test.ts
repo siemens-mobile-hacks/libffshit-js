@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { foldCase8bit, foldCaseUtf16 } from "../src/filesystem/hash.js";
-import { FFS, FFSError, type FFSTreeEntry } from "../src/index.js";
+import { FFS, FFSError, type FFSTreeEntry, type OpenOptions } from "../src/index.js";
 import { equalBytes, pattern, random } from "./helpers/data.js";
 import { NO_FULLFLASHES, readFullflash } from "./helpers/fullflashes.js";
 import { SCENARIOS } from "./helpers/scenarios.js";
@@ -29,7 +29,7 @@ class Model {
     }
 
     static of(ffs: FFS): Model {
-        const sgold = ffs.platform === "SGOLD";
+        const sgold = ffs.platform === "SGOLD" || ffs.platform === "EGOLD_CE";
         const model = new Model((path) => String.fromCharCode(...Array.from(path, (c) => sgold ? foldCase8bit(c.charCodeAt(0)) : foldCaseUtf16(c.charCodeAt(0)))));
 
         const add = (entry: FFSTreeEntry): void => {
@@ -145,17 +145,21 @@ function expectModel(ffs: FFS, model: Model): void {
     }
 }
 
-function run(image: Uint8Array, dir: string, seed: number): void {
-    let   ffs       = FFS.open(image, { strict: true });
+function run(image: Uint8Array, dir: string, seed: number, options: OpenOptions): void {
+    let   ffs       = FFS.open(image, { ...options, strict: true });
     const model     = Model.of(ffs);
-    const firmware  = [...model.entries.values()].filter((entry) => !entry.isDirectory && entry.path.startsWith(`${dir.slice(0, dir.indexOf("/", 1))}/`)).map((entry) => entry.path).slice(0, 30);
+    // Of names the library writes: the firmware's may have 0s in them
+    const firmware  = [...model.entries.values()]
+        .filter((entry) => !entry.isDirectory && entry.path.startsWith(`${dir.slice(0, dir.indexOf("/", 1))}/`) && !/[\x00-\x1F]/.test(entry.path))
+        .map((entry) => entry.path)
+        .slice(0, 30);
     let   compacted = 0;
 
     for (const [i, op] of randomOps(dir, firmware, seed).entries()) {
         const what = `operation ${i}: ${op.op} ${"path" in op ? op.path : ""}`;
 
         if (op.op === "reopen") {
-            ffs = FFS.open(ffs.save(), { strict: true });
+            ffs = FFS.open(ffs.save(), { ...options, strict: true });
 
             continue;
         }
@@ -201,27 +205,31 @@ function run(image: Uint8Array, dir: string, seed: number): void {
     }
 
     expectModel(ffs, model);
-    expectModel(FFS.open(ffs.save(), { strict: true }), model);
+    expectModel(FFS.open(ffs.save(), { ...options, strict: true }), model);
 
     assert.ok(compacted < OPS / 2, "most writes did not fit");
 }
 
-const TARGETS: [string, () => Uint8Array | undefined, string][] = [
+const EGOLD: OpenOptions = { experimentalEgoldWrites: true };
+
+const TARGETS: [string, () => Uint8Array | undefined, string, OpenOptions?][] = [
     ["made-up SGOLD", SCENARIOS.sgold, "/FFS/Misc"],
     ["made-up SGOLD2", SCENARIOS.sgold2, "/FFS_0/Misc"],
     ["made-up SGOLD2_ELKA", SCENARIOS.elka, "/FFS_0/Misc"],
+    ["made-up EGOLD_CE", SCENARIOS.egold, "/FFS/Misc", EGOLD],
+    ["made-up EGOLD_CE with 20-byte headers", SCENARIOS["egold 20-byte headers"], "/FFS/Misc", EGOLD],
     ["CX70", () => readFullflash("CX70v56lg3.bin"), "/FFS/Misc"],
     ["SL65", () => readFullflash("SL65v49lg1_TIM.bin"), "/FFS/Misc"],
     ["S75", () => readFullflash("S75v40lg1.bin"), "/FFS_0/Misc"],
     ["EL71", () => readFullflash("EL71v41lg91.bin"), "/FFS_0/Misc"],
 ];
 
-for (const [name, image, dir] of TARGETS) {
+for (const [name, image, dir, options] of TARGETS) {
     const data = image();
 
     describe(`Random writes to ${name}`, { skip: !data && NO_FULLFLASHES }, () => {
         for (let seed = 1; seed <= SEEDS; ++seed) {
-            it(`seed ${seed}`, () => run(data!, dir, seed * 7919 + name.length));
+            it(`seed ${seed}`, () => run(data!, dir, seed * 7919 + name.length, options ?? {}));
         }
     });
 }

@@ -1,4 +1,5 @@
 import { cString, isPrintable, latin1 } from "../bytes.js";
+import { hasEgoldBlocks } from "./partitions.js";
 
 export type Platform = "SGOLD" | "SGOLD2" | "SGOLD2_ELKA" | "EGOLD_CE";
 
@@ -17,10 +18,10 @@ export interface Detection {
 const BCORE_OFFSET      = 0x870;
 const ELKA_BCORE_OFFSET = 0xC70;
 
-// EGOLD keeps "SIEMENS" and the model in one of these places
-const EGOLD_INFO_OFFSETS    = [0x400300, 0x600300, 0x800300];
-const EGOLD_MODEL           = 0x0C;
-const EGOLD_MAGIC           = 0x1C;
+// EGOLD's flash configuration block ends a 64 KiB block with the language pack, the model and the
+// vendor, 16 bytes each
+const EGOLD_CONFIG_MODEL    = 0x90;
+const EGOLD_CONFIG_VENDOR   = 0x80;
 
 function string(data: Uint8Array, offset: number): string | undefined {
     const bytes = cString(data, offset);
@@ -51,11 +52,18 @@ function detectPlatform(data: Uint8Array): Platform | undefined {
         return "SGOLD2_ELKA";
     }
 
-    return egoldInfo(data) === undefined ? undefined : "EGOLD_CE";
+    // Of EGOLD phones, only those with a filesystem
+    return hasEgoldBlocks(data) ? "EGOLD_CE" : undefined;
 }
 
-function egoldInfo(data: Uint8Array): number | undefined {
-    return EGOLD_INFO_OFFSETS.find((offset) => latin1(cString(data, offset + EGOLD_MAGIC)) === "SIEMENS");
+function egoldModel(data: Uint8Array): string | undefined {
+    for (let end = 0x10000; end <= data.length; end += 0x10000) {
+        if (latin1(cString(data, end - EGOLD_CONFIG_VENDOR, 16)) === "SIEMENS") {
+            return string(data, end - EGOLD_CONFIG_MODEL);
+        }
+    }
+
+    return undefined;
 }
 
 // The platform, unless it is given, and the model and IMEI of a fullflash
@@ -93,9 +101,7 @@ export function detect(data: Uint8Array, platform = detectPlatform(data)): Detec
         }
 
         case "EGOLD_CE": {
-            const info = egoldInfo(data);
-
-            detection.model = info === undefined ? undefined : string(data, info + EGOLD_MODEL);
+            detection.model = egoldModel(data);
 
             break;
         }

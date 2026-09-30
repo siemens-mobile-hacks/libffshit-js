@@ -4,10 +4,10 @@
 
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
-import { FFS, FFSError, type FFSTreeEntry, type Platform } from "../src/index.js";
+import { FFS, FFSError, type FFSTreeEntry, type OpenOptions, type Platform } from "../src/index.js";
 import { equalBytes, pattern } from "./helpers/data.js";
 import { NO_FULLFLASHES, readFullflash } from "./helpers/fullflashes.js";
-import { fatTime, filesystemRecords, formattedImage, RecordsBuilder, type FsFile, type ImageLayout } from "./helpers/synthetic.js";
+import { fatTime, filesystemRecords, RecordsBuilder, type FsFile, type ImageLayout } from "./helpers/synthetic.js";
 
 interface Phone {
     name: string;
@@ -18,9 +18,15 @@ interface Phone {
     dir: string;
     // What a partition holds several times over
     churnSize: number;
+    options?: OpenOptions;
 }
 
-function syntheticPhone(platform: "SGOLD" | "SGOLD2" | "SGOLD2_ELKA", partition: string): Phone {
+// SGOLD and EGOLD keep names of 8-bit characters, and fold only their ASCII letters
+function eightBit(platform: Platform): boolean {
+    return platform === "SGOLD" || platform === "EGOLD_CE";
+}
+
+function syntheticPhone(platform: Platform, partition: string, headerSize?: number): Phone {
     const layout: ImageLayout = {
         platform,
         size: 0x1000000,
@@ -34,16 +40,17 @@ function syntheticPhone(platform: "SGOLD" | "SGOLD2" | "SGOLD2_ELKA", partition:
     ];
 
     return {
-        name: `made-up ${platform}`,
+        name: `made-up ${platform}${headerSize ? ` with ${headerSize}-byte headers` : ""}`,
         platform,
         partition,
         dir: "Misc",
         churnSize: 256 * 1024,
+        options: platform === "EGOLD_CE" ? { experimentalEgoldWrites: true } : {},
         image: () => {
-            const builder = new RecordsBuilder(formattedImage(layout), platform);
+            const builder = new RecordsBuilder(layout);
 
             for (const [name, tree] of [[partition, files], ["FFS_C", [{ name: "c.bin", data: pattern(100, 4) }]]] as const) {
-                for (const [id, data] of filesystemRecords(platform, [...tree], { chunkSize: platform === "SGOLD" ? 1024 : 2048 })) {
+                for (const [id, data] of filesystemRecords(platform, [...tree], { chunkSize: eightBit(platform) ? 1024 : 2048, headerSize })) {
                     builder.add(name, id, data);
                 }
             }
@@ -65,6 +72,8 @@ const PHONES: Phone[] = [
     syntheticPhone("SGOLD", "FFS"),
     syntheticPhone("SGOLD2", "FFS_0"),
     syntheticPhone("SGOLD2_ELKA", "FFS_0"),
+    syntheticPhone("EGOLD_CE", "FFS"),
+    syntheticPhone("EGOLD_CE", "FFS", 20),
 ];
 
 const WRITE_TIME = new Date(2024, 4, 17, 13, 37, 42);
@@ -150,11 +159,11 @@ for (const phone of PHONES) {
 
         const dirPath       = (name?: string) => `/${phone.partition}/${phone.dir}${name ? `/${name}` : ""}`;
         const write         = (path: string, data: Uint8Array) => ffs.writeFile(path, data, WRITE_TIME);
-        const reopen        = (codepage?: string) => FFS.open(ffs.save(), { codepage, strict: true });
+        const reopen        = (codepage?: string) => FFS.open(ffs.save(), { ...phone.options, codepage, strict: true });
         const unchanged     = () => assert.ok(equalBytes(ffs.save(), image!), "the fullflash changed");
 
         beforeEach(() => {
-            ffs = FFS.open(image!, { strict: true });
+            ffs = FFS.open(image!, { ...phone.options, strict: true });
 
             assert.equal(ffs.platform, phone.platform);
             assert.ok(ffs.stat(dirPath())?.isDirectory, dirPath());
@@ -326,8 +335,9 @@ for (const phone of PHONES) {
         it("writes names beyond ASCII", () => {
             const expected = snapshot(ffs);
 
-            // On SGOLD in the codepage, and in UTF-8 when the codepage lacks a character
-            for (const name of ["ffshit-Ärger.bin", "ffshit-файл.bin", "ffshit-中文.bin", "ffshit-😀.bin"]) {
+            // On SGOLD in the codepage, and in UTF-8 when the codepage lacks a character. A U+FEFF is
+            // no byte order mark.
+            for (const name of ["ffshit-Ärger.bin", "ffshit-файл.bin", "ffshit-中文.bin", "ffshit-😀.bin", "﻿ffshit-bom.bin"]) {
                 const data = pattern(100, Buffer.byteLength(name));
 
                 write(dirPath(name), data);
@@ -343,8 +353,8 @@ for (const phone of PHONES) {
             write(dirPath("ffshit-ärger.bin"), pattern(100, 1));
             write(dirPath("ffshit-Ärger.bin"), pattern(200, 2));
 
-            // SGOLD folds ASCII letters only: both files are there
-            if (phone.platform === "SGOLD") {
+            // SGOLD and EGOLD fold ASCII letters only: both files are there
+            if (eightBit(phone.platform)) {
                 expected.set(dirPath("ffshit-ärger.bin"), fileEntry(pattern(100, 1)));
             }
 
@@ -353,8 +363,8 @@ for (const phone of PHONES) {
             expectTree(snapshot(reopen()), expected);
         });
 
-        it("keeps SGOLD names in the phone's codepage", { skip: phone.platform !== "SGOLD" && "only SGOLD names are 8-bit" }, () => {
-            ffs = FFS.open(image!, { codepage: "CP1251" });
+        it("keeps 8-bit names in the phone's codepage", { skip: !eightBit(phone.platform) && "only SGOLD and EGOLD names are 8-bit" }, () => {
+            ffs = FFS.open(image!, { ...phone.options, codepage: "CP1251" });
 
             write(dirPath("ffshit-файл.bin"), pattern(100, 1));
             // CP1251 has no Ä

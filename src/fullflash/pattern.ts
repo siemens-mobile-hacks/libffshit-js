@@ -34,9 +34,9 @@ export class Pattern {
         return true;
     }
 
-    // Where it matches, from `start` on, at every `step`th byte
-    *find(data: Uint8Array, step: number, start = 0): Generator<number> {
-        for (let offset = start; offset + this.length <= data.length; offset += step) {
+    // Where it matches, at every `step`th byte
+    *find(data: Uint8Array, step: number): Generator<number> {
+        for (let offset = 0; offset + this.length <= data.length; offset += step) {
             if (this.matches(data, offset)) {
                 yield offset;
             }

@@ -19,33 +19,40 @@ describe("FAT timestamps", () => {
         }
     };
 
-    it("are in the local time, in whole even seconds", withTz("UTC", () => {
+    it("are in the local time on SGOLD and EGOLD, in whole even seconds", withTz("UTC", () => {
         // 2024-05-17 13:37:42
         const fat = ((2024 - 1980) << 25 | 5 << 21 | 17 << 16 | 13 << 11 | 37 << 5 | 21) >>> 0;
 
-        assert.equal(fatTimeToDate(fat).toISOString(), "2024-05-17T13:37:42.000Z");
-        assert.equal(dateToFatTime(Date.UTC(2024, 4, 17, 13, 37, 43, 999)), fat);
-        assert.equal(dateToFatTime(new Date(Date.UTC(2024, 4, 17, 13, 37, 42))), fat);
+        assert.equal(fatTimeToDate(fat, false).toISOString(), "2024-05-17T13:37:42.000Z");
+        assert.equal(dateToFatTime(Date.UTC(2024, 4, 17, 13, 37, 43, 999), false), fat);
+        assert.equal(dateToFatTime(new Date(Date.UTC(2024, 4, 17, 13, 37, 42)), false), fat);
     }));
 
     it("count daylight saving time in", withTz("Europe/Berlin", () => {
         const fat = ((2024 - 1980) << 25 | 7 << 21 | 1 << 16 | 12 << 11) >>> 0;
 
-        assert.equal(fatTimeToDate(fat).toISOString(), "2024-07-01T10:00:00.000Z");
-        assert.equal(dateToFatTime(Date.UTC(2024, 6, 1, 10)), fat);
+        assert.equal(fatTimeToDate(fat, false).toISOString(), "2024-07-01T10:00:00.000Z");
+        assert.equal(dateToFatTime(Date.UTC(2024, 6, 1, 10), false), fat);
+    }));
+
+    it("are in UTC on SGOLD2 and ELKA", withTz("Europe/Berlin", () => {
+        const fat = ((2024 - 1980) << 25 | 7 << 21 | 1 << 16 | 12 << 11) >>> 0;
+
+        assert.equal(fatTimeToDate(fat, true).toISOString(), "2024-07-01T12:00:00.000Z");
+        assert.equal(dateToFatTime(Date.UTC(2024, 6, 1, 12), true), fat);
     }));
 
     it("carry out of range fields over", withTz("UTC", () => {
         // Month 13, day 0, hour 25, minute 63, second 62: 2000-12-31 25:63:62
         const fat = ((2000 - 1980) << 25 | 13 << 21 | 0 << 16 | 25 << 11 | 63 << 5 | 31) >>> 0;
 
-        assert.equal(fatTimeToDate(fat).toISOString(), "2001-01-01T02:04:02.000Z");
+        assert.equal(fatTimeToDate(fat, false).toISOString(), "2001-01-01T02:04:02.000Z");
     }));
 
     it("hold the years 1980 to 2107", withTz("UTC", () => {
-        assert.equal(dateToFatTime(0), (1 << 21) | (1 << 16));
-        assert.equal(dateToFatTime(Date.UTC(2200, 0)), ((127 << 25) | (12 << 21) | (31 << 16) | (23 << 11) | (59 << 5) | 29) >>> 0);
-        assert.throws(() => dateToFatTime(NaN), FFSError);
+        assert.equal(dateToFatTime(0, false), (1 << 21) | (1 << 16));
+        assert.equal(dateToFatTime(Date.UTC(2200, 0), false), ((127 << 25) | (12 << 21) | (31 << 16) | (23 << 11) | (59 << 5) | 29) >>> 0);
+        assert.throws(() => dateToFatTime(NaN, false), FFSError);
     }));
 });
 

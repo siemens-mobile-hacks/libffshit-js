@@ -17,24 +17,16 @@ const HEADER_SIZE       = 28;
 const NAME_LENGTH_MAX   = (0x200 - HEADER_SIZE) / 2;
 const NONE              = 0xFFFFFFFF;
 
-const utf16Decoder = new TextDecoder("utf-16le");
-
-// The name's bytes up to its first 0 character
-function nameBytes(name: Uint8Array): Uint8Array {
-    let end = 0;
-
-    while (end + 1 < name.length && (name[end] | name[end + 1])) {
-        end += 2;
-    }
-
-    return name.slice(0, end);
-}
+// A name may start with U+FEFF, which is no byte order mark in it
+const utf16Decoder = new TextDecoder("utf-16le", { ignoreBOM: true });
 
 export class NewSgoldFormat extends WritableFormat {
     readonly rootId                 = 10;
     readonly none                   = NONE;
     readonly entrySize              = 8;
+    readonly utc                    = true;
     readonly firstId                = 12;
+    readonly configId               = 0;
     readonly nextOffset             = 8;
     readonly directoryRecordSize    = 256;
     readonly fileAttributes         = 0x0000;
@@ -51,7 +43,9 @@ export class NewSgoldFormat extends WritableFormat {
             fatTime:    u32(data, 20),
             attributes: u16(data, 24),
             dataId:     (u32(data, 0) + 1) >>> 0,
-            name:       nameBytes(data.subarray(HEADER_SIZE)),
+            // All of its length, 0s too: the firmware hashes them, and keeps "inbox.lst" and
+            // "inbox.lst\0" apart
+            name:       data.slice(HEADER_SIZE, HEADER_SIZE + u16(data, 26) * 2),
         };
     }
 
