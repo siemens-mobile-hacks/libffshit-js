@@ -140,6 +140,28 @@ const EXPECTED: Record<Scenario, Expected> = {
         tree: [],
         warnings: ["FFS: no root directory"],
     },
+    // The EEPROM's blocks are no filesystem's
+    "egold without card-explorer": {
+        platform: "EGOLD", model: "SYN",
+        tree: under("/FFS", [...SAMPLE, ...MISC, "Ärger.bin 5", " A  6", "фа 7", "�� 8"]),
+    },
+    "egold without card-explorer, 32 KiB blocks": {
+        platform: "EGOLD", model: "SYN",
+        tree: under("/FFS", SAMPLE),
+    },
+    "egold without card-explorer, without a table": {
+        platform: "EGOLD", model: "SYN",
+        tree: [...under("/FFS", SAMPLE), ...CACHE],
+    },
+    "egold without card-explorer, version 1": {
+        platform: "EGOLD", model: "SYN",
+        tree: under("/FFS", [...SAMPLE, ...MISC, "Ärger.bin 5", " A  6", "фа 7", "�� 8"]),
+    },
+    "egold without card-explorer, broken": {
+        platform: "EGOLD", model: "SYN",
+        tree: under("/FFS", ["fine.bin 100", "missing header 10"]),
+        warnings: ["FFS: two records with id 6010", "/FFS: record 6018 is missing", "/FFS/broken part.bin: its part 36583 is missing"],
+    },
     "x65flasher": {
         platform: "SGOLD", model: "SYN", imei: IMEI,
         tree: under("/FFS", SAMPLE.slice(0, 6)),
@@ -192,7 +214,10 @@ describe("Made-up fullflashes", () => {
     }
 
     it("have the files' content", () => {
-        for (const name of ["sgold", "sgold2", "elka", "sgold prototype", "egold", "egold 20-byte headers", "egold 128 KiB blocks", "egold at another address", "egold without a table"] as const) {
+        for (const name of [
+            "sgold", "sgold2", "elka", "sgold prototype", "egold", "egold 20-byte headers", "egold 128 KiB blocks", "egold at another address", "egold without a table",
+            "egold without card-explorer", "egold without card-explorer, 32 KiB blocks", "egold without card-explorer, without a table", "egold without card-explorer, version 1",
+        ] as const) {
             const ffs  = FFS.open(SCENARIOS[name]());
             const root = ffs.readDir("/")[0].path;
 
@@ -214,7 +239,7 @@ describe("Made-up fullflashes", () => {
     });
 
     it("have the timestamps in local time, on SGOLD2 and ELKA in UTC", () => {
-        for (const name of ["sgold", "egold"] as const) {
+        for (const name of ["sgold", "egold", "egold without card-explorer"] as const) {
             assert.deepEqual(FFS.open(SCENARIOS[name]()).stat("/FFS/parts.bin")?.timestamp, new Date(2107, 11, 31, 23, 59, 58), name);
         }
 
@@ -244,5 +269,11 @@ describe("Made-up fullflashes", () => {
         assert.throws(() => FFS.open(image), { name: "FFSError", message: "The fullflash is of an unknown platform" });
         assert.equal(FFS.open(image, { platform: "SGOLD" }).readDir("/FFS").length, 12);
         assert.throws(() => FFS.open(new Uint8Array(0x100000), { platform: "EGOLD_CE" }), { name: "FFSError", message: "No filesystem partitions found" });
+        assert.throws(() => FFS.open(new Uint8Array(0x100000), { platform: "EGOLD" }), { name: "FFSError", message: "No filesystem partitions found" });
+    });
+
+    it("tell EGOLD phones with Card-Explorer from those without by where their blocks have their headers", () => {
+        assert.throws(() => FFS.open(SCENARIOS.egold(), { platform: "EGOLD" }), { name: "FFSError", message: "No filesystem partitions found" });
+        assert.throws(() => FFS.open(SCENARIOS["egold without card-explorer"](), { platform: "EGOLD_CE" }), { name: "FFSError", message: "No filesystem partitions found" });
     });
 });

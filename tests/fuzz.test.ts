@@ -20,7 +20,7 @@ const FIRST_SEED = Number(process.env.SIE_FFS_FUZZ_SEED ?? 1);
 interface Region {
     addr: number;
     size: number;
-    layout: "linear" | "elka" | "egold";
+    layout: "linear" | "elka" | "egold" | "egold_ce";
 }
 
 function view(data: Uint8Array): DataView {
@@ -42,7 +42,7 @@ function blocks(data: Uint8Array): Region[] {
         const detection             = detect(data);
         const { platform, partitions } = findPartitions(data, detection.platform!, detection.sl75, new Log());
 
-        const layout = platform === "SGOLD2_ELKA" ? "elka" : platform === "EGOLD_CE" ? "egold" : "linear";
+        const layout = platform === "SGOLD2_ELKA" ? "elka" : platform === "EGOLD_CE" ? "egold_ce" : platform === "EGOLD" ? "egold" : "linear";
 
         return partitions.flatMap((partition) => partition.blocks.map((block) => ({ ...block, layout })));
     } catch {
@@ -82,11 +82,12 @@ function mutate(original: Uint8Array, regions: Region[], seed: number): { data: 
             case 1:
             case 2: {
                 const entry = {
-                    elka:   () => block!.size - 64 - 32 * int(80),
-                    egold:  () => block!.size - 12 * (1 + int(200)),
-                    linear: () => block!.size - 16 * (1 + int(200)),
+                    elka:       () => block!.size - 64 - 32 * int(80),
+                    egold:      () => block!.size - 12 * (1 + int(200)),
+                    egold_ce:   () => block!.size - 12 * (1 + int(200)),
+                    linear:     () => block!.size - 16 * (1 + int(200)),
                 }[block!.layout]();
-                const field = block!.addr + entry + (block!.layout === "egold" ? 2 * int(5) : 4 * int(4));
+                const field = block!.addr + entry + (block!.layout.startsWith("egold") ? 2 * int(5) : 4 * int(4));
 
                 writeU32(data, field, interesting(readU32(data, field)));
                 what.push(`FIT field at 0x${field.toString(16)}`);
@@ -107,9 +108,10 @@ function mutate(original: Uint8Array, regions: Region[], seed: number): { data: 
                 break;
             }
 
-            // A block's header: at its start, on ELKA at its end, on EGOLD at 0x80
+            // A block's header: at its start, on ELKA at its end, on EGOLD at 0x80 with Card-Explorer
+            // and at 0x10 without
             case 4: {
-                const offset = { elka: block!.addr + block!.size - 32, egold: block!.addr + 0x80, linear: block!.addr }[block!.layout] + int(16);
+                const offset = { elka: block!.addr + block!.size - 32, egold_ce: block!.addr + 0x80, egold: block!.addr + 0x10, linear: block!.addr }[block!.layout] + int(16);
 
                 data[offset] = int(256);
                 what.push(`block header byte at 0x${offset.toString(16)}`);
@@ -201,6 +203,8 @@ const TARGETS: [string, () => Uint8Array | undefined][] = [
     ["made-up SGOLD2", SCENARIOS.sgold2],
     ["made-up SGOLD2_ELKA", SCENARIOS.elka],
     ["made-up EGOLD", SCENARIOS.egold],
+    ["made-up EGOLD without Card-Explorer", SCENARIOS["egold without card-explorer, without a table"]],
+    ["made-up EGOLD without Card-Explorer, version 1", SCENARIOS["egold without card-explorer, version 1"]],
     ...allFullflashes().map((name): [string, () => Uint8Array | undefined] => [name, () => readFullflash(name)]),
 ];
 

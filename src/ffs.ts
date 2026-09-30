@@ -16,8 +16,8 @@ export interface OpenOptions {
     platform?: Platform;
     // Fails on anything broken, instead of leaving it out with a warning
     strict?: boolean;
-    // Writes EGOLD filesystems, as far as they are known from the phones' fullflashes. No phone has
-    // read what the library writes to them.
+    // Writes the filesystems of EGOLD phones with Card-Explorer, as far as they are known from the
+    // phones' fullflashes. No phone has read what the library writes to them.
     experimentalEgoldWrites?: boolean;
     logger?: Logger;
 }
@@ -126,6 +126,10 @@ function createVolume(platform: Platform, name: string, records: Records, option
 
         case "EGOLD_CE": {
             return new Volume(name, records, new EgoldFormat(records), options.experimentalEgoldWrites ? undefined : "writes to EGOLD are experimental, and made with experimentalEgoldWrites only");
+        }
+
+        case "EGOLD": {
+            return new Volume(name, records, new EgoldFormat(records), "writes to EGOLD without Card-Explorer are not supported");
         }
     }
 }

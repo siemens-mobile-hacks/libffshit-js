@@ -1,9 +1,10 @@
 import { cString, isPrintable, latin1 } from "../bytes.js";
 import { hasEgoldBlocks } from "./partitions.js";
 
-export type Platform = "SGOLD" | "SGOLD2" | "SGOLD2_ELKA" | "EGOLD_CE";
+// EGOLD_CE is EGOLD with Card-Explorer, EGOLD without it: the A55, A56, A57, C55 and S46
+export type Platform = "SGOLD" | "SGOLD2" | "SGOLD2_ELKA" | "EGOLD_CE" | "EGOLD";
 
-export const PLATFORMS: readonly Platform[] = ["SGOLD", "SGOLD2", "SGOLD2_ELKA", "EGOLD_CE"];
+export const PLATFORMS: readonly Platform[] = ["SGOLD", "SGOLD2", "SGOLD2_ELKA", "EGOLD_CE", "EGOLD"];
 
 export interface Detection {
     // Undefined when the fullflash is of none of the platforms
@@ -53,7 +54,11 @@ function detectPlatform(data: Uint8Array): Platform | undefined {
     }
 
     // Of EGOLD phones, only those with a filesystem
-    return hasEgoldBlocks(data) ? "EGOLD_CE" : undefined;
+    if (hasEgoldBlocks(data, "EGOLD_CE")) {
+        return "EGOLD_CE";
+    }
+
+    return hasEgoldBlocks(data, "EGOLD") ? "EGOLD" : undefined;
 }
 
 function egoldModel(data: Uint8Array): string | undefined {
@@ -100,7 +105,8 @@ export function detect(data: Uint8Array, platform = detectPlatform(data)): Detec
             break;
         }
 
-        case "EGOLD_CE": {
+        case "EGOLD_CE":
+        case "EGOLD": {
             detection.model = egoldModel(data);
 
             break;

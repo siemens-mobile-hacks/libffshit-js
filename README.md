@@ -12,6 +12,7 @@ It has no dependencies and runs wherever JavaScript does.
 - SGOLD2
 - SGOLD2 ELKA
 - EGOLD with Card-Explorer, where writing is experimental
+- EGOLD without Card-Explorer: the A55, A56, A57, C55 and S46, for reading only
 
 ## Usage
 
@@ -48,11 +49,12 @@ has no characters for as spaces.
 
 `FFS.open()` takes options:
 
-- `platform`, when it is not to be detected: `"SGOLD"`, `"SGOLD2"`, `"SGOLD2_ELKA"` or `"EGOLD_CE"`.
+- `platform`, when it is not to be detected: `"SGOLD"`, `"SGOLD2"`, `"SGOLD2_ELKA"`, `"EGOLD_CE"` or
+  `"EGOLD"`, which is without Card-Explorer.
 - `strict`: fail on anything broken, instead of leaving it out with a warning.
-- `experimentalEgoldWrites`: write to EGOLD filesystems. The library writes them as the phones'
-  fullflashes have them, but no emulator runs EGOLD phones, so none has read what it writes: keep a
-  backup of the fullflash.
+- `experimentalEgoldWrites`: write to the filesystems of EGOLD phones with Card-Explorer. The library
+  writes them as the phones' fullflashes have them, but no emulator runs EGOLD phones, so none has
+  read what it writes: keep a backup of the fullflash.
 - `logger`: `{ debug?(message), warn?(message) }`.
 
 Timestamps are kept to 2 seconds. SGOLD2 and ELKA phones keep them in UTC, and show them in the time

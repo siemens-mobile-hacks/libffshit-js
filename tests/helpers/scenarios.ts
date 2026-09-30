@@ -49,11 +49,11 @@ export function sampleTree(sgold: boolean): FsFile[] {
 }
 
 // A filesystem of the platform in a formatted image, its records added where the library would
-export function recordImage(layout: ImageLayout, trees: Record<string, { files: FsFile[], idOffset?: number, rootName?: Uint8Array, headerSize?: number }>, patch?: (image: Uint8Array) => void): Uint8Array {
+export function recordImage(layout: ImageLayout, trees: Record<string, { files: FsFile[], idOffset?: number, rootName?: Uint8Array, headerSize?: number, egoldVersion?: 1 | 2 }>, patch?: (image: Uint8Array) => void): Uint8Array {
     const builder = new RecordsBuilder(layout);
 
     for (const [partition, tree] of Object.entries(trees)) {
-        for (const [id, data] of filesystemRecords(layout.platform, tree.files, { chunkSize: 1024, idOffset: tree.idOffset, rootName: tree.rootName, headerSize: tree.headerSize })) {
+        for (const [id, data] of filesystemRecords(layout.platform, tree.files, { chunkSize: 1024, idOffset: tree.idOffset, rootName: tree.rootName, headerSize: tree.headerSize, egoldVersion: tree.egoldVersion })) {
             builder.add(partition, id, data);
         }
     }
@@ -69,6 +69,8 @@ export const SGOLD_LAYOUT: ImageLayout  = { platform: "SGOLD", size: 0x800000, b
 export const SGOLD2_LAYOUT: ImageLayout = { platform: "SGOLD2", size: 0x800000, blockSize: 0x10000, partitions: [{ name: "FFS_0", blocks: 8 }, { name: "FFS_C", blocks: 3 }] };
 export const ELKA_LAYOUT: ImageLayout   = { platform: "SGOLD2_ELKA", size: 0x800000, blockSize: 0x20000, partitions: [{ name: "FFS_0", blocks: 6 }, { name: "FFS_C", blocks: 3 }] };
 export const EGOLD_LAYOUT: ImageLayout  = { platform: "EGOLD_CE", size: 0x800000, blockSize: 0x10000, partitions: [{ name: "FFS", blocks: 8 }] };
+// Without Card-Explorer: the C55's, with the EEPROM's blocks after the filesystem's
+export const OLD_EGOLD_LAYOUT: ImageLayout = { platform: "EGOLD", size: 0x800000, blockSize: 0x20000, partitions: [{ name: "FFS", blocks: 4 }, { name: "EEFULL", blocks: 2 }] };
 
 const CACHE = [{ name: "cache.bin", data: pattern(2000, 1) }];
 
@@ -161,6 +163,24 @@ export const SCENARIOS = {
     }),
     "egold without root": () => recordImage(EGOLD_LAYOUT, { FFS: { files: [{ name: "a.bin", data: pattern(10, 1) }] } }, (image) => {
         patchFitEntry(image, "EGOLD_CE", layoutBlocks(EGOLD_LAYOUT, "FFS"), 6006, "id", 0x1234);
+    }),
+    "egold without card-explorer": () => recordImage(OLD_EGOLD_LAYOUT, { FFS: { files: sampleTree(true) } }),
+    // As one of the A56's
+    "egold without card-explorer, 32 KiB blocks": () => recordImage({ ...OLD_EGOLD_LAYOUT, blockSize: 0x8000, partitions: [{ name: "FFS", blocks: 8 }] }, { FFS: { files: sampleTree(true).slice(0, 7) } }),
+    "egold without card-explorer, without a table": () => recordImage({ ...OLD_EGOLD_LAYOUT, blockSize: 0x8000, partitions: [{ name: "FFS", blocks: 6 }, { name: "EEFULL", blocks: 1, blockSize: 0x10000 }, { name: "FFS_C", blocks: 2 }] }, {
+        FFS: { files: sampleTree(true).slice(0, 7) },
+        FFS_C: { files: CACHE },
+    }, removeEgoldTable),
+    // As the S46's: version 1, with 20-byte headers
+    "egold without card-explorer, version 1": () => recordImage({ ...OLD_EGOLD_LAYOUT, blockSize: 0x10000, partitions: [{ name: "FFS", blocks: 7 }] }, { FFS: { files: sampleTree(true), headerSize: 20, egoldVersion: 1 } }),
+    "egold without card-explorer, broken": () => recordImage(OLD_EGOLD_LAYOUT, { FFS: { files: [
+        { name: "fine.bin", data: pattern(100, 1) },
+        { name: "broken part.bin", data: pattern(3000, 3), brokenPart: true },
+        { name: "missing header", data: pattern(10, 4), headerId: 0x2222 },
+        { name: "dup.bin", data: pattern(10, 6) },
+    ] } }, (image) => {
+        // dup.bin's header takes the id of fine.bin's
+        patchFitEntry(image, "EGOLD", layoutBlocks(OLD_EGOLD_LAYOUT, "FFS"), 6018, "id", 6010);
     }),
     "x65flasher": () => concat(Buffer.from("FBK\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D"), recordImage(SGOLD_LAYOUT, { FFS: { files: sampleTree(true).slice(0, 6) } })),
 } satisfies Record<string, () => Uint8Array>;

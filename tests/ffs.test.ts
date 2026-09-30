@@ -213,6 +213,13 @@ describe("FFS", () => {
             assert.throws(() => asked.writeFile(`/FFS/${"x".repeat(63)}`, pattern(1, 1)), { name: "FFSError", message: "Names are up to 62 bytes long" });
         });
 
+        it("not to EGOLD without Card-Explorer", () => {
+            const ffs = FFS.open(SCENARIOS["egold without card-explorer"](), { experimentalEgoldWrites: true });
+
+            assert.throws(() => ffs.writeFile("/FFS/a", pattern(1, 1)), { name: "FFSError", message: "FFS: writes to EGOLD without Card-Explorer are not supported" });
+            assert.throws(() => ffs.remove("/FFS/one.bin"), { name: "FFSError", message: "FFS: writes to EGOLD without Card-Explorer are not supported" });
+        });
+
         it("not to a prototype's filesystem", () => {
             const ffs = FFS.open(SCENARIOS["sgold prototype"]());
 

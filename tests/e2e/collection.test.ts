@@ -41,7 +41,7 @@ function phoneOf(fullflash: string): Phone | string {
         return (e as Error).message;
     }
 
-    if (ffs.platform === "EGOLD_CE") {
+    if (ffs.platform === "EGOLD_CE" || ffs.platform === "EGOLD") {
         return "pmb887x-emu runs no EGOLD phones";
     }
 

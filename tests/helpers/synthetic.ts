@@ -46,7 +46,7 @@ export interface PartitionLayout {
     blocks: number;
     // indexes of blocks left unformatted
     unformatted?: number[];
-    // EGOLD: a multiple of 64 KiB, else the layout's
+    // EGOLD: a multiple of 32 KiB, else the layout's
     blockSize?: number;
 }
 
@@ -99,7 +99,8 @@ export function formattedImage(layout: ImageLayout): Uint8Array {
             break;
         }
 
-        case "EGOLD_CE": {
+        case "EGOLD_CE":
+        case "EGOLD": {
             // The flash configuration block: the language pack, the model and the vendor
             setString(data, 0x80000 - 0xA0, "lg1");
             setString(data, 0x80000 - 0x90, model);
@@ -189,10 +190,11 @@ function egoldBase(layout: ImageLayout): number {
 }
 
 // EGOLD's: a pointer to a table of records of blocks, each with where the block's address is, whose
-// header names the partition
+// header names the partition: at 0x80 with Card-Explorer, at 0x10 without
 function egoldTable(data: Uint8Array, layout: ImageLayout): void {
     const base      = egoldBase(layout);
     const blocks    = layout.partitions.flatMap((partition) => Array.from({ length: partition.blocks }, (_, i) => ({ name: partition.name, number: i, size: partition.blockSize ?? layout.blockSize })));
+    const header    = layout.platform === "EGOLD_CE" ? 0x80 : 0x10;
     let   blockAddr = layout.blocksAddr ?? BLOCKS_ADDR;
 
     // Addresses are segment:offset, with 16 KiB segments
@@ -207,24 +209,24 @@ function egoldTable(data: Uint8Array, layout: ImageLayout): void {
     setU32(data, POINTER_ADDR + 6, segment(TABLE_ADDR));
 
     blocks.forEach((block, i) => {
-        // Of 128 KiB sectors, or of 64 KiB ones
-        const wide = block.size % 0x20000 === 0;
+        // Of sectors of 128, 64 or 32 KiB, whose size in KiB the table has
+        const sector = [0x20000, 0x10000, 0x8000].find((size) => block.size % size === 0)!;
 
-        setU16(data, TABLE_ADDR + i * 6, block.size / (wide ? 0x20000 : 0x10000));
+        setU16(data, TABLE_ADDR + i * 6, block.size / sector);
         setU32(data, TABLE_ADDR + i * 6 + 2, segment(LISTS_ADDR + i * 6));
         setU32(data, LISTS_ADDR + i * 6, base + blockAddr);
-        setU16(data, LISTS_ADDR + i * 6 + 4, wide ? 0x80 : 0);
+        setU16(data, LISTS_ADDR + i * 6 + 4, sector / 0x400);
 
         data.fill(0xFF, blockAddr, blockAddr + block.size);
 
         // FE FE, the name, 1, the block's number, what the phones have there, FE FE
-        setU16(data, blockAddr + 0x80, 0xFEFE);
-        data.fill(0, blockAddr + 0x82, blockAddr + 0x88);
-        setString(data, blockAddr + 0x82, block.name);
-        setU16(data, blockAddr + 0x88, 1);
-        setU16(data, blockAddr + 0x8A, block.number);
-        setU16(data, blockAddr + 0x8C, 0xFFA0);
-        setU16(data, blockAddr + 0x8E, 0xFEFE);
+        setU16(data, blockAddr + header, 0xFEFE);
+        data.fill(0, blockAddr + header + 2, blockAddr + header + 8);
+        setString(data, blockAddr + header + 2, block.name);
+        setU16(data, blockAddr + header + 8, 1);
+        setU16(data, blockAddr + header + 10, block.number);
+        setU16(data, blockAddr + header + 12, 0xFFA0);
+        setU16(data, blockAddr + header + 14, 0xFEFE);
 
         blockAddr += block.size;
     });
@@ -270,7 +272,7 @@ export function patchFitEntry(image: Uint8Array, platform: Platform, blocks: { a
     const elka = platform === "SGOLD2_ELKA";
 
     // The state, 0, the size, the address, the id, a tag and the state again
-    if (platform === "EGOLD_CE") {
+    if (platform === "EGOLD_CE" || platform === "EGOLD") {
         for (const block of blocks) {
             for (let at = block.addr + block.size - 12; at > block.addr && image[at] !== 0xFF; at -= 12) {
                 if ((image[at + 8] | (image[at + 9] << 8)) !== id || image[at] !== 0xFC) {
@@ -369,6 +371,8 @@ export interface FsOptions {
     idOffset?: number;
     // EGOLD's headers and parts, of 16 bytes or of 20
     headerSize?: number;
+    // EGOLD's version 1, the S46's: directory entries without the names' hashes
+    egoldVersion?: 1 | 2;
 }
 
 interface Ids {
@@ -378,8 +382,9 @@ interface Ids {
 // The records of a filesystem, id by id, in the format of the platform
 export function filesystemRecords(platform: Platform, root: FsFile[], options: FsOptions): Map<number, Uint8Array> {
     const records   = new Map<number, Uint8Array>();
-    const egold     = platform === "EGOLD_CE";
+    const egold     = platform === "EGOLD_CE" || platform === "EGOLD";
     const sgold     = platform === "SGOLD" || egold;
+    const hashless  = options.egoldVersion === 1;
     // EGOLD's headers and parts end in 0xFF
     const padding   = new Uint8Array((options.headerSize ?? 16) - 16).fill(0xFF);
     const idOffset  = options.idOffset ?? (egold ? 6000 : 0);
@@ -443,8 +448,8 @@ export function filesystemRecords(platform: Platform, root: FsFile[], options: F
     };
 
     const directory = (id: number, parentId: number, children: FsFile[], fat: number, attributes: number, name: Uint8Array): void => {
-        const entrySize = sgold ? 4 : 8;
-        const perRecord = (sgold ? 128 : 256) / entrySize;
+        const entrySize = hashless ? 2 : sgold ? 4 : 8;
+        const perRecord = hashless ? 32 : (sgold ? 128 : 256) / entrySize;
         const entries: Uint8Array[] = [];
 
         for (const child of children) {
@@ -452,7 +457,7 @@ export function filesystemRecords(platform: Platform, root: FsFile[], options: F
             const stored  = storedName(child.name);
             const hash    = egold ? nameHash7bit(stored) : sgold ? nameHash8bit(stored) : nameHashUtf16(String.fromCharCode(...Array.from({ length: stored.length >> 1 }, (_, i) => stored[i * 2] | (stored[i * 2 + 1] << 8))));
 
-            entries.push(sgold ? concat(u16(childId), u16(hash)) : concat(u32(childId), u32((0xFFFF0000 | hash) >>> 0)));
+            entries.push(hashless ? u16(childId) : sgold ? concat(u16(childId), u16(hash)) : concat(u32(childId), u32((0xFFFF0000 | hash) >>> 0)));
 
             if (child.children) {
                 directory(childId, id, child.children, child.fat ?? fatTime(2008, 1, 2, 3, 4, 6), 0x10 | (child.attributes ?? 0), stored);
@@ -483,7 +488,10 @@ export function filesystemRecords(platform: Platform, root: FsFile[], options: F
     };
 
     // The configuration record: the chunk size, and EGOLD's the other sizes as the phones have them
-    if (egold) {
+    if (hashless) {
+        records.set(0, concat(u16(0x100), u16(chunk), u16(0x20), u16(options.headerSize ?? 16), u16(0x3C)));
+        records.set(1, new Uint8Array(0x3C).fill(0xFF));
+    } else if (egold) {
         records.set(0, concat(u16(0x200), u16(chunk), u16(0x20), u16(0x80), u16(options.headerSize ?? 16), u16(0x3C), u16(0x80)));
         records.set(1, new Uint8Array(0x3C).fill(0xFF));
     } else {

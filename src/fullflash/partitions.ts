@@ -63,13 +63,24 @@ const EGOLD_TABLE_POINTER = new Pattern("?? 00 00 00  0? 00  ?? ?? ?? 0?");
 
 // A block header between FE FE and FE FE
 const EGOLD_BLOCK = new Pattern("FE FE ?? ??  ?? ?? ?? ??  ?? ?? ?? ??  ?? ?? FE FE");
-// Where an EGOLD block has its header, after which its records are
-export const EGOLD_HEADER_OFFSET    = 0x80;
-export const EGOLD_FIRST_RECORD     = 0x90;
+export const EGOLD_HEADER_SIZE      = 16;
 export const EGOLD_FIT_ENTRY_SIZE   = 12;
 // The state a FIT entry begins and ends with
 export const EGOLD_VALID            = 0xFC;
 export const EGOLD_DELETED          = 0xF0;
+
+export type EgoldPlatform = "EGOLD_CE" | "EGOLD";
+
+// Where an EGOLD block has its header, after which its records are, and what blocks are multiples
+// of: with Card-Explorer at 0x80 and of 64 KiB, without it at 0x10 and of 32 KiB
+interface EgoldLayout {
+    header: number;
+    unit: number;
+}
+
+export function egoldLayout(platform: EgoldPlatform): EgoldLayout {
+    return platform === "EGOLD_CE" ? { header: 0x80, unit: 0x10000 } : { header: 0x10, unit: 0x8000 };
+}
 
 const ADDRESS_MASK      = 0x0FFFFFFF;
 const BLOCK_HEADER_SIZE = 16;
@@ -274,14 +285,16 @@ function segmentToPage(segmentAddr: number): number {
     return (segmentAddr >>> 16) * 0x4000 + (segmentAddr & 0xFFFF);
 }
 
-function isEgoldBlock(data: Uint8Array, addr: number): boolean {
-    return EGOLD_BLOCK.matches(data, addr + EGOLD_HEADER_OFFSET) && isFsName(cString(data, addr + EGOLD_HEADER_OFFSET + 2, 6));
+function isEgoldBlock(data: Uint8Array, addr: number, layout: EgoldLayout): boolean {
+    return EGOLD_BLOCK.matches(data, addr + layout.header) && isFsName(cString(data, addr + layout.header + 2, 6));
 }
 
-// Whether there are blocks of an EGOLD filesystem, which start at 64 KiB boundaries
-export function hasEgoldBlocks(data: Uint8Array): boolean {
-    for (let addr = 0; addr + EGOLD_FIRST_RECORD <= data.length; addr += 0x10000) {
-        if (isEgoldBlock(data, addr)) {
+// Whether there are blocks of an EGOLD filesystem of the platform
+export function hasEgoldBlocks(data: Uint8Array, platform: EgoldPlatform): boolean {
+    const layout = egoldLayout(platform);
+
+    for (let addr = 0; addr + layout.header + EGOLD_HEADER_SIZE <= data.length; addr += layout.unit) {
+        if (isEgoldBlock(data, addr, layout)) {
             return true;
         }
     }
@@ -289,11 +302,11 @@ export function hasEgoldBlocks(data: Uint8Array): boolean {
     return false;
 }
 
-// A block ends 64 KiB on, or a multiple of it, where its FIT ends with the entry of its first record,
-// which is right after the block's header: the block's size, and where the phone has that record.
-// Undefined for an erased block.
-function egoldFirstRecord(data: Uint8Array, addr: number): { size: number, address: number } | undefined {
-    for (let size = 0x10000; addr + size <= data.length; size += 0x10000) {
+// A block ends a multiple of the layout's unit on, where its FIT ends with the entry of its first
+// record, which is right after the block's header: the block's size, and where the phone has that
+// record. Undefined for an erased block.
+function egoldFirstRecord(data: Uint8Array, addr: number, layout: EgoldLayout): { size: number, address: number } | undefined {
+    for (let size = layout.unit; addr + size <= data.length; size += layout.unit) {
         const entry = addr + size - EGOLD_FIT_ENTRY_SIZE;
         const state = data[entry];
 
@@ -302,7 +315,7 @@ function egoldFirstRecord(data: Uint8Array, addr: number): { size: number, addre
         }
 
         // Of any block, of the filesystem or not
-        if (EGOLD_BLOCK.matches(data, addr + size + EGOLD_HEADER_OFFSET)) {
+        if (EGOLD_BLOCK.matches(data, addr + size + layout.header)) {
             return undefined;
         }
     }
@@ -313,18 +326,18 @@ function egoldFirstRecord(data: Uint8Array, addr: number): { size: number, addre
 // Where the fullflash starts in the phone's address space, which depends on the phone and on what
 // the dump was made of. Most of the blocks tell. Without any, the fullflash is taken to end at 16
 // MiB.
-function egoldBase(data: Uint8Array): number {
+function egoldBase(data: Uint8Array, layout: EgoldLayout): number {
     const votes = new Map<number, number>();
 
-    for (let addr = 0; addr + EGOLD_FIRST_RECORD <= data.length; addr += 0x10000) {
-        const first = isEgoldBlock(data, addr) ? egoldFirstRecord(data, addr) : undefined;
+    for (let addr = 0; addr + layout.header + EGOLD_HEADER_SIZE <= data.length; addr += layout.unit) {
+        const first = isEgoldBlock(data, addr, layout) ? egoldFirstRecord(data, addr, layout) : undefined;
 
         if (!first) {
             continue;
         }
 
         // Of a mirror of the flash, where the addresses are of the other copy, it is negative
-        const base = first.address - (addr + EGOLD_FIRST_RECORD);
+        const base = first.address - (addr + layout.header + EGOLD_HEADER_SIZE);
 
         if (base >= 0 && !(base & 0xFFFF)) {
             votes.set(base, (votes.get(base) ?? 0) + 1);
@@ -336,35 +349,37 @@ function egoldBase(data: Uint8Array): number {
     return best ? best[0] : 0x1000000 - data.length;
 }
 
-// The record of a block in a table: its number of blocks, and where its address is
-function egoldRecord(data: Uint8Array, base: number, offset: number): { blocks: number, addr: number, wide: boolean, name: Uint8Array } | undefined {
-    const blocks    = peek16(data, offset);
+// The record of a block in a table: its number of sectors, and where its address and the size of
+// its sectors in KiB are
+function egoldRecord(data: Uint8Array, base: number, offset: number, layout: EgoldLayout): { size: number, addr: number, name: Uint8Array } | undefined {
+    const sectors   = peek16(data, offset);
     const segment   = peek32(data, offset + 2);
 
-    if (blocks === undefined || segment === undefined) {
+    if (sectors === undefined || segment === undefined) {
         return undefined;
     }
 
     const page      = segmentToPage(segment) - base;
     const address   = peek32(data, page);
-    const flags     = peek16(data, page + 4);
+    const kib       = peek16(data, page + 4);
 
-    if (page <= 0 || address === undefined || flags === undefined || flags > 0x80) {
+    if (page <= 0 || address === undefined || !kib || kib > 0x80 || (kib & (kib - 1))) {
         return undefined;
     }
 
     const addr = address - base;
 
-    if (addr < 0 || (addr & 0xFFF) !== 0 || ((addr + 2) | 0x80) + 12 >= data.length) {
+    if (addr < 0 || (addr & 0xFFF) !== 0 || addr + layout.header + 14 >= data.length) {
         return undefined;
     }
 
-    return { blocks, addr, wide: flags === 0x80, name: cString(data, (addr + 2) | 0x80, 6) };
+    return { size: sectors * kib * 0x400, addr, name: cString(data, addr + layout.header + 2, 6) };
 }
 
-function searchEgoldTables(data: Uint8Array, base: number, log: Log): Found | undefined {
+function searchEgoldTables(data: Uint8Array, base: number, platform: EgoldPlatform, log: Log): Found | undefined {
     const search = new Search(data, log);
     const tables = new Set<number>();
+    const layout = egoldLayout(platform);
 
     for (const pointer of [...EGOLD_TABLE_POINTER.find(data, 2)].reverse()) {
         const records   = peek32(data, pointer)!;
@@ -375,7 +390,7 @@ function searchEgoldTables(data: Uint8Array, base: number, log: Log): Found | un
             continue;
         }
 
-        const entries = Array.from({ length: records }, (_, i) => egoldRecord(data, base, table + i * 6));
+        const entries = Array.from({ length: records }, (_, i) => egoldRecord(data, base, table + i * 6, layout));
 
         if (entries.some((entry) => !entry || !isPrintable(entry.name))) {
             continue;
@@ -389,13 +404,12 @@ function searchEgoldTables(data: Uint8Array, base: number, log: Log): Found | un
             const name = latin1(entry!.name);
 
             if (name.includes("FFS")) {
-                // New EGOLD's blocks are of 128 KiB
-                search.add(name, { addr: entry!.addr, size: (entry!.wide ? 0x20000 : 0x10000) * entry!.blocks });
+                search.add(name, { addr: entry!.addr, size: entry!.size });
             }
         }
     }
 
-    return search.found("EGOLD_CE");
+    return search.found(platform);
 }
 
 // =========================================================================
@@ -403,15 +417,16 @@ function searchEgoldTables(data: Uint8Array, base: number, log: Log): Found | un
 
 // A partition's blocks are of one size, which their FITs tell: a dump may lack some of the blocks,
 // and have others of the flash in between
-function searchEgoldBlocks(data: Uint8Array, base: number, log: Log): Found | undefined {
+function searchEgoldBlocks(data: Uint8Array, base: number, platform: EgoldPlatform, log: Log): Found | undefined {
     const search = new Search(data, log);
+    const layout = egoldLayout(platform);
     const blocks: { addr: number, name: string, size?: number }[] = [];
 
     for (const addr of EGOLD_BLOCK.find(data, 4)) {
         const name = cString(data, addr + 2, 6);
 
-        if ((addr & 0xFFF) === EGOLD_HEADER_OFFSET && isFsName(name)) {
-            blocks.push({ addr: addr - EGOLD_HEADER_OFFSET, name: latin1(name) });
+        if ((addr & 0xFFF) === layout.header && isFsName(name)) {
+            blocks.push({ addr: addr - layout.header, name: latin1(name) });
         }
     }
 
@@ -419,9 +434,9 @@ function searchEgoldBlocks(data: Uint8Array, base: number, log: Log): Found | un
     const limits = blocks.map((block, i) => (blocks[i + 1]?.addr ?? data.length) - block.addr);
 
     blocks.forEach((block, i) => {
-        const first = egoldFirstRecord(data, block.addr);
+        const first = egoldFirstRecord(data, block.addr, layout);
 
-        if (first && first.size <= limits[i] && first.address === base + block.addr + EGOLD_FIRST_RECORD) {
+        if (first && first.size <= limits[i] && first.address === base + block.addr + layout.header + EGOLD_HEADER_SIZE) {
             block.size = first.size;
         }
     });
@@ -433,7 +448,7 @@ function searchEgoldBlocks(data: Uint8Array, base: number, log: Log): Found | un
         search.add(block.name, { addr: block.addr, size: block.size ?? Math.min(other?.size ?? 0x10000, limits[i]) });
     });
 
-    return search.found("EGOLD_CE");
+    return search.found(platform);
 }
 
 // Blocks of 64 KiB, the first of every partition's pair with a header
@@ -471,7 +486,8 @@ function searchElkaBlocks(data: Uint8Array, log: Log): Found | undefined {
 // =========================================================================
 
 export function findPartitions(data: Uint8Array, platform: Platform, sl75: boolean, log: Log): Partitions {
-    const base = platform === "EGOLD_CE" ? egoldBase(data) : 0;
+    const egold = platform === "EGOLD_CE" || platform === "EGOLD";
+    const base  = egold ? egoldBase(data, egoldLayout(platform)) : 0;
 
     let found: Found | undefined;
 
@@ -479,7 +495,8 @@ export function findPartitions(data: Uint8Array, platform: Platform, sl75: boole
         case "SGOLD":       found = searchTables(data, SGOLD_LAYOUT, sl75, log); break;
         case "SGOLD2":      found = searchTables(data, SGOLD2_LAYOUT, sl75, log); break;
         case "SGOLD2_ELKA": found = searchTables(data, SGOLD2_ELKA_LAYOUT, sl75, log); break;
-        case "EGOLD_CE":    found = searchEgoldTables(data, base, log); break;
+        case "EGOLD_CE":
+        case "EGOLD":       found = searchEgoldTables(data, base, platform, log); break;
     }
 
     if (!found) {
@@ -489,7 +506,8 @@ export function findPartitions(data: Uint8Array, platform: Platform, sl75: boole
             case "SGOLD":
             case "SGOLD2":      found = searchSgoldBlocks(data, platform, log); break;
             case "SGOLD2_ELKA": found = searchElkaBlocks(data, log); break;
-            case "EGOLD_CE":    found = searchEgoldBlocks(data, base, log); break;
+            case "EGOLD_CE":
+            case "EGOLD":       found = searchEgoldBlocks(data, base, platform, log); break;
         }
     }
 
@@ -501,7 +519,7 @@ export function findPartitions(data: Uint8Array, platform: Platform, sl75: boole
         log.warn(problem);
     }
 
-    if (platform === "EGOLD_CE") {
+    if (egold) {
         log.debug(`The fullflash starts at ${hex(base)} in the phone`);
     }
 

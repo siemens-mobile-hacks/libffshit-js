@@ -31,7 +31,7 @@ export class SgoldFormat extends WritableFormat {
     readonly firstId: number;
     readonly configId: number;
     readonly none                   = NONE;
-    readonly entrySize              = 4;
+    readonly entrySize: number      = 4;
     readonly utc                    = false;
     readonly nextOffset             = 14;
     readonly directoryRecordSize    = 128;

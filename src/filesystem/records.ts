@@ -13,7 +13,7 @@
 import { concat, hex, le16, le32, u16, u32 } from "../bytes.js";
 import { FFSError } from "../errors.js";
 import type { Platform } from "../fullflash/detector.js";
-import { EGOLD_DELETED, EGOLD_FIRST_RECORD, EGOLD_FIT_ENTRY_SIZE, EGOLD_HEADER_OFFSET, EGOLD_VALID, type Block, type Partition } from "../fullflash/partitions.js";
+import { EGOLD_DELETED, EGOLD_FIT_ENTRY_SIZE, EGOLD_HEADER_SIZE, EGOLD_VALID, egoldLayout, type Block, type Partition } from "../fullflash/partitions.js";
 import type { Image } from "../image.js";
 import { EGOLD_ID_OFFSET } from "./egold.js";
 
@@ -75,7 +75,8 @@ export abstract class Records {
             case "SGOLD":
             case "SGOLD2":      return new LinearRecords(image, partition);
             case "SGOLD2_ELKA": return new ElkaRecords(image, partition);
-            case "EGOLD_CE":    return new EgoldRecords(image, partition, base);
+            case "EGOLD_CE":
+            case "EGOLD":       return new EgoldRecords(image, partition, base, egoldLayout(platform).header);
         }
     }
 
@@ -738,14 +739,19 @@ function align2(size: number): number {
     return (size + 1) & ~1;
 }
 
-// EGOLD: a 16 byte header at 0x80, the data packed from 0x90 on at 2 byte boundaries, and the FIT's
-// 12 byte entries growing down from the block's end: the state, 0, the size, the address in the
-// phone, the id, a tag and the state again. An erase leaves the header as it is: what the
-// firmware keeps in it besides the partition's name and the block's number is not known.
+// EGOLD: a 16 byte header, at 0x80 with Card-Explorer and at 0x10 without, the data packed after it
+// at 2 byte boundaries, and the FIT's 12 byte entries growing down from the block's end: the state,
+// 0, the size, the address in the phone, the id, a tag and the state again. An erase leaves the
+// header as it is: what the firmware keeps in it besides the partition's name and the block's number
+// is not known.
 class EgoldRecords extends Records {
-    constructor(image: Image, partition: Partition, private readonly base: number) {
+    // Where a block's records start
+    private readonly firstRecord: number;
+
+    constructor(image: Image, partition: Partition, private readonly base: number, private readonly header: number) {
         super(image, partition.name, partition.blocks, EGOLD_ID_OFFSET);
 
+        this.firstRecord = header + EGOLD_HEADER_SIZE;
         this.scan();
     }
 
@@ -753,7 +759,7 @@ class EgoldRecords extends Records {
         const data = this.image.data;
 
         block.entries = [];
-        block.dataEnd = EGOLD_FIRST_RECORD;
+        block.dataEnd = this.firstRecord;
 
         let offset = block.size - EGOLD_FIT_ENTRY_SIZE;
 
@@ -784,7 +790,7 @@ class EgoldRecords extends Records {
     }
 
     protected inBlock(block: RecordsBlock, entry: Entry): boolean {
-        return entry.offset >= block.addr + EGOLD_FIRST_RECORD && entry.offset + entry.size <= block.addr + block.size;
+        return entry.offset >= block.addr + this.firstRecord && entry.offset + entry.size <= block.addr + block.size;
     }
 
     protected readEntry(_block: RecordsBlock, entry: Entry): Uint8Array {
@@ -828,11 +834,11 @@ class EgoldRecords extends Records {
     }
 
     protected erase(block: RecordsBlock): void {
-        this.fill(block.addr, EGOLD_HEADER_OFFSET);
-        this.fill(block.addr + EGOLD_FIRST_RECORD, block.size - EGOLD_FIRST_RECORD);
+        this.fill(block.addr, this.header);
+        this.fill(block.addr + this.firstRecord, block.size - this.firstRecord);
 
         block.entries = [];
-        block.dataEnd = EGOLD_FIRST_RECORD;
+        block.dataEnd = this.firstRecord;
         block.fitNext = block.size - EGOLD_FIT_ENTRY_SIZE;
     }
 }
