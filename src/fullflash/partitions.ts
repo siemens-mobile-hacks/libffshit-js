@@ -14,7 +14,7 @@
 
 import { cString, hex, isPrintable, latin1 } from "../bytes.js";
 import { FFSError } from "../errors.js";
-import type { Log } from "../log.js";
+import { Log } from "../log.js";
 import type { Platform } from "./detector.js";
 import { Pattern } from "./pattern.js";
 
@@ -278,6 +278,20 @@ function searchTables(data: Uint8Array, layout: TableLayout, sl75: boolean, log:
     }
 
     return undefined;
+}
+
+// Whether "OTP\0" points to a partition table of ELKA's, with formatted blocks: of a dump without the
+// boot core's name where the detector reads it, as some E71s' have it elsewhere or erased
+export function hasElkaTable(data: Uint8Array): boolean {
+    for (const pointer of TABLE_POINTER.find(data, 4)) {
+        const table = peek32(data, pointer + 4)! & ADDRESS_MASK;
+
+        if (NEW_SGOLD_TABLE.matches(data, table) && parseTable(data, table, SGOLD2_ELKA_LAYOUT, false, new Log())) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 // =========================================================================

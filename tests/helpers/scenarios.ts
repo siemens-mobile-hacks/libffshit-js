@@ -171,6 +171,10 @@ export const SCENARIOS = {
 
         return image;
     },
+    // As some E71s' dumps: the boot core's name is elsewhere or erased
+    "elka without the boot core's name": () => recordImage(ELKA_LAYOUT, { FFS_0: { files: sampleTree(false).slice(0, 4) }, FFS_C: { files: CACHE } }, (image) => {
+        image.fill(0xFF, 0xC70, 0xC74);
+    }),
     "sgold without a table pointer": () => recordImage({ ...SGOLD_LAYOUT, noPointer: true, detectorFallbacks: true }, { FFS: { files: sampleTree(true).slice(0, 4) } }),
     "sgold2 without a table pointer": () => recordImage({ ...SGOLD2_LAYOUT, noPointer: true, detectorFallbacks: true }, { FFS_0: { files: sampleTree(false).slice(0, 4) }, FFS_C: { files: CACHE } }),
     "elka without a table pointer": () => recordImage({ ...ELKA_LAYOUT, noPointer: true, detectorFallbacks: true }, { FFS_0: { files: sampleTree(false).slice(0, 4) }, FFS_C: { files: CACHE } }),

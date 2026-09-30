@@ -1,5 +1,5 @@
 import { cString, isPrintable, latin1 } from "../bytes.js";
-import { hasEgoldBlocks } from "./partitions.js";
+import { hasEgoldBlocks, hasElkaTable } from "./partitions.js";
 
 // EGOLD_CE is EGOLD with Card-Explorer, EGOLD without it: the A55, A56, A57, C55 and S46, and the
 // S45, S45i, M50, MT50 and SL42, whose filesystem is a FAT disk
@@ -59,7 +59,11 @@ function detectPlatform(data: Uint8Array): Platform | undefined {
         return "EGOLD_CE";
     }
 
-    return hasEgoldBlocks(data, "EGOLD") ? "EGOLD" : undefined;
+    if (hasEgoldBlocks(data, "EGOLD")) {
+        return "EGOLD";
+    }
+
+    return hasElkaTable(data) ? "SGOLD2_ELKA" : undefined;
 }
 
 function egoldModel(data: Uint8Array): string | undefined {

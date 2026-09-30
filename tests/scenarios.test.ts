@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { FFS, type FFSTreeEntry, type Platform } from "../src/index.js";
 import { equalBytes, pattern } from "./helpers/data.js";
-import { SCENARIOS, type Scenario } from "./helpers/scenarios.js";
+import { ELKA_LAYOUT, recordImage, SCENARIOS, type Scenario } from "./helpers/scenarios.js";
 
 interface Expected {
     platform: Platform;
@@ -94,6 +94,11 @@ const EXPECTED: Record<Scenario, Expected> = {
     "sgold2 elka prototype": {
         platform: "SGOLD2_ELKA",
         tree: [...under("/FFS_0", SAMPLE.slice(0, 6)), ...CACHE],
+    },
+    // Found by its partition table
+    "elka without the boot core's name": {
+        platform: "SGOLD2_ELKA", model: "SYN", imei: IMEI,
+        tree: [...under("/FFS_0", SAMPLE.slice(0, 4)), ...CACHE],
     },
     // The table found by its pattern, the model and IMEI where some phones have them
     "sgold without a table pointer": {
@@ -294,6 +299,18 @@ describe("Made-up fullflashes", () => {
         assert.equal(FFS.open(image, { platform: "SGOLD" }).readDir("/FFS").length, 12);
         assert.throws(() => FFS.open(new Uint8Array(0x100000), { platform: "EGOLD_CE" }), { name: "FFSError", message: "No filesystem partitions found" });
         assert.throws(() => FFS.open(new Uint8Array(0x100000), { platform: "EGOLD" }), { name: "FFSError", message: "No filesystem partitions found" });
+    });
+
+    it("take a fullflash without the boot core's name for an ELKA's only by an ELKA's partition table", () => {
+        const sgold2 = SCENARIOS.sgold2();
+        const elka   = recordImage({ ...ELKA_LAYOUT, noPointer: true }, { FFS_0: { files: [] } });
+
+        sgold2.fill(0xFF, 0x870, 0x874);
+        elka.fill(0xFF, 0xC70, 0xC74);
+
+        for (const image of [sgold2, elka]) {
+            assert.throws(() => FFS.open(image), { name: "FFSError", message: "The fullflash is of an unknown platform" });
+        }
     });
 
     it("find the names on FAT disks without regard to the case of ASCII letters, with their attributes", () => {
