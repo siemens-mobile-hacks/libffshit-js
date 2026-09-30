@@ -82,6 +82,9 @@ export function egoldLayout(platform: EgoldPlatform): EgoldLayout {
     return platform === "EGOLD_CE" ? { header: 0x80, unit: 0x10000 } : { header: 0x10, unit: 0x8000 };
 }
 
+// The x45's partition of a FAT disk, whose records are its sectors
+export const LBA_FS = "LBA_FS";
+
 const ADDRESS_MASK      = 0x0FFFFFFF;
 const BLOCK_HEADER_SIZE = 16;
 const FORMATTED         = 0xFFFFFFF0;
@@ -285,8 +288,12 @@ function segmentToPage(segmentAddr: number): number {
     return (segmentAddr >>> 16) * 0x4000 + (segmentAddr & 0xFFFF);
 }
 
+function isEgoldFsName(name: Uint8Array): boolean {
+    return isFsName(name) || latin1(name) === LBA_FS;
+}
+
 function isEgoldBlock(data: Uint8Array, addr: number, layout: EgoldLayout): boolean {
-    return EGOLD_BLOCK.matches(data, addr + layout.header) && isFsName(cString(data, addr + layout.header + 2, 6));
+    return EGOLD_BLOCK.matches(data, addr + layout.header) && isEgoldFsName(cString(data, addr + layout.header + 2, 6));
 }
 
 // Whether there are blocks of an EGOLD filesystem of the platform
@@ -401,10 +408,8 @@ function searchEgoldTables(data: Uint8Array, base: number, platform: EgoldPlatfo
         tables.add(table);
 
         for (const entry of entries) {
-            const name = latin1(entry!.name);
-
-            if (name.includes("FFS")) {
-                search.add(name, { addr: entry!.addr, size: entry!.size });
+            if (isEgoldFsName(entry!.name)) {
+                search.add(latin1(entry!.name), { addr: entry!.addr, size: entry!.size });
             }
         }
     }
@@ -425,7 +430,7 @@ function searchEgoldBlocks(data: Uint8Array, base: number, platform: EgoldPlatfo
     for (const addr of EGOLD_BLOCK.find(data, 4)) {
         const name = cString(data, addr + 2, 6);
 
-        if ((addr & 0xFFF) === layout.header && isFsName(name)) {
+        if ((addr & 0xFFF) === layout.header && isEgoldFsName(name)) {
             blocks.push({ addr: addr - layout.header, name: latin1(name) });
         }
     }

@@ -375,6 +375,227 @@ export interface FsOptions {
     egoldVersion?: 1 | 2;
 }
 
+export interface FatOptions {
+    // where the partition starts, behind a partition table, or 0 for none
+    start?: number;
+    clusterSectors?: number;
+}
+
+// The x45's LBA_FS: a FAT12 disk of 512-byte sectors, each a record under its number. Directories
+// have a long name's entries before their short one where a short name will not do, and the root a
+// volume label and a deleted entry. A file's name given as bytes is its short name, of 11 bytes.
+// What goes wrong: noData leaves a file's sectors out, brokenPart has its chain lead out of the disk
+// after its first cluster, and headerId is the cluster a directory's entry has. The sectors never
+// written are left out.
+export function fatRecords(root: FsFile[], options: FatOptions = {}): Map<number, Uint8Array> {
+    const start         = options.start ?? 32;
+    const clusterSectors = options.clusterSectors ?? 1;
+    const clusterBytes  = clusterSectors * 512;
+    const total         = 736;
+    const fatSectors    = 3;
+    const rootSectors   = 32;
+    const rootStart     = start + 1 + 2 * fatSectors;
+    const dataStart     = rootStart + rootSectors;
+    const clusters      = Math.floor((start + total - dataStart) / clusterSectors);
+    const sectors       = new Map<number, Uint8Array>();
+    const fat           = new Array<number>(clusters + 2).fill(0);
+    let   nextCluster   = 2;
+
+    const sector = (n: number): Uint8Array => {
+        if (!sectors.has(n)) {
+            sectors.set(n, new Uint8Array(512));
+        }
+
+        return sectors.get(n)!;
+    };
+
+    // A chain of clusters, whose last one is marked as the end
+    const allocate = (count: number): number[] => {
+        const chain = Array.from({ length: count }, (_, i) => nextCluster + i);
+
+        chain.forEach((cluster, i) => fat[cluster] = chain[i + 1] ?? 0xFFF);
+        nextCluster += count;
+
+        return chain;
+    };
+
+    const store = (chain: number[], data: Uint8Array): void => {
+        for (let i = 0; i * 512 < data.length; ++i) {
+            const cluster = chain[Math.floor(i / clusterSectors)];
+
+            sector(dataStart + (cluster - 2) * clusterSectors + i % clusterSectors).set(data.subarray(i * 512, (i + 1) * 512));
+        }
+    };
+
+    const entry = (name: Uint8Array, attributes: number, cluster: number, size = 0, time = fatTime(2008, 1, 2, 3, 4, 6), caseFlags = 0): Uint8Array => {
+        const data = new Uint8Array(32);
+
+        data.set(name);
+        data[11] = attributes;
+        data[12] = caseFlags;
+        setU16(data, 22, time & 0xFFFF);
+        setU16(data, 24, time >>> 16);
+        setU16(data, 26, cluster);
+        setU32(data, 28, size);
+
+        return data;
+    };
+
+    // The short name and the flags that show it in lower case, unless it takes a long name
+    const shortName = (name: string): { stored: Uint8Array, caseFlags: number } | undefined => {
+        const match = /^([A-Za-z0-9_~-]{1,8})(?:\.([A-Za-z0-9_~-]{1,3}))?$/.exec(name);
+        const lower = (part: string) => part !== part.toUpperCase() && part === part.toLowerCase();
+        const mixed = (part: string) => part !== part.toUpperCase() && part !== part.toLowerCase();
+
+        if (!match || mixed(match[1]) || mixed(match[2] ?? "")) {
+            return undefined;
+        }
+
+        return {
+            stored:     Uint8Array.from(Buffer.from(match[1].toUpperCase().padEnd(8) + (match[2] ?? "").toUpperCase().padEnd(3), "latin1")),
+            caseFlags:  (lower(match[1]) ? 0x08 : 0) | (lower(match[2] ?? "") ? 0x10 : 0),
+        };
+    };
+
+    // The entries of a long name, from its last part on, and the short name they go with
+    const longName = (name: string, index: number): { entries: Uint8Array[], stored: Uint8Array } => {
+        const stored    = Uint8Array.from(Buffer.from(`LFN~${index}`.padEnd(11), "latin1"));
+        const checksum  = stored.reduce((sum, byte) => ((((sum & 1) << 7) | (sum >>> 1)) + byte) & 0xFF, 0);
+        const units     = Array.from({ length: name.length }, (_, i) => name.charCodeAt(i));
+        const parts     = Math.ceil(units.length / 13);
+
+        // A 0 after the name where there is room, then 0xFFFF
+        if (units.length % 13) {
+            units.push(0);
+        }
+
+        while (units.length < parts * 13) {
+            units.push(0xFFFF);
+        }
+
+        const entries = Array.from({ length: parts }, (_, i) => {
+            const part = parts - i;
+            const data = new Uint8Array(32);
+            const at   = [1, 3, 5, 7, 9, 14, 16, 18, 20, 22, 24, 28, 30];
+
+            data[0]  = part | (part === parts ? 0x40 : 0);
+            data[11] = 0x0F;
+            data[13] = checksum;
+            at.forEach((offset, j) => setU16(data, offset, units[(part - 1) * 13 + j]));
+
+            return data;
+        });
+
+        return { entries, stored };
+    };
+
+    const entriesOf = (files: FsFile[]): number => files.reduce((count, file, i) => {
+        const long = typeof file.name === "string" && !shortName(file.name) ? longName(file.name, i).entries.length : 0;
+
+        return count + 1 + long;
+    }, 2);
+
+    const directory = (files: FsFile[], cluster: number, parent: number): Uint8Array[] => {
+        const entries = cluster ? [entry(Buffer.from(".          ", "latin1"), 0x10, cluster), entry(Buffer.from("..         ", "latin1"), 0x10, parent)] : [];
+
+        files.forEach((file, i) => {
+            const short = typeof file.name === "string" ? shortName(file.name) : { stored: file.name, caseFlags: 0 };
+            const long  = typeof file.name === "string" && !short ? longName(file.name, i) : undefined;
+            let   first = 0;
+
+            if (file.children) {
+                if (file.headerId !== undefined) {
+                    first = file.headerId;
+                } else {
+                    const chain = allocate(Math.max(1, Math.ceil(entriesOf(file.children) * 32 / clusterBytes)));
+
+                    first = chain[0];
+                    store(chain, concat(...directory(file.children, first, cluster)));
+                }
+            } else if (file.data?.length) {
+                const chain = allocate(Math.ceil(file.data.length / clusterBytes));
+
+                first = chain[0];
+
+                if (!file.noData) {
+                    store(chain, file.data);
+                }
+
+                if (file.brokenPart) {
+                    fat[chain[0]] = 0x777;
+                }
+            }
+
+            const attributes = (file.children ? 0x10 : 0) | (file.attributes ?? 0);
+
+            entries.push(...(long?.entries ?? []), entry(long?.stored ?? short!.stored, attributes, first, file.data?.length ?? 0, file.fat ?? fatTime(2009, 5, 6, 7, 8, 10), short?.caseFlags ?? 0));
+        });
+
+        return entries;
+    };
+
+    // The volume label, and a deleted file's entry
+    const deleted = entry(Buffer.from("\xE5ONE    BIN", "latin1"), 0, 0);
+    const rootDir = concat(entry(Buffer.from("SANVOL     ", "latin1"), 0x08, 0), deleted, ...directory(root, 0, 0));
+
+    for (let i = 0; i * 512 < rootDir.length; ++i) {
+        sector(rootStart + i).set(rootDir.subarray(i * 512, (i + 1) * 512));
+    }
+
+    // FAT12, twice
+    fat[0] = 0xFF8;
+    fat[1] = 0xFFF;
+
+    for (let copy = 0; copy < 2; ++copy) {
+        const table = new Uint8Array(fatSectors * 512);
+
+        fat.forEach((value, cluster) => {
+            const at = cluster + (cluster >>> 1);
+
+            if (cluster & 1) {
+                table[at]     |= (value << 4) & 0xF0;
+                table[at + 1]  = value >>> 4;
+            } else {
+                table[at]      = value & 0xFF;
+                table[at + 1] |= value >>> 8;
+            }
+        });
+
+        for (let i = 0; i < fatSectors; ++i) {
+            sector(start + 1 + copy * fatSectors + i).set(table.subarray(i * 512, (i + 1) * 512));
+        }
+    }
+
+    // The boot sector: a jump, the OEM name, the sectors' size, the clusters', the reserved sectors,
+    // the FATs, the root's entries, the sectors, the media, the FATs' size
+    const boot = sector(start);
+
+    boot.set([0xEB, 0x3C, 0x90]);
+    setString(boot, 3, "MSDOS5.0");
+    setU16(boot, 11, 512);
+    boot[13] = clusterSectors;
+    setU16(boot, 14, 1);
+    boot[16] = 2;
+    setU16(boot, 17, rootSectors * 16);
+    setU16(boot, 19, total);
+    boot[21] = 0xF8;
+    setU16(boot, 22, fatSectors);
+    setU16(boot, 510, 0xAA55);
+
+    // The partition table: its first partition's type, where it starts, and its sectors
+    if (start) {
+        const mbr = sector(0);
+
+        mbr.set([0xFA, 0x33, 0xC0]);
+        mbr[446 + 4] = 0x01;
+        setU32(mbr, 446 + 8, start);
+        setU32(mbr, 446 + 12, total);
+        setU16(mbr, 510, 0xAA55);
+    }
+
+    return sectors;
+}
+
 interface Ids {
     next: number;
 }

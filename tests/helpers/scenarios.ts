@@ -1,6 +1,6 @@
 // Made-up fullflashes of every platform, with the files and the breakage the library has to cope with
 import { pattern } from "./data.js";
-import { fatTime, filesystemRecords, layoutBlocks, patchFitEntry, RecordsBuilder, removeEgoldTable, type FsFile, type ImageLayout } from "./synthetic.js";
+import { fatRecords, fatTime, filesystemRecords, layoutBlocks, patchFitEntry, RecordsBuilder, removeEgoldTable, type FatOptions, type FsFile, type ImageLayout } from "./synthetic.js";
 
 export const bytes = (...values: number[]) => Uint8Array.from(values);
 export const utf16 = (str: string) => Uint8Array.from(Buffer.from(str, "utf16le"));
@@ -65,12 +65,51 @@ export function recordImage(layout: ImageLayout, trees: Record<string, { files: 
     return image;
 }
 
+// The x45's LBA_FS, a FAT disk, its sectors added where the library would
+function fatImage(files: FsFile[], options?: FatOptions): Uint8Array {
+    const builder = new RecordsBuilder(LBA_FS_LAYOUT);
+
+    for (const [sector, data] of fatRecords(files, options)) {
+        builder.add("LBA_FS", sector, data);
+    }
+
+    return builder.build();
+}
+
+// Names short and long, of every case, as bytes in CP1252, and a directory of more
+// than a cluster
+export const FAT_TREE: FsFile[] = [
+    { name: "EMPTY.BIN", data: new Uint8Array(0) },
+    { name: "one.bin", data: pattern(1, 1), attributes: 0x01 },
+    { name: "sector.bin", data: pattern(512, 2), attributes: 0x02 },
+    { name: "Sector+1.bin", data: pattern(513, 3), attributes: 0x04 },
+    { name: "parts.bin", data: pattern(5000, 5), fat: fatTime(2107, 12, 31, 23, 59, 58) },
+    { name: "big.bin", data: pattern(20000, 6) },
+    { name: bytes(0xC4, 0x52, 0x47, 0x45, 0x52, 0x20, 0x20, 0x20, 0x42, 0x49, 0x4E), data: pattern(5, 12) },
+    { name: bytes(0x05, 0x42, 0x43, 0x20, 0x20, 0x20, 0x20, 0x20, 0x42, 0x49, 0x4E), data: pattern(6, 13) },
+    { name: "Thirteen1.txt", data: pattern(13, 14) },
+    { name: "Address book", children: [{ name: "5F02.adr", data: pattern(700, 7) }] },
+    {
+        name: "Misc",
+        children: [
+            { name: "Ärger.txt", data: pattern(30, 8) },
+            { name: "файл.txt", data: pattern(40, 9) },
+            { name: "😀 a name of more than 26 characters.txt", data: pattern(50, 10) },
+            { name: "sub", children: [{ name: "deep.txt", data: pattern(60, 11) }], attributes: 0x02 },
+            { name: "empty dir", children: [] },
+        ],
+    },
+    { name: "Many", children: Array.from({ length: 20 }, (_, i) => ({ name: `file ${i}.txt`, data: pattern(i + 1, 20 + i) })) },
+];
+
 export const SGOLD_LAYOUT: ImageLayout  = { platform: "SGOLD", size: 0x800000, blockSize: 0x10000, partitions: [{ name: "FFS", blocks: 8 }] };
 export const SGOLD2_LAYOUT: ImageLayout = { platform: "SGOLD2", size: 0x800000, blockSize: 0x10000, partitions: [{ name: "FFS_0", blocks: 8 }, { name: "FFS_C", blocks: 3 }] };
 export const ELKA_LAYOUT: ImageLayout   = { platform: "SGOLD2_ELKA", size: 0x800000, blockSize: 0x20000, partitions: [{ name: "FFS_0", blocks: 6 }, { name: "FFS_C", blocks: 3 }] };
 export const EGOLD_LAYOUT: ImageLayout  = { platform: "EGOLD_CE", size: 0x800000, blockSize: 0x10000, partitions: [{ name: "FFS", blocks: 8 }] };
 // Without Card-Explorer: the C55's, with the EEPROM's blocks after the filesystem's
 export const OLD_EGOLD_LAYOUT: ImageLayout = { platform: "EGOLD", size: 0x800000, blockSize: 0x20000, partitions: [{ name: "FFS", blocks: 4 }, { name: "EEFULL", blocks: 2 }] };
+// The x45's: a FAT disk, and the EEPROM's filesystem, which is none
+export const LBA_FS_LAYOUT: ImageLayout = { platform: "EGOLD", size: 0x800000, blockSize: 0x10000, partitions: [{ name: "LBA_FS", blocks: 8 }, { name: "EE_FS", blocks: 2 }] };
 
 const CACHE = [{ name: "cache.bin", data: pattern(2000, 1) }];
 
@@ -182,6 +221,15 @@ export const SCENARIOS = {
         // dup.bin's header takes the id of fine.bin's
         patchFitEntry(image, "EGOLD", layoutBlocks(OLD_EGOLD_LAYOUT, "FFS"), 6018, "id", 6010);
     }),
+    "egold lba_fs": () => fatImage(FAT_TREE),
+    "egold lba_fs without a partition table, of 2-sector clusters": () => fatImage(FAT_TREE, { start: 0, clusterSectors: 2 }),
+    "egold lba_fs broken": () => fatImage([
+        { name: "fine.bin", data: pattern(100, 1) },
+        { name: "broken chain.bin", data: pattern(3000, 2), brokenPart: true },
+        { name: "no data.bin", data: pattern(1000, 3), noData: true },
+        { name: "root again", children: [], headerId: 1 },
+        { name: "nowhere", children: [], headerId: 0x800 },
+    ]),
     "x65flasher": () => concat(Buffer.from("FBK\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D"), recordImage(SGOLD_LAYOUT, { FFS: { files: sampleTree(true).slice(0, 6) } })),
 } satisfies Record<string, () => Uint8Array>;
 

@@ -1,13 +1,14 @@
 import { concat } from "./bytes.js";
 import { FFSError } from "./errors.js";
 import { EgoldFormat } from "./filesystem/egold.js";
+import { FatVolume } from "./filesystem/fat.js";
 import { Attributes, isDirectory, type Header } from "./filesystem/format.js";
 import { NewSgoldFormat } from "./filesystem/newsgold.js";
 import { Records } from "./filesystem/records.js";
 import { PROTOTYPE_ID_OFFSET, SgoldFormat } from "./filesystem/sgold.js";
-import { Volume } from "./filesystem/volume.js";
+import { Volume, type Filesystem } from "./filesystem/volume.js";
 import { detect, PLATFORMS, type Platform } from "./fullflash/detector.js";
-import { findPartitions } from "./fullflash/partitions.js";
+import { findPartitions, LBA_FS } from "./fullflash/partitions.js";
 import { Image } from "./image.js";
 import { Log, type Logger } from "./log.js";
 
@@ -42,7 +43,7 @@ export interface FFSTreeEntry extends FFSEntry {
 
 // A file or directory a path leads to
 interface Node {
-    volume: Volume;
+    volume: Filesystem;
     header: Header;
     name: string;
     path: string;
@@ -92,7 +93,7 @@ function nameProblem(name: string): string | undefined {
     return undefined;
 }
 
-function rootProblem(volume: Volume): string | undefined {
+function rootProblem(volume: Filesystem): string | undefined {
     try {
         return volume.root() ? undefined : "no root directory";
     } catch (e) {
@@ -104,7 +105,11 @@ function rootProblem(volume: Volume): string | undefined {
     }
 }
 
-function createVolume(platform: Platform, name: string, records: Records, options: OpenOptions, log: Log): Volume {
+function createVolume(platform: Platform, name: string, records: Records, options: OpenOptions, log: Log): Filesystem {
+    if (name === LBA_FS) {
+        return new FatVolume(name, records);
+    }
+
     switch (platform) {
         case "SGOLD": {
             // Prototypes keep the root at 6006
@@ -155,7 +160,7 @@ export class FFS {
         private readonly image: Image,
         // What came before the fullflash, which save() puts back
         private readonly prefix: Uint8Array,
-        private readonly volumes: ReadonlyMap<string, Volume>,
+        private readonly volumes: ReadonlyMap<string, Filesystem>,
     ) {
         this.platform   = platform;
         this.model      = detection.model;
@@ -193,7 +198,7 @@ export class FFS {
 
         const { platform, partitions, base } = findPartitions(data, detection.platform, detection.sl75, log);
         const image                     = new Image(data);
-        const volumes                   = new Map<string, Volume>();
+        const volumes                   = new Map<string, Filesystem>();
 
         for (const partition of partitions) {
             const records = Records.open(platform, image, partition, base);
@@ -332,12 +337,12 @@ export class FFS {
 
     // =========================================================================
 
-    private volume(name: string): Volume | undefined {
+    private volume(name: string): Filesystem | undefined {
         return [...this.volumes.values()].find((volume) => volume.name.toLowerCase() === name.toLowerCase());
     }
 
     // A partition's root is a directory whatever its attributes
-    private partition(volume: Volume): Node {
+    private partition(volume: Filesystem): Node {
         const root = volume.root()!;
 
         return {
@@ -411,14 +416,14 @@ export class FFS {
 
     // The volume a file or directory would be created or removed in, and the directory in it
     private parentOf(path: string): { volume: Volume, parent: Node, name: string, path: string } {
-        const parts     = splitPath(path);
-        const volume    = parts.length ? this.volume(parts[0]) : undefined;
+        const parts         = splitPath(path);
+        const filesystem    = parts.length ? this.volume(parts[0]) : undefined;
 
-        if (!volume) {
+        if (!filesystem) {
             throw new FFSError(`${joinPath(parts)}: no such partition`);
         }
 
-        volume.prepareWrite();
+        const volume = filesystem.writable();
 
         if (parts.length === 1) {
             throw new FFSError(`/${volume.name}: is a partition's root directory`);
@@ -442,16 +447,10 @@ export class FFS {
     private describe(node: Node): FFSEntry | string {
         const { header, volume } = node;
 
-        let size = 0;
+        const size = isDirectory(header) ? 0 : volume.size(header);
 
-        if (!isDirectory(header)) {
-            const chain = volume.chain(header);
-
-            if (chain.problem) {
-                return chain.problem;
-            }
-
-            size = volume.dataSize(chain);
+        if (typeof size === "string") {
+            return size;
         }
 
         return {

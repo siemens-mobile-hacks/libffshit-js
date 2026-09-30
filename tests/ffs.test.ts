@@ -218,6 +218,10 @@ describe("FFS", () => {
 
             assert.throws(() => ffs.writeFile("/FFS/a", pattern(1, 1)), { name: "FFSError", message: "FFS: writes to EGOLD without Card-Explorer are not supported" });
             assert.throws(() => ffs.remove("/FFS/one.bin"), { name: "FFSError", message: "FFS: writes to EGOLD without Card-Explorer are not supported" });
+
+            const fat = FFS.open(SCENARIOS["egold lba_fs"]());
+
+            assert.throws(() => fat.mkdir("/LBA_FS/a"), { name: "FFSError", message: "LBA_FS: writes to EGOLD without Card-Explorer are not supported" });
         });
 
         it("not to a prototype's filesystem", () => {

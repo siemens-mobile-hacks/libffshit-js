@@ -12,7 +12,8 @@ It has no dependencies and runs wherever JavaScript does.
 - SGOLD2
 - SGOLD2 ELKA
 - EGOLD with Card-Explorer, where writing is experimental
-- EGOLD without Card-Explorer: the A55, A56, A57, C55 and S46, for reading only
+- EGOLD without Card-Explorer, for reading only: the A55, A56, A57, C55 and S46, and the S45, S45i,
+  M50, MT50 and SL42, whose filesystem is a FAT disk
 
 ## Usage
 

@@ -205,6 +205,7 @@ const TARGETS: [string, () => Uint8Array | undefined][] = [
     ["made-up EGOLD", SCENARIOS.egold],
     ["made-up EGOLD without Card-Explorer", SCENARIOS["egold without card-explorer, without a table"]],
     ["made-up EGOLD without Card-Explorer, version 1", SCENARIOS["egold without card-explorer, version 1"]],
+    ["made-up EGOLD LBA_FS", SCENARIOS["egold lba_fs"]],
     ...allFullflashes().map((name): [string, () => Uint8Array | undefined] => [name, () => readFullflash(name)]),
 ];
 

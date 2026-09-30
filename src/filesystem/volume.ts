@@ -36,8 +36,25 @@ interface Listing {
 
 const FORBIDDEN = "\\/:*?\"<>|";
 
+// What is read of a partition's filesystem
+export interface Filesystem {
+    readonly name: string;
+    // Undefined when there is none. Throws when it is too short.
+    root(): Header | undefined;
+    // The size of a file's data, or what breaks it
+    size(header: Header): number | string;
+    read(header: Header): Uint8Array;
+    // The entries of a directory whose headers are there. What is not is reported.
+    children(dir: Header, report?: (problem: string) => void): Child[];
+    // As the firmware finds names: without regard to case, as far as it folds it
+    find(dir: Header, name: string): Child | undefined;
+    timestamp(header: Header): Date;
+    // What writes to it, once it is checked that it can be written to
+    writable(): Volume;
+}
+
 // The filesystem of one partition, read from its records whenever it is asked for anything
-export class Volume {
+export class Volume implements Filesystem {
     // What writing to it takes, read on the first write
     private chunkSize = 0;
 
@@ -112,6 +129,12 @@ export class Volume {
 
     dataSize(chain: Chain): number {
         return chain.data.reduce((size, id) => size + this.records.size(id), 0);
+    }
+
+    size(header: Header): number | string {
+        const chain = this.chain(header);
+
+        return chain.problem ?? this.dataSize(chain);
     }
 
     read(header: Header): Uint8Array {
@@ -239,6 +262,12 @@ export class Volume {
         this.chunkSize = chunkSize;
 
         return format;
+    }
+
+    writable(): Volume {
+        this.prepareWrite();
+
+        return this;
     }
 
     // The name as a header would keep it. Throws when it is none the firmware takes.

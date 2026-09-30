@@ -22,7 +22,7 @@ const NONE          = 0xFFFF;
 export const PROTOTYPE_ID_OFFSET = 6000;
 
 // The name folded as the firmware folds it, its ASCII letters only: "Ärger" and "ärger" differ
-function foldAscii(name: string): string {
+export function foldAscii(name: string): string {
     return name.replace(/[a-z]/g, (c) => String.fromCharCode(foldCase8bit(c.charCodeAt(0))));
 }
 

@@ -23,6 +23,13 @@ const IMEI = "490154203237518";
 const SAMPLE = ["empty.bin 0", "one.bin 1", "chunk-1.bin 1023", "chunk.bin 1024", "chunk+1.bin 1025", "parts.bin 5000", "big.bin 20000"];
 const MISC   = ["Misc/", "Misc/Ärger.txt 30", "Misc/файл.txt 40", "Misc/中文.txt 50", "Misc/sub/", "Misc/sub/deep.txt 60", "Misc/empty dir/"];
 const CACHE  = ["/FFS_C/", "/FFS_C/cache.bin 2000"];
+// Short names in CP1252, and 0x05 for 0xE5
+const FAT    = [
+    "EMPTY.BIN 0", "one.bin 1", "sector.bin 512", "Sector+1.bin 513", "parts.bin 5000", "big.bin 20000", "ÄRGER.BIN 5", "åBC.BIN 6", "Thirteen1.txt 13",
+    "Address book/", "Address book/5F02.adr 700",
+    "Misc/", "Misc/Ärger.txt 30", "Misc/файл.txt 40", "Misc/😀 a name of more than 26 characters.txt 50", "Misc/sub/", "Misc/sub/deep.txt 60", "Misc/empty dir/",
+    "Many/", ...Array.from({ length: 20 }, (_, i) => `Many/file ${i}.txt ${i + 1}`),
+];
 
 const under = (dir: string, entries: string[]) => [`${dir}/`, ...entries.map((entry) => `${dir}/${entry}`)];
 
@@ -162,6 +169,20 @@ const EXPECTED: Record<Scenario, Expected> = {
         tree: under("/FFS", ["fine.bin 100", "missing header 10"]),
         warnings: ["FFS: two records with id 6010", "/FFS: record 6018 is missing", "/FFS/broken part.bin: its part 36583 is missing"],
     },
+    // The EEPROM's filesystem is none
+    "egold lba_fs": {
+        platform: "EGOLD", model: "SYN",
+        tree: under("/LBA_FS", FAT),
+    },
+    "egold lba_fs without a partition table, of 2-sector clusters": {
+        platform: "EGOLD", model: "SYN",
+        tree: under("/LBA_FS", FAT),
+    },
+    "egold lba_fs broken": {
+        platform: "EGOLD", model: "SYN",
+        tree: under("/LBA_FS", ["fine.bin 100", "nowhere/"]),
+        warnings: ["/LBA_FS/broken chain.bin: its cluster chain is broken at 1911", "/LBA_FS/no data.bin: its sector 78 is missing", "/LBA_FS: entry 1 leads back to a directory it is in", "/LBA_FS/nowhere: its cluster chain is broken at 2048"],
+    },
     "x65flasher": {
         platform: "SGOLD", model: "SYN", imei: IMEI,
         tree: under("/FFS", SAMPLE.slice(0, 6)),
@@ -217,6 +238,7 @@ describe("Made-up fullflashes", () => {
         for (const name of [
             "sgold", "sgold2", "elka", "sgold prototype", "egold", "egold 20-byte headers", "egold 128 KiB blocks", "egold at another address", "egold without a table",
             "egold without card-explorer", "egold without card-explorer, 32 KiB blocks", "egold without card-explorer, without a table", "egold without card-explorer, version 1",
+            "egold lba_fs", "egold lba_fs without a partition table, of 2-sector clusters",
         ] as const) {
             const ffs  = FFS.open(SCENARIOS[name]());
             const root = ffs.readDir("/")[0].path;
@@ -242,6 +264,8 @@ describe("Made-up fullflashes", () => {
         for (const name of ["sgold", "egold", "egold without card-explorer"] as const) {
             assert.deepEqual(FFS.open(SCENARIOS[name]()).stat("/FFS/parts.bin")?.timestamp, new Date(2107, 11, 31, 23, 59, 58), name);
         }
+
+        assert.deepEqual(FFS.open(SCENARIOS["egold lba_fs"]()).stat("/LBA_FS/parts.bin")?.timestamp, new Date(2107, 11, 31, 23, 59, 58));
 
         for (const name of ["sgold2", "elka"] as const) {
             assert.deepEqual(FFS.open(SCENARIOS[name]()).stat("/FFS_0/parts.bin")?.timestamp, new Date(Date.UTC(2107, 11, 31, 23, 59, 58)), name);
@@ -270,6 +294,16 @@ describe("Made-up fullflashes", () => {
         assert.equal(FFS.open(image, { platform: "SGOLD" }).readDir("/FFS").length, 12);
         assert.throws(() => FFS.open(new Uint8Array(0x100000), { platform: "EGOLD_CE" }), { name: "FFSError", message: "No filesystem partitions found" });
         assert.throws(() => FFS.open(new Uint8Array(0x100000), { platform: "EGOLD" }), { name: "FFSError", message: "No filesystem partitions found" });
+    });
+
+    it("find the names on FAT disks without regard to the case of ASCII letters, with their attributes", () => {
+        const ffs = FFS.open(SCENARIOS["egold lba_fs"]());
+
+        assert.ok(equalBytes(ffs.readFile("/lba_fs/MISC/SUB/DEEP.TXT"), pattern(60, 11)));
+        assert.ok(equalBytes(ffs.readFile("/LBA_FS/many/FILE 19.txt"), pattern(20, 39)));
+        assert.equal(ffs.stat("/LBA_FS/misc/ärger.txt"), undefined);
+        assert.deepEqual(["one.bin", "sector.bin", "Sector+1.bin"].map((name) => ffs.stat(`/LBA_FS/${name}`)).map((entry) => [entry?.readonly, entry?.hidden, entry?.system]), [[true, false, false], [false, true, false], [false, false, true]]);
+        assert.equal(ffs.stat("/LBA_FS/Misc/sub")?.hidden, true);
     });
 
     it("tell EGOLD phones with Card-Explorer from those without by where their blocks have their headers", () => {
