@@ -28,7 +28,7 @@ ffs.model;                          // "EL71", or undefined
 ffs.imei;
 ffs.warnings;                       // what was found broken, and left out
 ffs.readDir("/");                   // the partitions: /Data, /Cache, /Config
-ffs.readDir("/Data/Misc");          // [{ name, path, isDirectory, size, timestamp, readonly, hidden, system }]
+ffs.readDir("/Data/Misc");          // [{ name, path, isDirectory, size, timestamp, readonly, hidden, system, archive, protected }]
 ffs.stat("/data/misc/a.txt");       // the entry, or undefined
 ffs.readFile("/data/misc/a.txt");   // Uint8Array
 ffs.tree();                         // everything, as entries with children
@@ -74,6 +74,9 @@ what the parts and FIT entries of files would take. The CX70, SL65, S75 and EL71
 pmb887x-emu. An EGOLD phone's, whose firmware reckons them in a way not known, are in bytes of the
 flash, and a FAT disk's in clusters. `readonly` is of partitions the library does not write to. The
 root's is of all partitions.
+
+Entries have FAT's attributes, read-only, hidden, system and archive, and `protected`, 0x40, which
+SGOLD phones set on some of their T9 dictionaries.
 
 Timestamps are kept to 2 seconds. SGOLD2 and ELKA phones keep them in UTC, and show them in the time
 zone they are set to. SGOLD and EGOLD phones keep them in their local time, which the library takes

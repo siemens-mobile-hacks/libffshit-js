@@ -7,6 +7,9 @@ export const Attributes = {
     HIDDEN:     0x02,
     SYSTEM:     0x04,
     DIRECTORY:  0x10,
+    ARCHIVE:    0x20,
+    // Not FAT's: SGOLD phones set it on some of their T9 dictionaries
+    PROTECTED:  0x40,
 } as const;
 
 // A file's or directory's header. The ids are the records': of the header, of its first data

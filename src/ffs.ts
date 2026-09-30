@@ -35,6 +35,9 @@ export interface FFSEntry {
     readonly: boolean;
     hidden: boolean;
     system: boolean;
+    archive: boolean;
+    // Attribute 0x40, not FAT's, which SGOLD phones set on some of their T9 dictionaries
+    protected: boolean;
 }
 
 export interface FFSTreeEntry extends FFSEntry {
@@ -64,7 +67,7 @@ type Report = (problem: string) => void;
 
 // The root, which holds the partitions
 function rootEntry(): FFSEntry {
-    return { name: "", path: "/", isDirectory: true, size: 0, timestamp: new Date(0), readonly: false, hidden: false, system: false };
+    return { name: "", path: "/", isDirectory: true, size: 0, timestamp: new Date(0), readonly: false, hidden: false, system: false, archive: false, protected: false };
 }
 
 // x65flasher puts a 16 byte header before the fullflash
@@ -515,6 +518,8 @@ export class FFS {
             readonly:       (header.attributes & Attributes.READONLY) !== 0,
             hidden:         (header.attributes & Attributes.HIDDEN) !== 0,
             system:         (header.attributes & Attributes.SYSTEM) !== 0,
+            archive:        (header.attributes & Attributes.ARCHIVE) !== 0,
+            protected:      (header.attributes & Attributes.PROTECTED) !== 0,
         };
     }
 

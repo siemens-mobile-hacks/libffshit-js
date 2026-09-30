@@ -70,10 +70,25 @@ describe("FFS", () => {
             readonly:       true,
             hidden:         false,
             system:         false,
+            archive:        false,
+            protected:      false,
         }]);
 
         assert.throws(() => ffs.readDir("/nope"), { name: "FFSError", message: "/nope: no such directory" });
         assert.throws(() => ffs.readDir("/FFS/empty.txt"), { name: "FFSError", message: "/FFS/empty.txt: not a directory" });
+    });
+
+    it("tells the attributes of files and directories: read-only, hidden, system, archive and protected", () => {
+        const ffs = FFS.open(sgoldImage([
+            { name: "a.txt", data: pattern(1, 1), attributes: 0x21 },
+            { name: "t9en.ldb", data: pattern(1, 2), attributes: 0x40 },
+            { name: "Dir", children: [], attributes: 0x06 },
+        ]));
+        assert.deepEqual(ffs.readDir("/FFS").map((entry) => [entry.name, entry.readonly, entry.hidden, entry.system, entry.archive, entry.protected]), [
+            ["a.txt", true, false, false, true, false],
+            ["t9en.ldb", false, false, false, false, true],
+            ["Dir", false, true, true, false, false],
+        ]);
     });
 
     it("finds files without regard to the case of ASCII letters, as SGOLD phones do", () => {
