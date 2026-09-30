@@ -1,34 +1,58 @@
 import type { Platform } from "./detector.js";
+import { LBA_FS } from "./partitions.js";
 
-// The names the firmwares of SGOLD, SGOLD2 and ELKA phones give their drives 0:, 1: and 2:, which
-// their OBEX servers list in the root. They keep them as UTF-16 strings after their length.
-const DRIVE_NAMES = ["Data", "Cache", "Config"];
-
-// The drive each partition is
-const DRIVES: Partial<Record<Platform, Record<string, number>>> = {
-    SGOLD:          { FFS: 0, FFS_B: 1, FFS_C: 2 },
-    SGOLD2:         { FFS_0: 0, FFS_1: 1, FFS_2: 2 },
-    SGOLD2_ELKA:    { FFS_0: 0, FFS_1: 1, FFS_2: 2 },
-};
-
-function stored(name: string): Uint8Array {
-    const text = `\\${name}`;
-    const data = new Uint8Array(2 + 2 * text.length);
-
-    data[0] = text.length;
-
-    for (let i = 0; i < text.length; ++i) {
-        data[2 + 2 * i] = text.charCodeAt(i);
-    }
-
-    return data;
+// A drive's name, and how its firmware keeps it
+interface Drive {
+    name: string;
+    stored: Uint8Array;
 }
 
-function contains(data: Uint8Array, needle: Uint8Array): boolean {
-    for (let at = data.indexOf(needle[0]); at >= 0; at = data.indexOf(needle[0], at + 1)) {
-        let i = 1;
+// The firmwares of SGOLD, SGOLD2 and ELKA phones name their drives 0:, 1: and 2: Data, Cache and
+// Config, which their OBEX servers list in the root. They keep the names as UTF-16 strings after
+// their length.
+function named(name: string): Drive {
+    const text      = `\\${name}`;
+    const stored    = new Uint8Array(2 + 2 * text.length);
 
-        while (i < needle.length && data[at + i] === needle[i]) {
+    stored[0] = text.length;
+
+    for (let i = 0; i < text.length; ++i) {
+        stored[2 + 2 * i] = text.charCodeAt(i);
+    }
+
+    return { name, stored };
+}
+
+// EGOLD firmwares know their drives by letters alone, and keep their roots as C strings: "A:\"
+function lettered(letter: string): Drive {
+    return { name: letter, stored: Uint8Array.from(`\0${letter}:\\\0`, (c) => c.charCodeAt(0)) };
+}
+
+const DATA      = named("Data");
+const CACHE     = named("Cache");
+const CONFIG    = named("Config");
+const A         = lettered("A");
+const B         = lettered("B");
+
+// The drive each partition is. The FFS_C of EGOLD phones with Card-Explorer is drive 3:, which has no
+// letter.
+const DRIVES: Partial<Record<Platform, Record<string, Drive>>> = {
+    SGOLD:          { FFS: DATA, FFS_B: CACHE, FFS_C: CONFIG },
+    SGOLD2:         { FFS_0: DATA, FFS_1: CACHE, FFS_2: CONFIG },
+    SGOLD2_ELKA:    { FFS_0: DATA, FFS_1: CACHE, FFS_2: CONFIG },
+    EGOLD_CE:       { FFS: A, FFS_B: B },
+    EGOLD:          { FFS: A, [LBA_FS]: A },
+};
+
+function contains(data: Uint8Array, needle: Uint8Array): boolean {
+    // Looked for by its first byte that is not 0, as a flash has many
+    const anchor = needle.findIndex((byte) => byte !== 0);
+
+    for (let at = data.indexOf(needle[anchor], anchor); at >= 0; at = data.indexOf(needle[anchor], at + 1)) {
+        const start = at - anchor;
+        let   i     = 0;
+
+        while (i < needle.length && data[start + i] === needle[i]) {
             ++i;
         }
 
@@ -43,7 +67,6 @@ function contains(data: Uint8Array, needle: Uint8Array): boolean {
 // The name the phone knows a partition by, where its firmware has one for the partition's drive
 export function diskName(data: Uint8Array, platform: Platform, partition: string): string | undefined {
     const drive = DRIVES[platform]?.[partition];
-    const name  = drive === undefined ? undefined : DRIVE_NAMES[drive];
 
-    return name && contains(data, stored(name)) ? name : undefined;
+    return drive && contains(data, drive.stored) ? drive.name : undefined;
 }

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { FFS, FFSError } from "../src/index.js";
 import { equalBytes, pattern } from "./helpers/data.js";
-import { recordImage, SCENARIOS, SGOLD_LAYOUT, utf16 } from "./helpers/scenarios.js";
+import { EGOLD_LAYOUT, recordImage, SCENARIOS, SGOLD_LAYOUT, utf16 } from "./helpers/scenarios.js";
 import { fatTime, filesystemRecords, RecordsBuilder, type FsFile } from "./helpers/synthetic.js";
 
 function sgoldImage(files: FsFile[]): Uint8Array {
@@ -34,6 +34,13 @@ function driveNames(image: Uint8Array, names = ["\\Data", "\\Cache", "\\Config"]
         image.set([name.length, 0, ...utf16(name)], at);
         at += 2 + 2 * name.length;
     }
+
+    return image;
+}
+
+// An EGOLD firmware's roots of its drives, as it keeps them: "A:\" as a C string
+function driveRoots(image: Uint8Array, ...letters: string[]): Uint8Array {
+    image.set(Uint8Array.from(`\0${letters.map((letter) => `${letter}:\\\0`).join("")}`, (c) => c.charCodeAt(0)), 0x8000);
 
     return image;
 }
@@ -174,6 +181,31 @@ describe("FFS", () => {
         assert.deepEqual(names(driveNames(SCENARIOS.elka())), ["Data", "FFS_C"]);
         // EGOLD's firmwares know their drives by letters
         assert.deepEqual(names(driveNames(SCENARIOS.egold())), ["FFS", "FFS_C"]);
+    });
+
+    it("names EGOLD partitions by their drives' letters, where the firmware has the drives' roots", () => {
+        const layout    = { ...EGOLD_LAYOUT, partitions: [{ name: "FFS", blocks: 4 }, { name: "FFS_B", blocks: 2 }, { name: "FFS_C", blocks: 2 }] };
+        const trees     = { FFS: { files: [{ name: "a.txt", data: pattern(10, 1) }] }, FFS_B: { files: [] }, FFS_C: { files: [] } };
+        const names     = (image: Uint8Array) => FFS.open(image).readDir("/").map((entry) => entry.name);
+        const ffs       = FFS.open(recordImage(layout, trees, (image) => driveRoots(image, "A", "B")), { experimentalEgoldWrites: true });
+
+        // FFS_C is drive 3:, which has no letter
+        assert.deepEqual(ffs.readDir("/").map((entry) => entry.path), ["/A", "/B", "/FFS_C"]);
+        // The partition table's names lead to them too
+        assert.equal(ffs.stat("/ffs/A.TXT")?.path, "/A/a.txt");
+        assert.deepEqual(ffs.statfs("/FFS_B"), ffs.statfs("/b"));
+
+        ffs.writeFile("/a/b.txt", pattern(5, 2));
+
+        assert.deepEqual(FFS.open(ffs.save()).readDir("/A").map((entry) => entry.path), ["/A/a.txt", "/A/b.txt"]);
+
+        assert.deepEqual(names(recordImage(layout, trees, (image) => driveRoots(image, "A"))), ["A", "FFS_B", "FFS_C"]);
+        assert.deepEqual(names(recordImage(layout, trees)), ["FFS", "FFS_B", "FFS_C"]);
+        // Without Card-Explorer, and the x45's LBA_FS
+        assert.deepEqual(names(driveRoots(SCENARIOS["egold without card-explorer"](), "A")), ["A"]);
+        assert.deepEqual(names(driveRoots(SCENARIOS["egold lba_fs"](), "A")), ["A"]);
+        // SGOLD firmwares' drives have names
+        assert.deepEqual(names(driveRoots(SCENARIOS.sgold(), "A")), ["FFS"]);
     });
 
     it("tells which partitions it does not write to", () => {

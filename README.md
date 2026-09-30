@@ -44,11 +44,13 @@ Paths are absolute, the partitions the directories in the root. Names are found 
 them, without regard to case as far as its firmware folds it: SGOLD and EGOLD fold ASCII letters
 only, SGOLD2 and ELKA fold Latin, Greek, Cyrillic, Armenian and more.
 
-The partitions are named as the phone names them over OBEX, where its firmware does, and else as the
+The partitions are named as the phone's firmware names their drives, where it does, and else as the
 partition table does. SGOLD, SGOLD2 and ELKA firmwares name drives 0:, 1: and 2: Data, Cache and
-Config, which are FFS, FFS_B and FFS_C on SGOLD phones, and FFS_0, FFS_1 and FFS_2 on the others.
-EGOLD firmwares know their drives by letters only. Paths take the partition table's names too:
-"/FFS_0/Misc" leads to "/Data/Misc".
+Config, as their OBEX servers list them, which are FFS, FFS_B and FFS_C on SGOLD phones, and FFS_0,
+FFS_1 and FFS_2 on the others. EGOLD firmwares know drives by letters alone, "A:\Misc", and list
+drive A:'s folders in the OBEX root: A is FFS, or the x45's LBA_FS, and B is FFS_B. FFS_C is drive
+3:, which has no letter. Paths take the partition table's names too: "/FFS_0/Misc" leads to
+"/Data/Misc".
 
 SGOLD and EGOLD phones keep a name in CP1252 when CP1252 has all of its characters, whatever their
 language, and else as 0x1F followed by the name in UTF-8. The library writes names as they do, and

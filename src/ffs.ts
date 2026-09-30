@@ -128,8 +128,9 @@ function isWritable(volume: Filesystem): boolean {
     }
 }
 
-function createVolume(platform: Platform, name: string, records: Records, options: OpenOptions, log: Log): Filesystem {
-    if (name === LBA_FS) {
+// Of the partition of that name in the partition table, named as the phone names it
+function createVolume(platform: Platform, partition: string, name: string, records: Records, options: OpenOptions, log: Log): Filesystem {
+    if (partition === LBA_FS) {
         return new FatVolume(name, records);
     }
 
@@ -231,7 +232,7 @@ export class FFS {
                 log.warn(problem);
             }
 
-            const volume    = createVolume(platform, diskName(data, platform, partition.name) ?? partition.name, records, options, log);
+            const volume    = createVolume(platform, partition.name, diskName(data, platform, partition.name) ?? partition.name, records, options, log);
             const problem   = rootProblem(volume);
 
             if (problem) {
