@@ -27,22 +27,28 @@ ffs.platform;                       // "SGOLD2_ELKA"
 ffs.model;                          // "EL71", or undefined
 ffs.imei;
 ffs.warnings;                       // what was found broken, and left out
-ffs.readDir("/");                   // the partitions: /FFS_0, /FFS_C, ...
-ffs.readDir("/FFS_0/Misc");         // [{ name, path, isDirectory, size, timestamp, readonly, hidden, system }]
-ffs.stat("/ffs_0/misc/a.txt");      // the entry, or undefined
-ffs.readFile("/ffs_0/misc/a.txt");  // Uint8Array
+ffs.readDir("/");                   // the partitions: /Data, /Cache, /Config
+ffs.readDir("/Data/Misc");          // [{ name, path, isDirectory, size, timestamp, readonly, hidden, system }]
+ffs.stat("/data/misc/a.txt");       // the entry, or undefined
+ffs.readFile("/data/misc/a.txt");   // Uint8Array
 ffs.tree();                         // everything, as entries with children
-ffs.statfs("/FFS_0/Misc");          // { size, free, readonly }, of the partition
+ffs.statfs("/Data/Misc");           // { size, free, readonly }, of the partition
 
-ffs.mkdir("/FFS_0/Misc/New");
-ffs.writeFile("/FFS_0/Misc/New/b.txt", data, new Date());
-ffs.remove("/FFS_0/Misc/a.txt");
+ffs.mkdir("/Data/Misc/New");
+ffs.writeFile("/Data/Misc/New/b.txt", data, new Date());
+ffs.remove("/Data/Misc/a.txt");
 fs.writeFileSync("EL71-new.bin", ffs.save());
 ```
 
 Paths are absolute, the partitions the directories in the root. Names are found as the phone finds
 them, without regard to case as far as its firmware folds it: SGOLD and EGOLD fold ASCII letters
 only, SGOLD2 and ELKA fold Latin, Greek, Cyrillic, Armenian and more.
+
+The partitions are named as the phone names them over OBEX, where its firmware does, and else as the
+partition table does. SGOLD, SGOLD2 and ELKA firmwares name drives 0:, 1: and 2: Data, Cache and
+Config, which are FFS, FFS_B and FFS_C on SGOLD phones, and FFS_0, FFS_1 and FFS_2 on the others.
+EGOLD firmwares know their drives by letters only. Paths take the partition table's names too:
+"/FFS_0/Misc" leads to "/Data/Misc".
 
 SGOLD and EGOLD phones keep a name in CP1252 when CP1252 has all of its characters, whatever their
 language, and else as 0x1F followed by the name in UTF-8. The library writes names as they do, and

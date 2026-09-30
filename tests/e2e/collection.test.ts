@@ -69,7 +69,7 @@ function phoneOf(fullflash: string): Phone | string {
                     return found;
                 }
             } else if (entry.size > pieces && entry.size <= 16384 && /^[\x20-\x7E]+$/.test(entry.path)) {
-                return entry.path.slice(partition.length + 2);
+                return entry.path.slice(entry.path.indexOf("/", 1) + 1);
             }
         }
 

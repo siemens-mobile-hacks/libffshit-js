@@ -7,11 +7,12 @@ import { describe, it } from "node:test";
 import { FFS, FFSError, type FFSTreeEntry, type Platform } from "../src/index.js";
 import { allFullflashes, NO_FULLFLASHES, readFullflash } from "./helpers/fullflashes.js";
 
-const KNOWN: Record<string, [Platform, string]> = {
-    "CX70v56lg3.bin":       ["SGOLD", "CX70"],
-    "SL65v49lg1_TIM.bin":   ["SGOLD", "SL65"],
-    "S75v40lg1.bin":        ["SGOLD2", "S75"],
-    "EL71v41lg91.bin":      ["SGOLD2_ELKA", "EL71"],
+// Their platforms, models and partitions
+const KNOWN: Record<string, [Platform, string, string[]]> = {
+    "CX70v56lg3.bin":       ["SGOLD", "CX70", ["Data", "Cache", "Config"]],
+    "SL65v49lg1_TIM.bin":   ["SGOLD", "SL65", ["Data", "Cache", "Config"]],
+    "S75v40lg1.bin":        ["SGOLD2", "S75", ["Data", "Cache", "Config"]],
+    "EL71v41lg91.bin":      ["SGOLD2_ELKA", "EL71", ["Data", "Cache", "Config"]],
 };
 
 function entries(entry: FFSTreeEntry): FFSTreeEntry[] {
@@ -38,12 +39,13 @@ describe("The phones' fullflashes", { skip: !fullflashes.length && NO_FULLFLASHE
                 return;
             }
 
-            const all = entries(ffs.tree());
+            const all           = entries(ffs.tree());
+            const partitions    = ffs.readDir("/").map((entry) => entry.name);
 
-            t.diagnostic(`${ffs.platform} ${ffs.model}: ${all.length} entries, ${ffs.warnings.length} warnings`);
+            t.diagnostic(`${ffs.platform} ${ffs.model}: ${all.length} entries, ${ffs.warnings.length} warnings, in ${partitions.join(", ")}`);
 
             if (known) {
-                assert.deepEqual([ffs.platform, ffs.model], known);
+                assert.deepEqual([ffs.platform, ffs.model, partitions], known);
                 assert.ok(all.length > 100);
             }
 

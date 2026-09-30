@@ -13,7 +13,8 @@ interface Phone {
     name: string;
     image: () => Uint8Array | undefined;
     platform: Platform;
-    // The partition the phone shows as /Data, and a directory in it the tests write into
+    // The partition the phone shows as /Data, as the library lists it, and a directory in it the
+    // tests write into
     partition: string;
     dir: string;
     // What a partition holds several times over
@@ -60,15 +61,16 @@ function syntheticPhone(platform: Platform, partition: string, headerSize?: numb
     };
 }
 
-function realPhone(name: string, file: string, platform: Platform, partition: string): Phone {
-    return { name, platform, partition, dir: "Misc", churnSize: 1024 * 1024, image: () => readFullflash(file) };
+// Named Data after its firmware
+function realPhone(name: string, file: string, platform: Platform): Phone {
+    return { name, platform, partition: "Data", dir: "Misc", churnSize: 1024 * 1024, image: () => readFullflash(file) };
 }
 
 const PHONES: Phone[] = [
-    realPhone("CX70", "CX70v56lg3.bin", "SGOLD", "FFS"),
-    realPhone("SL65", "SL65v49lg1_TIM.bin", "SGOLD", "FFS"),
-    realPhone("S75", "S75v40lg1.bin", "SGOLD2", "FFS_0"),
-    realPhone("EL71", "EL71v41lg91.bin", "SGOLD2_ELKA", "FFS_0"),
+    realPhone("CX70", "CX70v56lg3.bin", "SGOLD"),
+    realPhone("SL65", "SL65v49lg1_TIM.bin", "SGOLD"),
+    realPhone("S75", "S75v40lg1.bin", "SGOLD2"),
+    realPhone("EL71", "EL71v41lg91.bin", "SGOLD2_ELKA"),
     syntheticPhone("SGOLD", "FFS"),
     syntheticPhone("SGOLD2", "FFS_0"),
     syntheticPhone("SGOLD2_ELKA", "FFS_0"),

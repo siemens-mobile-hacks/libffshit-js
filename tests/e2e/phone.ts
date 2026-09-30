@@ -18,7 +18,7 @@ export interface Phone {
     // What it names itself over OBEX, and its platform as the OBEX client takes it
     deviceName?: string;
     platform?: PhonePlatform;
-    // The partition it shows as /Data
+    // The partition it shows as /Data, by its name in the partition table
     partition: string;
     // The size of the pieces files are cut in on that partition
     chunkSize: number;

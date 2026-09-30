@@ -218,10 +218,10 @@ const TARGETS: [string, () => Uint8Array | undefined, string, OpenOptions?][] = 
     ["made-up SGOLD2_ELKA", SCENARIOS.elka, "/FFS_0/Misc"],
     ["made-up EGOLD_CE", SCENARIOS.egold, "/FFS/Misc", EGOLD],
     ["made-up EGOLD_CE with 20-byte headers", SCENARIOS["egold 20-byte headers"], "/FFS/Misc", EGOLD],
-    ["CX70", () => readFullflash("CX70v56lg3.bin"), "/FFS/Misc"],
-    ["SL65", () => readFullflash("SL65v49lg1_TIM.bin"), "/FFS/Misc"],
-    ["S75", () => readFullflash("S75v40lg1.bin"), "/FFS_0/Misc"],
-    ["EL71", () => readFullflash("EL71v41lg91.bin"), "/FFS_0/Misc"],
+    ["CX70", () => readFullflash("CX70v56lg3.bin"), "/Data/Misc"],
+    ["SL65", () => readFullflash("SL65v49lg1_TIM.bin"), "/Data/Misc"],
+    ["S75", () => readFullflash("S75v40lg1.bin"), "/Data/Misc"],
+    ["EL71", () => readFullflash("EL71v41lg91.bin"), "/Data/Misc"],
 ];
 
 for (const [name, image, dir, options] of TARGETS) {

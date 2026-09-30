@@ -8,6 +8,7 @@ import { Records } from "./filesystem/records.js";
 import { PROTOTYPE_ID_OFFSET, SgoldFormat } from "./filesystem/sgold.js";
 import { Volume, type Filesystem } from "./filesystem/volume.js";
 import { detect, PLATFORMS, type Platform } from "./fullflash/detector.js";
+import { diskName } from "./fullflash/disks.js";
 import { findPartitions, LBA_FS } from "./fullflash/partitions.js";
 import { Image } from "./image.js";
 import { Log, type Logger } from "./log.js";
@@ -161,9 +162,10 @@ function createVolume(platform: Platform, name: string, records: Records, option
     }
 }
 
-// The filesystem of a fullflash, its partitions the directories in the root: "/FFS_0/Misc/a.txt".
-// Paths are found as the phone finds them, without regard to case as far as its firmware folds it,
-// the partitions' names without regard to case.
+// The filesystem of a fullflash, its partitions the directories in the root, named as the phone
+// names them where its firmware does, else as the partition table does: "/Data/Misc/a.txt", which
+// "/FFS_0/Misc/a.txt" leads to as well. Paths are found as the phone finds them, without regard to
+// case as far as its firmware folds it, the partitions' names without regard to case.
 //
 // The fullflash is read where it is, so it must not change while in use. Writes go to a copy made
 // on the first one, which save() returns: the fullflash given is never changed.
@@ -229,7 +231,7 @@ export class FFS {
                 log.warn(problem);
             }
 
-            const volume    = createVolume(platform, partition.name, records, options, log);
+            const volume    = createVolume(platform, diskName(data, platform, partition.name) ?? partition.name, records, options, log);
             const problem   = rootProblem(volume);
 
             if (problem) {
@@ -381,8 +383,11 @@ export class FFS {
 
     // =========================================================================
 
+    // By its name, or its partition's
     private volume(name: string): Filesystem | undefined {
-        return [...this.volumes.values()].find((volume) => volume.name.toLowerCase() === name.toLowerCase());
+        const key = name.toLowerCase();
+
+        return [...this.volumes].find(([partition, volume]) => volume.name.toLowerCase() === key || partition.toLowerCase() === key)?.[1];
     }
 
     // A partition's root is a directory whatever its attributes

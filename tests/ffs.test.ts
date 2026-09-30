@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { FFS, FFSError } from "../src/index.js";
 import { equalBytes, pattern } from "./helpers/data.js";
-import { SCENARIOS } from "./helpers/scenarios.js";
+import { recordImage, SCENARIOS, SGOLD_LAYOUT, utf16 } from "./helpers/scenarios.js";
 import { fatTime, filesystemRecords, RecordsBuilder, type FsFile } from "./helpers/synthetic.js";
 
 function sgoldImage(files: FsFile[]): Uint8Array {
@@ -25,6 +25,18 @@ const FILES: FsFile[] = [
 ];
 
 const open = (options = {}) => FFS.open(sgoldImage(FILES), options);
+
+// A firmware's names of drives 0:, 1: and 2:, as it keeps them: after their lengths, in UTF-16
+function driveNames(image: Uint8Array, names = ["\\Data", "\\Cache", "\\Config"]): Uint8Array {
+    let at = 0x8000;
+
+    for (const name of ["0:", "1:", "2:", ...names]) {
+        image.set([name.length, 0, ...utf16(name)], at);
+        at += 2 + 2 * name.length;
+    }
+
+    return image;
+}
 
 describe("FFS", () => {
     it("tells the platform, model and IMEI", () => {
@@ -133,6 +145,35 @@ describe("FFS", () => {
         // of which they take 63
         assert.deepEqual(FFS.open(SCENARIOS["egold lba_fs"]()).statfs("/LBA_FS"), { size: 697 * 512, free: 606 * 512, readonly: true });
         assert.deepEqual(FFS.open(SCENARIOS["egold lba_fs without a partition table, of 2-sector clusters"]()).statfs("/LBA_FS"), { size: 348 * 1024, free: 285 * 1024, readonly: true });
+    });
+
+    it("names the partitions as the phone does, where its firmware names their drives", () => {
+        const layout    = { ...SGOLD_LAYOUT, partitions: [{ name: "FFS", blocks: 4 }, { name: "FFS_B", blocks: 2 }, { name: "FFS_C", blocks: 2 }] };
+        const tree      = { files: [{ name: "a.txt", data: pattern(10, 1) }] };
+        const ffs       = FFS.open(recordImage(layout, { FFS: tree, FFS_B: tree, FFS_C: tree }, (image) => driveNames(image)));
+
+        assert.deepEqual(ffs.readDir("/").map((entry) => entry.path), ["/Data", "/Cache", "/Config"]);
+        // The partition table's names lead to them too
+        assert.equal(ffs.stat("/ffs_b/A.TXT")?.path, "/Cache/a.txt");
+        assert.deepEqual(ffs.statfs("/FFS_C"), ffs.statfs("/config"));
+
+        ffs.writeFile("/FFS/b.txt", pattern(5, 2));
+
+        assert.deepEqual(FFS.open(ffs.save()).readDir("/data").map((entry) => entry.path), ["/Data/a.txt", "/Data/b.txt"]);
+    });
+
+    it("keeps the partition table's names where the firmware names no drive of theirs", () => {
+        const layout    = { ...SGOLD_LAYOUT, partitions: [{ name: "FFS", blocks: 4 }, { name: "FFS_B", blocks: 2 }, { name: "FFS_C", blocks: 2 }] };
+        const tree      = { files: [{ name: "a.txt", data: pattern(10, 1) }] };
+        const names     = (image: Uint8Array) => FFS.open(image).readDir("/").map((entry) => entry.name);
+
+        assert.deepEqual(names(recordImage(layout, { FFS: tree, FFS_B: tree, FFS_C: tree })), ["FFS", "FFS_B", "FFS_C"]);
+        assert.deepEqual(names(recordImage(layout, { FFS: tree, FFS_B: tree, FFS_C: tree }, (image) => driveNames(image, ["\\Data"]))), ["Data", "FFS_B", "FFS_C"]);
+        // FFS_C is no drive on SGOLD2 and ELKA
+        assert.deepEqual(names(driveNames(SCENARIOS.sgold2())), ["Data", "FFS_C"]);
+        assert.deepEqual(names(driveNames(SCENARIOS.elka())), ["Data", "FFS_C"]);
+        // EGOLD's firmwares know their drives by letters
+        assert.deepEqual(names(driveNames(SCENARIOS.egold())), ["FFS", "FFS_C"]);
     });
 
     it("tells which partitions it does not write to", () => {
