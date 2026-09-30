@@ -27,7 +27,7 @@ const CACHE  = ["/FFS_C/", "/FFS_C/cache.bin 2000"];
 const FAT    = [
     "EMPTY.BIN 0", "one.bin 1", "sector.bin 512", "Sector+1.bin 513", "parts.bin 5000", "big.bin 20000", "ÄRGER.BIN 5", "åBC.BIN 6", "Thirteen1.txt 13",
     "Address book/", "Address book/5F02.adr 700",
-    "Misc/", "Misc/Ärger.txt 30", "Misc/файл.txt 40", "Misc/😀 a name of more than 26 characters.txt 50", "Misc/sub/", "Misc/sub/deep.txt 60", "Misc/empty dir/",
+    "Misc/", "Misc/Ärger.txt 30", "Misc/файл.txt 40", "Misc/😀 a name of more than 26 characters.txt 50", "Misc/\uFEFFbom.txt 15", "Misc/sub/", "Misc/sub/deep.txt 60", "Misc/empty dir/",
     "Many/", ...Array.from({ length: 20 }, (_, i) => `Many/file ${i}.txt ${i + 1}`),
 ];
 

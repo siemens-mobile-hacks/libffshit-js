@@ -16,6 +16,9 @@ const SECTOR_SIZE   = 512;
 const ENTRY_SIZE    = 32;
 const ZEROS         = new Uint8Array(SECTOR_SIZE);
 
+// A name may start with U+FEFF, which is no byte order mark in it
+const utf16Decoder = new TextDecoder("utf-16le", { ignoreBOM: true });
+
 const LONG_NAME     = 0x0F;
 const VOLUME_LABEL  = 0x08;
 const DELETED       = 0xE5;
@@ -64,7 +67,7 @@ function decodeLongName(parts: Uint8Array[]): string {
         end += 2;
     }
 
-    return new TextDecoder("utf-16le").decode(units.subarray(0, end));
+    return utf16Decoder.decode(units.subarray(0, end));
 }
 
 export class FatVolume implements Filesystem {

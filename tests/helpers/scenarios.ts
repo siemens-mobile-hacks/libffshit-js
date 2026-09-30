@@ -95,6 +95,7 @@ export const FAT_TREE: FsFile[] = [
             { name: "Ärger.txt", data: pattern(30, 8) },
             { name: "файл.txt", data: pattern(40, 9) },
             { name: "😀 a name of more than 26 characters.txt", data: pattern(50, 10) },
+            { name: "\uFEFFbom.txt", data: pattern(15, 15) },
             { name: "sub", children: [{ name: "deep.txt", data: pattern(60, 11) }], attributes: 0x02 },
             { name: "empty dir", children: [] },
         ],
