@@ -20,14 +20,10 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 // SIE_FFS_E2E_EMU, else a gitignored symlink to a build directory, else the one in PATH
 const EMULATORS = [process.env.SIE_FFS_E2E_EMU, path.join(HERE, ".emu", "pmb887x-emu")].filter((candidate): candidate is string => !!candidate);
 
-export function findEmulator(): string | undefined {
-    for (const candidate of EMULATORS) {
-        if (fs.existsSync(candidate) && spawnSync(candidate, ["--version"]).status === 0) {
-            return candidate;
-        }
-    }
+function findEmulator(): string | undefined {
+    const inPath = (process.env.PATH ?? "").split(path.delimiter).filter(Boolean).map((dir) => path.join(dir, "pmb887x-emu"));
 
-    return spawnSync("which", ["pmb887x-emu"], { encoding: "utf8" }).stdout?.trim() || undefined;
+    return [...EMULATORS, ...inPath].find((candidate) => fs.existsSync(candidate) && spawnSync(candidate, ["--version"]).status === 0);
 }
 
 // Why the phones cannot run here, or undefined when they can

@@ -51,8 +51,9 @@ function phoneOf(fullflash: string): Phone | string {
         return `it has no /${partition}/Misc`;
     }
 
+    // Into a copy, of an empty directory, which leaves what is found below as it is
     try {
-        FFS.open(data).mkdir(`/${partition}/Misc/sie-ffs-check`);
+        ffs.mkdir(`/${partition}/Misc/sie-ffs-check`);
     } catch (e) {
         return (e as Error).message;
     }

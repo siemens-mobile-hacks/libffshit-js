@@ -5,7 +5,7 @@
 import { concat, le16, le32 } from "../../src/bytes.js";
 import { encodeName } from "../../src/filesystem/codepage.js";
 import { nameHash7bit, nameHash8bit, nameHashUtf16 } from "../../src/filesystem/hash.js";
-import { Records } from "../../src/filesystem/records.js";
+import { fitSize, Records } from "../../src/filesystem/records.js";
 import type { Platform } from "../../src/fullflash/detector.js";
 import { Image } from "../../src/image.js";
 
@@ -30,7 +30,7 @@ export function fatTime(year: number, month: number, day: number, hour: number, 
 // =========================================================================
 // Partition tables and formatted blocks
 
-export interface PartitionLayout {
+interface PartitionLayout {
     name: string;
     blocks: number;
     // indexes of blocks left unformatted
@@ -45,7 +45,6 @@ export interface ImageLayout {
     blockSize: number;
     partitions: PartitionLayout[];
     model?: string;
-    imei?: string;
     // no "OTP\0" pointing at the table, which is then searched for by its pattern
     noPointer?: boolean;
     // where the blocks start in the image, and what the table adds to their addresses
@@ -64,11 +63,11 @@ const LISTS_ADDR    = 0x3800;
 const BLOCKS_ADDR   = 0x100000;
 
 // An image with the partition table, and each partition's blocks erased and formatted
-export function formattedImage(layout: ImageLayout): Uint8Array {
+function formattedImage(layout: ImageLayout): Uint8Array {
     const data   = new Uint8Array(layout.size);
     const elka   = layout.platform === "SGOLD2_ELKA";
     const model  = layout.model ?? "SYN";
-    const imei   = layout.imei ?? "490154203237518";
+    const imei   = "490154203237518";
 
     switch (layout.platform) {
         case "SGOLD": {
@@ -226,6 +225,11 @@ export function removeEgoldTable(data: Uint8Array): void {
     data.fill(0, POINTER_ADDR, POINTER_ADDR + 10);
 }
 
+// Of an SGOLD, SGOLD2 or ELKA image made by formattedImage(): the table "OTP\0" points to is zeros
+export function breakTable(data: Uint8Array): void {
+    data.fill(0, TABLE_ADDR, NAMES_ADDR);
+}
+
 // An image made by formattedImage(), and records added to its partitions' formatted blocks, where
 // the library would write them
 export class RecordsBuilder {
@@ -300,7 +304,7 @@ export function patchFitEntry(image: Uint8Array, platform: Platform, blocks: { a
                 return;
             }
 
-            offset -= elka ? fitStep(size) : 16;
+            offset -= elka ? fitSize(size) : 16;
         }
     }
 
@@ -324,17 +328,6 @@ export function layoutBlocks(layout: ImageLayout, partition: string): { addr: nu
     throw new Error(`No partition ${partition}`);
 }
 
-function fitStep(size: number): number {
-    const inline = (n: number) => (1 + Math.ceil(n / 16)) * 32;
-    const tail   = size & 0x3FF;
-
-    if (size <= 0x200) {
-        return inline(size);
-    }
-
-    return (size & 0x1C00) && tail > 0 && tail <= 0x200 ? inline(tail) : 32;
-}
-
 // =========================================================================
 // Filesystems
 
@@ -351,11 +344,8 @@ export interface FsFile {
     headerId?: number;
 }
 
-export interface FsOptions {
+interface FsOptions {
     chunkSize: number;
-    rootFat?: number;
-    // what the root's header names it, nothing by default
-    rootName?: Uint8Array;
     // added to every record's id, as SGOLD prototypes and EGOLD have them
     idOffset?: number;
     // EGOLD's headers and parts, of 16 bytes or of 20
@@ -368,20 +358,24 @@ export interface FatOptions {
     // where the partition starts, behind a partition table, or 0 for none
     start?: number;
     clusterSectors?: number;
+    // of more than 4084 clusters, which makes it FAT16
+    fat16?: boolean;
 }
 
-// The x45's LBA_FS: a FAT12 disk of 512-byte sectors, each a record under its number. Directories
-// have a long name's entries before their short one where a short name will not do, and the root a
-// volume label and a deleted entry. A file's name given as bytes is its short name, of 11 bytes.
-// What goes wrong: noData leaves a file's sectors out, brokenPart has its chain lead out of the disk
-// after its first cluster, and headerId is the cluster a directory's entry has. The sectors never
-// written are left out.
+// The x45's LBA_FS: a FAT12 or FAT16 disk of 512-byte sectors, each a record under its number.
+// Directories have a long name's entries before their short one where a short name will not do, and
+// the root a volume label and a deleted entry. A file's name given as bytes is its short name, of 11
+// bytes. What goes wrong: noData leaves a file's sectors out, brokenPart has its chain lead out of
+// the FAT12 disk after its first cluster, and headerId is the cluster a directory's entry has. The
+// sectors never written are left out.
 export function fatRecords(root: FsFile[], options: FatOptions = {}): Map<number, Uint8Array> {
     const start         = options.start ?? 32;
     const clusterSectors = options.clusterSectors ?? 1;
     const clusterBytes  = clusterSectors * 512;
-    const total         = 736;
-    const fatSectors    = 3;
+    const fat16         = options.fat16 ?? false;
+    const total         = fat16 ? 4200 : 736;
+    const fatSectors    = fat16 ? 17 : 3;
+    const chainEnd      = fat16 ? 0xFFFF : 0xFFF;
     const rootSectors   = 32;
     const rootStart     = start + 1 + 2 * fatSectors;
     const dataStart     = rootStart + rootSectors;
@@ -402,7 +396,7 @@ export function fatRecords(root: FsFile[], options: FatOptions = {}): Map<number
     const allocate = (count: number): number[] => {
         const chain = Array.from({ length: count }, (_, i) => nextCluster + i);
 
-        chain.forEach((cluster, i) => fat[cluster] = chain[i + 1] ?? 0xFFF);
+        chain.forEach((cluster, i) => fat[cluster] = chain[i + 1] ?? chainEnd);
         nextCluster += count;
 
         return chain;
@@ -531,9 +525,9 @@ export function fatRecords(root: FsFile[], options: FatOptions = {}): Map<number
         sector(rootStart + i).set(rootDir.subarray(i * 512, (i + 1) * 512));
     }
 
-    // FAT12, twice
-    fat[0] = 0xFF8;
-    fat[1] = 0xFFF;
+    // Twice
+    fat[0] = chainEnd & ~7;
+    fat[1] = chainEnd;
 
     for (let copy = 0; copy < 2; ++copy) {
         const table = new Uint8Array(fatSectors * 512);
@@ -541,7 +535,9 @@ export function fatRecords(root: FsFile[], options: FatOptions = {}): Map<number
         fat.forEach((value, cluster) => {
             const at = cluster + (cluster >>> 1);
 
-            if (cluster & 1) {
+            if (fat16) {
+                setU16(table, cluster * 2, value);
+            } else if (cluster & 1) {
                 table[at]     |= (value << 4) & 0xF0;
                 table[at + 1]  = value >>> 4;
             } else {
@@ -708,7 +704,7 @@ export function filesystemRecords(platform: Platform, root: FsFile[], options: F
         records.set(0, sgold ? concat([le16(1), le16(chunk), new Uint8Array(12)]) : concat([le32(1), le32(chunk), new Uint8Array(8)]));
     }
 
-    directory(rootId, rootId, root, options.rootFat ?? fatTime(2007, 6, 5, 4, 3, 2), 0x10, options.rootName ?? new Uint8Array(0));
+    directory(rootId, rootId, root, fatTime(2007, 6, 5, 4, 3, 2), 0x10, new Uint8Array(0));
 
     if (idOffset) {
         return new Map([...records].map(([id, data]) => [id + idOffset, data]));

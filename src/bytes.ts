@@ -1,21 +1,31 @@
 import { FFSError } from "./errors.js";
 
-function check(data: Uint8Array, offset: number, size: number): void {
-    if (offset < 0 || offset + size > data.length) {
-        throw new FFSError(`${size} bytes at ${offset} are past the end of ${data.length}`);
-    }
+// A name may start with U+FEFF, which is no byte order mark in it
+const utf16Decoder = new TextDecoder("utf-16le", { ignoreBOM: true });
+
+function pastTheEnd(data: Uint8Array, offset: number, size: number): never {
+    throw new FFSError(`${size} bytes at ${offset} are past the end of ${data.length}`);
+}
+
+// Undefined past the end
+export function peek16(data: Uint8Array, offset: number): number | undefined {
+    return offset >= 0 && offset + 2 <= data.length ? data[offset] | (data[offset + 1] << 8) : undefined;
+}
+
+export function peek32(data: Uint8Array, offset: number): number | undefined {
+    return offset >= 0 && offset + 4 <= data.length ? (data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24)) >>> 0 : undefined;
 }
 
 export function u16(data: Uint8Array, offset: number): number {
-    check(data, offset, 2);
-
-    return data[offset] | (data[offset + 1] << 8);
+    return peek16(data, offset) ?? pastTheEnd(data, offset, 2);
 }
 
 export function u32(data: Uint8Array, offset: number): number {
-    check(data, offset, 4);
+    return peek32(data, offset) ?? pastTheEnd(data, offset, 4);
+}
 
-    return (data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24)) >>> 0;
+export function decodeUtf16(bytes: Uint8Array): string {
+    return utf16Decoder.decode(bytes);
 }
 
 export function le16(value: number): Uint8Array {

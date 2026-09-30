@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { detect } from "../src/fullflash/detector.js";
-import { findPartitions } from "../src/fullflash/partitions.js";
+import { findPartitions, TABLE_POINTER } from "../src/fullflash/partitions.js";
 import { FFS, FFSError, type FFSTreeEntry } from "../src/index.js";
 import { Log } from "../src/log.js";
 import { equalBytes, pattern, random } from "./helpers/data.js";
@@ -52,10 +52,8 @@ function blocks(data: Uint8Array): Region[] {
 
 // Where "OTP\0" points to
 function partitionTable(data: Uint8Array): number | undefined {
-    for (let i = 0; i + 8 <= data.length; i += 4) {
-        if (data[i] === 0x4F && data[i + 1] === 0x54 && data[i + 2] === 0x50 && data[i + 3] === 0 && (data[i + 7] & 0xF0) === 0xA0) {
-            return readU32(data, i + 4) & 0x0FFFFFFF;
-        }
+    for (const pointer of TABLE_POINTER.find(data, 4)) {
+        return readU32(data, pointer + 4) & 0x0FFFFFFF;
     }
 
     return undefined;
@@ -180,9 +178,17 @@ function exercise(data: Uint8Array, seed: number): void {
         }
     }
 
+    const partitions = ffs.readDir("/").map((entry) => entry.path);
+
+    for (const path of ["/", ...partitions]) {
+        const { size, free } = ffs.statfs(path);
+
+        assert.ok(free >= 0 && free <= size, `${path}: ${free} of ${size} bytes free`);
+    }
+
     const dirs = entries.filter((entry) => entry.isDirectory).map((entry) => entry.path);
 
-    for (const [i, dir] of [...ffs.readDir("/").map((entry) => entry.path), ...dirs.slice(0, 3)].entries()) {
+    for (const [i, dir] of [...partitions, ...dirs.slice(0, 3)].entries()) {
         const before = ffs.save();
 
         try {

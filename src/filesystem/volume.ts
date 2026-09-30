@@ -111,9 +111,10 @@ export class Volume implements Filesystem {
         const chain: Chain      = { data: [], parts: [], last: header.id };
         const visited           = new Set<number>();
 
+        // A file without data is empty, but a directory always has a record of entries
         if (this.records.has(header.dataId)) {
             chain.data.push(header.dataId);
-        } else if (header.nextPart !== none) {
+        } else if (header.nextPart !== none || isDirectory(header)) {
             chain.problem = `its data record ${header.dataId} is missing`;
         }
 
@@ -248,6 +249,11 @@ export class Volume implements Filesystem {
         return this.list(dir).entries.length === 0;
     }
 
+    // What breaks the records of a directory's entries, which it would grow after
+    directoryProblem(dir: Header): string | undefined {
+        return this.list(dir).problem;
+    }
+
     timestamp(header: Header): Date {
         return fatTimeToDate(header.fatTime, this.format.utc);
     }
@@ -285,10 +291,9 @@ export class Volume implements Filesystem {
             throw new FFSError(`${this.name}: unknown chunk size ${chunkSize}, not writing to it`);
         }
 
-        const root = this.root();
-
-        if (!root || !isDirectory(root)) {
-            throw new FFSError(`${this.name} has no root directory, not writing to it`);
+        // Read as one whatever its attributes, but whether the firmware would write to it is not known
+        if (!isDirectory(this.root()!)) {
+            throw new FFSError(`${this.name}: its root does not have the directory attribute, not writing to it`);
         }
 
         this.chunkSize = chunkSize;
@@ -302,16 +307,13 @@ export class Volume implements Filesystem {
         return this;
     }
 
-    // The name as a header would keep it. Throws when it is none the firmware takes.
+    // The name as a header would keep it, of a path, so neither empty, "." nor "..". Throws when it is
+    // none the firmware takes.
     encodeName(name: string): Uint8Array {
         for (const c of name) {
-            if (c.charCodeAt(0) < 0x20 || FORBIDDEN.includes(c)) {
+            if (c.charCodeAt(0) < 0x20 || c === "\x7F" || FORBIDDEN.includes(c)) {
                 throw new FFSError(`Invalid name '${name}': no control characters and none of ${FORBIDDEN}`);
             }
-        }
-
-        if (name === "" || name === "." || name === "..") {
-            throw new FFSError(`Invalid name '${name}'`);
         }
 
         return this.prepareWrite().encodeName(name);

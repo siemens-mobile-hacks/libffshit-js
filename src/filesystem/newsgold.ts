@@ -7,7 +7,7 @@
 // Directory entry: id, 0xFFFF0000 | name hash (32 bits each), in records of 256 bytes. An entry
 //                  whose upper half of the hash is not 0xFFFF is taken for deleted.
 
-import { concat, le16, le32, u16, u32 } from "../bytes.js";
+import { concat, decodeUtf16, le16, le32, u16, u32 } from "../bytes.js";
 import { FFSError } from "../errors.js";
 import { WritableFormat, type Header, type Part } from "./format.js";
 import { foldCaseUtf16, nameHashUtf16 } from "./hash.js";
@@ -17,9 +17,6 @@ const HEADER_SIZE       = 28;
 // Keeps a header inline in an ELKA FIT, where it can be changed in place
 const NAME_LENGTH_MAX   = (0x200 - HEADER_SIZE) / 2;
 const NONE              = 0xFFFFFFFF;
-
-// A name may start with U+FEFF, which is no byte order mark in it
-const utf16Decoder = new TextDecoder("utf-16le", { ignoreBOM: true });
 
 export class NewSgoldFormat extends WritableFormat {
     readonly rootId                 = 10;
@@ -69,15 +66,22 @@ export class NewSgoldFormat extends WritableFormat {
     }
 
     name(header: Header): string {
-        return utf16Decoder.decode(header.name);
+        return decodeUtf16(header.name);
     }
 
+    // A path's name may be of any length
     fold(name: string): string {
-        return String.fromCharCode(...Array.from({ length: name.length }, (_, i) => foldCaseUtf16(name.charCodeAt(i))));
+        let folded = "";
+
+        for (let i = 0; i < name.length; ++i) {
+            folded += String.fromCharCode(foldCaseUtf16(name.charCodeAt(i)));
+        }
+
+        return folded;
     }
 
     chunkSize(config: Uint8Array): number {
-        return u32(config, 4);
+        return config.length >= 8 ? u32(config, 4) : 0;
     }
 
     encodeName(name: string): Uint8Array {
@@ -122,7 +126,7 @@ export class NewSgoldFormat extends WritableFormat {
     }
 
     encodeEntry(id: number, name: Uint8Array): Uint8Array {
-        return concat([le32(id), le32((0xFFFF0000 | nameHashUtf16(utf16Decoder.decode(name))) >>> 0)]);
+        return concat([le32(id), le32((0xFFFF0000 | nameHashUtf16(decodeUtf16(name))) >>> 0)]);
     }
 
     deletedEntry(record: Uint8Array, offset: number): Uint8Array {

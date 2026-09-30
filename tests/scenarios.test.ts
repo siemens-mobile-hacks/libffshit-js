@@ -59,6 +59,23 @@ const EXPECTED: Record<Scenario, Expected> = {
         tree: under("/FFS", ["fine.bin 100", "no data.bin 0", "missing header 10", "dup.bin 10"]),
         warnings: ["FFS: two records with id 10", "/FFS: record 20 is missing", "/FFS/broken part.bin: its part 30583 is missing"],
     },
+    // A directory without its record of entries lists as empty, but is reported
+    "sgold broken records": {
+        platform: "SGOLD", model: "SYN", imei: IMEI,
+        tree: under("/FFS", ["Dir/", "fine.bin 10"]),
+        warnings: [
+            "/FFS: record 24 holds the header of 256",
+            "/FFS/loop.bin: its parts loop",
+            "/FFS/short part.bin: record 18 of 3 bytes is too short for a part",
+            "/FFS/no part data.bin: the data record 23 of its part 22 is missing",
+            "/FFS/Dir: its data record 27 is missing",
+        ],
+    },
+    "sgold names no path leads to": {
+        platform: "SGOLD", model: "SYN", imei: IMEI,
+        tree: under("/FFS", ["fine.bin 4"]),
+        warnings: ["/FFS: an entry without a name", "/FFS: an entry named '.'", "/FFS: an entry named 'a/b'"],
+    },
     "sgold loop": {
         platform: "SGOLD", model: "SYN", imei: IMEI,
         tree: under("/FFS", ["Loop/", "Loop/a.bin 10"]),
@@ -78,6 +95,11 @@ const EXPECTED: Record<Scenario, Expected> = {
         tree: [],
         warnings: ["FFS: no root directory"],
     },
+    "sgold root too short": {
+        platform: "SGOLD", model: "SYN", imei: IMEI,
+        tree: [],
+        warnings: ["FFS: its root directory's record 6 of 3 bytes is too short for a header"],
+    },
     "sgold root without the directory attribute": {
         platform: "SGOLD", model: "SYN", imei: IMEI,
         tree: under("/FFS", ["a.bin 10"]),
@@ -86,6 +108,12 @@ const EXPECTED: Record<Scenario, Expected> = {
         platform: "SGOLD", model: "SYN", imei: IMEI,
         tree: under("/FFS", SAMPLE.slice(0, 2)),
         warnings: ["The block of FFS at 00100000 is empty"],
+    },
+    // One warning of all the blocks past the end
+    "sgold cut short": {
+        platform: "SGOLD", model: "SYN", imei: IMEI,
+        tree: under("/FFS", SAMPLE.slice(0, 4)),
+        warnings: ["2 blocks of FFS, starting from 00160000, end past the end of the fullflash"],
     },
     "sgold2 with an sgold table": {
         platform: "SGOLD", model: "SYN",
@@ -110,6 +138,19 @@ const EXPECTED: Record<Scenario, Expected> = {
         tree: [...under("/FFS_0", SAMPLE.slice(0, 4)), ...CACHE],
     },
     "elka without a table pointer": {
+        platform: "SGOLD2_ELKA", model: "SYN", imei: IMEI,
+        tree: [...under("/FFS_0", SAMPLE.slice(0, 4)), ...CACHE],
+    },
+    // Every block, the ELKA's whose last sector starts erased too
+    "sgold with a broken table": {
+        platform: "SGOLD", model: "SYN", imei: IMEI,
+        tree: [...under("/FFS", SAMPLE.slice(0, 4)), ...CACHE],
+    },
+    "sgold2 with a broken table": {
+        platform: "SGOLD2", model: "SYN", imei: IMEI,
+        tree: [...under("/FFS_0", SAMPLE.slice(0, 4)), ...CACHE],
+    },
+    "elka with a broken table": {
         platform: "SGOLD2_ELKA", model: "SYN", imei: IMEI,
         tree: [...under("/FFS_0", SAMPLE.slice(0, 4)), ...CACHE],
     },
@@ -183,6 +224,10 @@ const EXPECTED: Record<Scenario, Expected> = {
         platform: "EGOLD", model: "SYN",
         tree: under("/LBA_FS", FAT),
     },
+    "egold lba_fs fat16": {
+        platform: "EGOLD", model: "SYN",
+        tree: under("/LBA_FS", FAT),
+    },
     "egold lba_fs broken": {
         platform: "EGOLD", model: "SYN",
         tree: under("/LBA_FS", ["fine.bin 100", "nowhere/"]),
@@ -243,7 +288,7 @@ describe("Made-up fullflashes", () => {
         for (const name of [
             "sgold", "sgold2", "elka", "sgold prototype", "egold", "egold 20-byte headers", "egold 128 KiB blocks", "egold at another address", "egold without a table",
             "egold without card-explorer", "egold without card-explorer, 32 KiB blocks", "egold without card-explorer, without a table", "egold without card-explorer, version 1",
-            "egold lba_fs", "egold lba_fs without a partition table, of 2-sector clusters",
+            "egold lba_fs", "egold lba_fs without a partition table, of 2-sector clusters", "egold lba_fs fat16",
         ] as const) {
             const ffs  = FFS.open(SCENARIOS[name]());
             const root = ffs.readDir("/")[0].path;

@@ -4,7 +4,8 @@ The filesystem in Siemens phones' fullflashes, in TypeScript: reading, and writi
 replacing files, creating directories, removing files and empty directories. It started as a
 rewrite of [libffshit](https://github.com/siemens-mobile-hacks/libffshit).
 
-It has no dependencies and runs wherever JavaScript does.
+It has no dependencies and runs wherever JavaScript of ES2024 does: Node 20 and later, and browsers
+from late 2023 on.
 
 ### Platforms
 
@@ -30,6 +31,7 @@ ffs.warnings;                       // what was found broken, and left out
 ffs.readDir("/");                   // the partitions: /Data, /Cache, /Config
 ffs.readDir("/Data/Misc");          // [{ name, path, isDirectory, size, timestamp, readonly, hidden, system, archive, protected }]
 ffs.stat("/data/misc/a.txt");       // the entry, or undefined
+ffs.exists("/data/misc/a.txt");     // whether stat() finds it
 ffs.readFile("/data/misc/a.txt");   // Uint8Array
 ffs.tree();                         // everything, as entries with children
 ffs.statfs("/Data/Misc");           // { size, free, readonly }, of the partition
@@ -72,8 +74,9 @@ has no characters for as spaces.
 tell of their data partition over OBEX: the blocks but one, less a reserve of 4 % or more, and less
 what the parts and FIT entries of files would take. The CX70, SL65, S75 and EL71 tell the same in
 pmb887x-emu. An EGOLD phone's, whose firmware reckons them in a way not known, are in bytes of the
-flash, and a FAT disk's in clusters. `readonly` is of partitions the library does not write to. The
-root's is of all partitions.
+flash, and a FAT disk's in clusters. `readonly` tells a partition the library does not write to. The
+root's size and free space are of all partitions, and it is read only, since partitions are neither
+created nor removed.
 
 Entries have FAT's attributes, read-only, hidden, system and archive, and `protected`, 0x40, which
 SGOLD phones set on some of their T9 dictionaries.
@@ -81,6 +84,13 @@ SGOLD phones set on some of their T9 dictionaries.
 Timestamps are kept to 2 seconds. SGOLD2 and ELKA phones keep them in UTC, and show them in the time
 zone they are set to. SGOLD and EGOLD phones keep them in their local time, which the library takes
 for the local time where it runs.
+
+What is found broken is left out, with a warning in `warnings`, or with `strict` an `FFSError`: a
+fullflash none of whose partitions has a root directory opens with none. A file whose data is broken
+is left out of listings, and `stat()` and `exists()` do not find it, but its path leads to it:
+`readFile()` throws what is broken, `writeFile()` replaces it, `remove()` removes it, and `mkdir()`
+finds that the name exists. A directory whose records of entries are broken lists what can be read of
+them, and nothing is written into it.
 
 Everything the library throws about a fullflash, a path or an operation is an `FFSError`.
 
@@ -110,7 +120,8 @@ subdirectories included.
 - `tests/fullflashes.test.ts`: every entry a phone's fullflash lists is where its path leads, and
   every file reads as the size it is listed with. The known phones' open without anything broken.
   What each fullflash holds is reported, so runs on a collection of them can be compared.
-- `tests/ffs.test.ts` and `tests/unit`: the API, name hashes, 8-bit names, FAT timestamps.
+- `tests/ffs.test.ts` and `tests/unit`: the API, name hashes, 8-bit names, FAT timestamps, and the
+  ids handed out.
 
 ### On the phones
 

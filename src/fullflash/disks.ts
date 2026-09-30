@@ -36,7 +36,7 @@ const B         = lettered("B");
 
 // The drive each partition is. The FFS_C of EGOLD phones with Card-Explorer is drive 3:, which has no
 // letter.
-const DRIVES: Partial<Record<Platform, Record<string, Drive>>> = {
+const DRIVES: Record<Platform, Record<string, Drive>> = {
     SGOLD:          { FFS: DATA, FFS_B: CACHE, FFS_C: CONFIG },
     SGOLD2:         { FFS_0: DATA, FFS_1: CACHE, FFS_2: CONFIG },
     SGOLD2_ELKA:    { FFS_0: DATA, FFS_1: CACHE, FFS_2: CONFIG },
@@ -67,14 +67,14 @@ function contains(data: Uint8Array, needle: Uint8Array): boolean {
 // Where the partition's drive comes among the platform's, from 0: or A: on, and a partition of no
 // drive after them
 export function driveOrder(platform: Platform, partition: string): number {
-    const order = Object.keys(DRIVES[platform] ?? {}).indexOf(partition);
+    const order = Object.keys(DRIVES[platform]).indexOf(partition);
 
     return order < 0 ? Number.MAX_SAFE_INTEGER : order;
 }
 
 // The name the phone knows a partition by, where its firmware has one for the partition's drive
 export function diskName(data: Uint8Array, platform: Platform, partition: string): string | undefined {
-    const drive = DRIVES[platform]?.[partition];
+    const drive = DRIVES[platform][partition];
 
     return drive && contains(data, drive.stored) ? drive.name : undefined;
 }

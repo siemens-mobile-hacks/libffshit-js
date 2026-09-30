@@ -15,7 +15,6 @@ import { FFSError } from "../errors.js";
 import type { Platform } from "../fullflash/detector.js";
 import { EGOLD_DELETED, EGOLD_FIT_ENTRY_SIZE, EGOLD_HEADER_SIZE, EGOLD_VALID, egoldLayout, type Block, type Partition } from "../fullflash/partitions.js";
 import type { Image } from "../image.js";
-import { EGOLD_ID_OFFSET } from "./egold.js";
 import type { Usage } from "./space.js";
 import type { Space } from "./volume.js";
 
@@ -104,7 +103,9 @@ export abstract class Records {
         }
 
         // The firmware's own records list ids: of the operations it logged, of the files it keeps
-        // open. Whatever they mention is never handed out.
+        // open. Whatever they mention is never handed out. They are read as 16-bit words: on SGOLD2
+        // and ELKA, whose ids are 32-bit, that takes in every id they list below 0x10000, the only
+        // ones handed out, and some small numbers besides.
         for (let id = this.idOffset + 1; id <= this.idOffset + 5; ++id) {
             if (!this.has(id)) {
                 continue;
@@ -292,7 +293,8 @@ export abstract class Records {
         return used;
     }
 
-    // Everything the operation writes, or on an error nothing
+    // Everything the operation writes, or on an error nothing. They do not nest: the operation
+    // starts no other.
     transaction(operation: () => void): void {
         this.inTransaction = true;
         this.savedBlocks.clear();
@@ -637,8 +639,8 @@ function head(size: number): number {
     }
 }
 
-// How much of the FIT a record takes
-function fitSize(size: number): number {
+// How much of an ELKA FIT a record takes
+export function fitSize(size: number): number {
     return kind(size) === Kind.DATA_AREA ? ELKA_SLOT_SIZE : (1 + inlineSlots(size - head(size))) * ELKA_SLOT_SIZE;
 }
 
@@ -785,6 +787,9 @@ class ElkaRecords extends Records {
 }
 
 // =========================================================================
+
+// EGOLD keeps every record under its id plus this
+export const EGOLD_ID_OFFSET = 6000;
 
 // Of the records the firmware writes, what it does with this is not known
 const EGOLD_NEW_TAG         = 0x02;

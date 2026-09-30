@@ -157,7 +157,13 @@ function createVolume(platform: Platform, partition: string, name: string, recor
         }
 
         case "EGOLD_CE": {
-            return new Volume(name, records, new EgoldFormat(records), options.experimentalEgoldWrites ? undefined : "writes to EGOLD are experimental, and made with experimentalEgoldWrites only");
+            const format = new EgoldFormat(records);
+
+            if (!options.experimentalEgoldWrites) {
+                return new Volume(name, records, format, "writes to EGOLD are experimental, and made with experimentalEgoldWrites only");
+            }
+
+            return new Volume(name, records, format, format.version1 ? "writes to version 1 of EGOLD's filesystem are not supported" : undefined);
         }
 
         case "EGOLD": {
@@ -267,7 +273,11 @@ export class FFS {
             return rootEntry();
         }
 
-        const entry = node && this.describe(node);
+        if (!node) {
+            return undefined;
+        }
+
+        const entry = this.describe(node);
 
         return typeof entry === "string" ? undefined : entry;
     }
@@ -470,7 +480,8 @@ export class FFS {
         return node;
     }
 
-    // The volume a file or directory would be created or removed in, and the directory in it
+    // The volume a file or directory would be created or removed in, and the directory in it, which
+    // must not be broken
     private parentOf(path: string): { volume: Volume, parent: Node, name: string, path: string } {
         const parts         = splitPath(path);
         const filesystem    = parts.length ? this.volume(parts[0]) : undefined;
@@ -479,12 +490,11 @@ export class FFS {
             throw new FFSError(`${joinPath(parts)}: no such partition`);
         }
 
-        const volume = filesystem.writable();
-
         if (parts.length === 1) {
-            throw new FFSError(`/${volume.name}: is a partition's root directory`);
+            throw new FFSError(`/${filesystem.name}: is a partition's root directory`);
         }
 
+        const volume    = filesystem.writable();
         const nodes     = this.follow(parts.slice(0, -1));
         const parent    = nodes[nodes.length - 1];
 
@@ -494,6 +504,12 @@ export class FFS {
 
         if (nodes.length < parts.length - 1) {
             throw new FFSError(`${parent.path}/${parts[nodes.length]}: no such directory`);
+        }
+
+        const problem = volume.directoryProblem(parent.header);
+
+        if (problem) {
+            throw new FFSError(`${parent.path}: ${problem}, not writing to it`);
         }
 
         return { volume, parent, name: parts[parts.length - 1], path: `${parent.path}/${parts[parts.length - 1]}` };

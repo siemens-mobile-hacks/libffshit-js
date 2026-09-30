@@ -35,7 +35,7 @@ export class SgoldFormat extends WritableFormat {
     readonly entrySize: number      = 4;
     readonly utc                    = false;
     readonly nextOffset             = 14;
-    readonly directoryRecordSize    = 128;
+    readonly directoryRecordSize: number = 128;
     readonly fileAttributes         = 0xFFFF0000;
     readonly directoryAttributes    = 0xFFFF0010;
     readonly space: SpaceConstants | undefined = SGOLD_SPACE;
@@ -99,7 +99,7 @@ export class SgoldFormat extends WritableFormat {
     }
 
     chunkSize(config: Uint8Array): number {
-        return u16(config, 2);
+        return config.length >= 4 ? u16(config, 2) : 0;
     }
 
     encodeName(name: string): Uint8Array {

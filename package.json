@@ -3,9 +3,11 @@
     "version": "0.1.0",
     "description": "Reads and writes the filesystem of Siemens phones' fullflashes",
     "repository": {
+        "type": "git",
         "url": "git+https://github.com/siemens-mobile-hacks/node-sie-ffs.git"
     },
     "type": "module",
+    "sideEffects": false,
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "exports": {
@@ -19,11 +21,19 @@
     ],
     "scripts": {
         "build": "tsc -p tsconfig.build.json",
+        "prepack": "pnpm build",
         "typecheck": "tsc --noEmit",
         "test": "tsx --test --test-reporter=spec \"tests/*.test.ts\" \"tests/unit/*.test.ts\"",
         "test:e2e": "tsx --test --test-concurrency=1 --test-reporter=spec \"tests/e2e/*.test.ts\""
     },
-    "keywords": [],
+    "keywords": [
+        "siemens",
+        "fullflash",
+        "ffs",
+        "filesystem",
+        "sgold",
+        "egold"
+    ],
     "author": "Siemens Mobile Hackers",
     "license": "MIT",
     "engines": {

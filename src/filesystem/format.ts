@@ -92,6 +92,7 @@ export abstract class WritableFormat extends Format {
     // How the firmware reckons capacity and free space, where that is known
     abstract readonly space: SpaceConstants | undefined;
 
+    // 0 when the record is too short to keep it
     abstract chunkSize(config: Uint8Array): number;
     // The name as a header keeps it. Throws when the firmware could not take it.
     abstract encodeName(name: string): Uint8Array;

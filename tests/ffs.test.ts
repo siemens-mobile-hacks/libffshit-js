@@ -2,18 +2,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { FFS, FFSError } from "../src/index.js";
 import { equalBytes, pattern } from "./helpers/data.js";
-import { EGOLD_LAYOUT, recordImage, SCENARIOS, SGOLD_LAYOUT, utf16 } from "./helpers/scenarios.js";
-import { fatTime, filesystemRecords, RecordsBuilder, type FsFile } from "./helpers/synthetic.js";
+import { EGOLD_LAYOUT, recordImage, SCENARIOS, SGOLD_LAYOUT, SGOLD2_LAYOUT, utf16 } from "./helpers/scenarios.js";
+import { fatTime, layoutBlocks, patchFitEntry, type FsFile } from "./helpers/synthetic.js";
 
 function sgoldImage(files: FsFile[]): Uint8Array {
-    const layout  = { platform: "SGOLD" as const, size: 0x800000, blockSize: 0x10000, partitions: [{ name: "FFS", blocks: 8 }] };
-    const builder = new RecordsBuilder(layout);
-
-    for (const [id, data] of filesystemRecords("SGOLD", files, { chunkSize: 1024 })) {
-        builder.add("FFS", id, data);
-    }
-
-    return builder.build();
+    return recordImage(SGOLD_LAYOUT, { FFS: { files } });
 }
 
 const FILES: FsFile[] = [
@@ -102,6 +95,8 @@ describe("FFS", () => {
         assert.equal(ffs.stat("/nope/deeper"), undefined);
         assert.equal(ffs.exists("/FFS/EMPTY.TXT"), true);
         assert.equal(ffs.stat("/")?.path, "/");
+        // Of any length
+        assert.equal(FFS.open(SCENARIOS.sgold2()).stat(`/FFS_0/${"a".repeat(200000)}`), undefined);
     });
 
     it("reads files", () => {
@@ -165,6 +160,22 @@ describe("FFS", () => {
 
             assert.deepEqual(ffs.statfs(`/${partition}`), before, scenario);
             assert.ok(before.free > 0 && before.free < before.size, scenario);
+        }
+    });
+
+    it("tells what a partition holds in bytes of the flash when its configuration record is too short, and does not write to it", () => {
+        for (const [layout, partition, size] of [[SGOLD_LAYOUT, "FFS", 1], [SGOLD2_LAYOUT, "FFS_0", 3]] as const) {
+            const trees = Object.fromEntries(layout.partitions.map((p) => [p.name, { files: p.name === partition ? [{ name: "a.bin", data: pattern(10, 1) }] : [] }]));
+            const image = recordImage(layout, trees, (image) => patchFitEntry(image, layout.platform, layoutBlocks(layout, partition), 0, "size", size));
+            const ffs   = FFS.open(image, { strict: true });
+
+            const stats = ffs.statfs(`/${partition}`);
+
+            // Of 8 blocks of 64 KiB but one, less their headers and the FITs' last entries
+            assert.equal(stats.size, 7 * (0x10000 - 32));
+            assert.equal(stats.readonly, true);
+            assert.ok(ffs.statfs("/").size >= stats.size);
+            assert.throws(() => ffs.writeFile(`/${partition}/b.bin`, pattern(1, 1)), { name: "FFSError", message: `${partition}: unknown chunk size 0, not writing to it` });
         }
     });
 
@@ -351,6 +362,7 @@ describe("FFS", () => {
             assert.throws(() => ffs.writeFile("/NOPE/a", pattern(1, 1)), { name: "FFSError", message: "/NOPE/a: no such partition" });
             assert.throws(() => ffs.writeFile("/FFS/Misc", pattern(1, 1)), { name: "FFSError", message: "/FFS/Misc: is a directory" });
             assert.throws(() => ffs.writeFile("/FFS/a:b", pattern(1, 1)), { name: "FFSError", message: "Invalid name 'a:b': no control characters and none of \\/:*?\"<>|" });
+            assert.throws(() => ffs.writeFile("/FFS/a\x7F", pattern(1, 1)), { name: "FFSError", message: "Invalid name 'a\x7F': no control characters and none of \\/:*?\"<>|" });
             assert.throws(() => ffs.writeFile("/FFS/a", pattern(1, 1), NaN), { name: "FFSError", message: "Invalid timestamp: NaN" });
             assert.throws(() => ffs.writeFile("/FFS/big", pattern(8 * 0x10000, 1)), { name: "FFSError", message: "Not enough free space in FFS" });
             assert.throws(() => ffs.mkdir("/ffs"), { name: "FFSError", message: "/FFS: is a partition's root directory" });
@@ -358,12 +370,15 @@ describe("FFS", () => {
             assert.throws(() => ffs.remove("/FFS/nope"), { name: "FFSError", message: "/FFS/nope: no such file or directory" });
 
             assert.ok(equalBytes(ffs.save(), sgoldImage(FILES)));
+
+            assert.throws(() => FFS.open(SCENARIOS.sgold2()).writeFile("/FFS_0/\uD800", pattern(1, 1)), { name: "FFSError", message: "'\uD800' is not valid Unicode" });
         });
 
         it("not to EGOLD, unless asked to", () => {
             const ffs = FFS.open(SCENARIOS.egold());
 
             assert.throws(() => ffs.writeFile("/FFS/a", pattern(1, 1)), { name: "FFSError", message: "FFS: writes to EGOLD are experimental, and made with experimentalEgoldWrites only" });
+            assert.throws(() => ffs.remove("/FFS"), { name: "FFSError", message: "/FFS: is a partition's root directory" });
 
             const asked = FFS.open(SCENARIOS.egold(), { experimentalEgoldWrites: true });
 
@@ -383,6 +398,42 @@ describe("FFS", () => {
             const fat = FFS.open(SCENARIOS["egold lba_fs"]());
 
             assert.throws(() => fat.mkdir("/LBA_FS/a"), { name: "FFSError", message: "LBA_FS: writes to EGOLD without Card-Explorer are not supported" });
+            assert.throws(() => fat.remove("/LBA_FS"), { name: "FFSError", message: "/LBA_FS: is a partition's root directory" });
+        });
+
+        it("not to EGOLD's filesystem of version 1, whose directory entries are 2 bytes", () => {
+            const image = recordImage(EGOLD_LAYOUT, { FFS: { files: [{ name: "a.bin", data: pattern(10, 1) }], egoldVersion: 1 } });
+            const ffs   = FFS.open(image, { experimentalEgoldWrites: true, strict: true });
+
+            assert.equal(ffs.statfs("/FFS").readonly, true);
+            assert.throws(() => ffs.writeFile("/FFS/b.bin", pattern(1, 1)), { name: "FFSError", message: "FFS: writes to version 1 of EGOLD's filesystem are not supported" });
+            assert.throws(() => ffs.remove("/FFS/a.bin"), { name: "FFSError", message: "FFS: writes to version 1 of EGOLD's filesystem are not supported" });
+        });
+
+        it("not into a broken directory, but over and in place of broken files", () => {
+            const ffs = FFS.open(SCENARIOS["sgold broken records"]());
+
+            assert.throws(() => ffs.writeFile("/FFS/Dir/b.bin", pattern(1, 1)), { name: "FFSError", message: "/FFS/Dir: its data record 27 is missing, not writing to it" });
+            assert.throws(() => ffs.mkdir("/FFS/Dir/Sub"), { name: "FFSError", message: "/FFS/Dir: its data record 27 is missing, not writing to it" });
+
+            // Left out, but where their paths lead
+            assert.equal(ffs.stat("/FFS/loop.bin"), undefined);
+            assert.throws(() => ffs.readFile("/FFS/loop.bin"), { name: "FFSError", message: "/FFS/loop.bin: its parts loop" });
+            assert.throws(() => ffs.mkdir("/FFS/loop.bin"), { name: "FFSError", message: "/FFS/loop.bin: exists already" });
+
+            ffs.writeFile("/FFS/loop.bin", pattern(5, 1));
+            ffs.remove("/FFS/short part.bin");
+
+            const reopened = FFS.open(ffs.save());
+
+            assert.deepEqual(reopened.readDir("/FFS").map((entry) => [entry.name, entry.size]), [["Dir", 0], ["fine.bin", 10], ["loop.bin", 5]]);
+            assert.deepEqual(reopened.warnings, ["/FFS: record 24 holds the header of 256", "/FFS/no part data.bin: the data record 23 of its part 22 is missing", "/FFS/Dir: its data record 27 is missing"]);
+        });
+
+        it("not to a partition whose root does not have the directory attribute", () => {
+            const ffs = FFS.open(SCENARIOS["sgold root without the directory attribute"]());
+
+            assert.throws(() => ffs.writeFile("/FFS/b.bin", pattern(1, 1)), { name: "FFSError", message: "FFS: its root does not have the directory attribute, not writing to it" });
         });
 
         it("not to a prototype's filesystem", () => {

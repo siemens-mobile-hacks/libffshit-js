@@ -1,13 +1,13 @@
 // Made-up fullflashes of every platform, with the files and the breakage the library has to cope with
 import { concat } from "../../src/bytes.js";
 import { pattern } from "./data.js";
-import { fatRecords, fatTime, filesystemRecords, layoutBlocks, patchFitEntry, RecordsBuilder, removeEgoldTable, type FatOptions, type FsFile, type ImageLayout } from "./synthetic.js";
+import { breakTable, fatRecords, fatTime, filesystemRecords, layoutBlocks, patchFitEntry, RecordsBuilder, removeEgoldTable, type FatOptions, type FsFile, type ImageLayout } from "./synthetic.js";
 
-export const bytes = (...values: number[]) => Uint8Array.from(values);
+const bytes = (...values: number[]) => Uint8Array.from(values);
 export const utf16 = (str: string) => Uint8Array.from(Buffer.from(str, "utf16le"));
 
 // Files of the sizes around the chunk size, names of every kind, attributes and timestamps
-export function sampleTree(sgold: boolean): FsFile[] {
+function sampleTree(sgold: boolean): FsFile[] {
     return [
         { name: "empty.bin", data: new Uint8Array(0) },
         { name: "one.bin", data: pattern(1, 1), attributes: 0x01 },
@@ -49,11 +49,11 @@ export function sampleTree(sgold: boolean): FsFile[] {
 }
 
 // A filesystem of the platform in a formatted image, its records added where the library would
-export function recordImage(layout: ImageLayout, trees: Record<string, { files: FsFile[], idOffset?: number, rootName?: Uint8Array, headerSize?: number, egoldVersion?: 1 | 2 }>, patch?: (image: Uint8Array) => void): Uint8Array {
+export function recordImage(layout: ImageLayout, trees: Record<string, { files: FsFile[], idOffset?: number, headerSize?: number, egoldVersion?: 1 | 2 }>, patch?: (image: Uint8Array) => void): Uint8Array {
     const builder = new RecordsBuilder(layout);
 
     for (const [partition, tree] of Object.entries(trees)) {
-        for (const [id, data] of filesystemRecords(layout.platform, tree.files, { chunkSize: 1024, idOffset: tree.idOffset, rootName: tree.rootName, headerSize: tree.headerSize, egoldVersion: tree.egoldVersion })) {
+        for (const [id, data] of filesystemRecords(layout.platform, tree.files, { chunkSize: 1024, idOffset: tree.idOffset, headerSize: tree.headerSize, egoldVersion: tree.egoldVersion })) {
             builder.add(partition, id, data);
         }
     }
@@ -63,6 +63,20 @@ export function recordImage(layout: ImageLayout, trees: Record<string, { files: 
     patch?.(image);
 
     return image;
+}
+
+// A filesystem of the partition, its records by id changed before they are added
+function changedImage(layout: ImageLayout, partition: string, files: FsFile[], change: (records: Map<number, Uint8Array>) => void): Uint8Array {
+    const builder = new RecordsBuilder(layout);
+    const records = filesystemRecords(layout.platform, files, { chunkSize: 1024 });
+
+    change(records);
+
+    for (const [id, data] of records) {
+        builder.add(partition, id, data);
+    }
+
+    return builder.build();
 }
 
 // The x45's LBA_FS, a FAT disk, its sectors added where the library would
@@ -78,7 +92,7 @@ function fatImage(files: FsFile[], options?: FatOptions): Uint8Array {
 
 // Names short and long, of every case, as bytes in CP1252, and a directory of more
 // than a cluster
-export const FAT_TREE: FsFile[] = [
+const FAT_TREE: FsFile[] = [
     { name: "EMPTY.BIN", data: new Uint8Array(0) },
     { name: "one.bin", data: pattern(1, 1), attributes: 0x01 },
     { name: "sector.bin", data: pattern(512, 2), attributes: 0x02 },
@@ -108,9 +122,9 @@ export const SGOLD2_LAYOUT: ImageLayout = { platform: "SGOLD2", size: 0x800000, 
 export const ELKA_LAYOUT: ImageLayout   = { platform: "SGOLD2_ELKA", size: 0x800000, blockSize: 0x20000, partitions: [{ name: "FFS_0", blocks: 6 }, { name: "FFS_C", blocks: 3 }] };
 export const EGOLD_LAYOUT: ImageLayout  = { platform: "EGOLD_CE", size: 0x800000, blockSize: 0x10000, partitions: [{ name: "FFS", blocks: 8 }] };
 // Without Card-Explorer: the C55's, with the EEPROM's blocks after the filesystem's
-export const OLD_EGOLD_LAYOUT: ImageLayout = { platform: "EGOLD", size: 0x800000, blockSize: 0x20000, partitions: [{ name: "FFS", blocks: 4 }, { name: "EEFULL", blocks: 2 }] };
+const OLD_EGOLD_LAYOUT: ImageLayout = { platform: "EGOLD", size: 0x800000, blockSize: 0x20000, partitions: [{ name: "FFS", blocks: 4 }, { name: "EEFULL", blocks: 2 }] };
 // The x45's: a FAT disk, and the EEPROM's filesystem, which is none
-export const LBA_FS_LAYOUT: ImageLayout = { platform: "EGOLD", size: 0x800000, blockSize: 0x10000, partitions: [{ name: "LBA_FS", blocks: 8 }, { name: "EE_FS", blocks: 2 }] };
+const LBA_FS_LAYOUT: ImageLayout = { platform: "EGOLD", size: 0x800000, blockSize: 0x10000, partitions: [{ name: "LBA_FS", blocks: 8 }, { name: "EE_FS", blocks: 2 }] };
 
 const CACHE = [{ name: "cache.bin", data: pattern(2000, 1) }];
 
@@ -133,6 +147,29 @@ export const SCENARIOS = {
         patchFitEntry(image, "SGOLD", layoutBlocks(SGOLD_LAYOUT, "FFS"), 20, "id", 10);
         patchFitEntry(image, "SGOLD", layoutBlocks(SGOLD_LAYOUT, "FFS"), 0, "flags", 0xFFFFFF00);
     }),
+    // Headers from 10 on: loop.bin's parts are 12 and 14, short part.bin's 18, no part data.bin's 22,
+    // and Dir's data record 27
+    "sgold broken records": () => changedImage(SGOLD_LAYOUT, "FFS", [
+        { name: "loop.bin", data: pattern(3000, 1) },
+        { name: "short part.bin", data: pattern(2000, 2) },
+        { name: "no part data.bin", data: pattern(2000, 3) },
+        { name: "other header.bin", data: pattern(10, 4) },
+        { name: "Dir", children: [{ name: "a.bin", data: pattern(10, 5) }] },
+        { name: "fine.bin", data: pattern(10, 6) },
+    ], (records) => {
+        // The last part's next part is the first, and the header of 24 says it is of 256
+        records.get(14)!.set([12, 0], 14);
+        records.set(18, records.get(18)!.subarray(0, 3));
+        records.delete(23);
+        records.get(24)!.set([0, 1], 0);
+        records.delete(27);
+    }),
+    "sgold names no path leads to": () => recordImage(SGOLD_LAYOUT, { FFS: { files: [
+        { name: bytes(), data: pattern(1, 1) },
+        { name: ".", data: pattern(2, 2) },
+        { name: "a/b", data: pattern(3, 3) },
+        { name: "fine.bin", data: pattern(4, 4) },
+    ] } }),
     "sgold loop": () => recordImage(SGOLD_LAYOUT, { FFS: { files: [{ name: "Loop", children: [{ name: "root again", headerId: 6 }, { name: "a.bin", data: pattern(10, 1) }] }] } }),
     "sgold prototype": () => recordImage(SGOLD_LAYOUT, { FFS: { files: sampleTree(true).slice(0, 7), idOffset: 6000 } }),
     "sgold partitions": () => recordImage({ ...SGOLD_LAYOUT, partitions: [{ name: "FFS", blocks: 4, unformatted: [1] }, { name: "FFS_B", blocks: 2, unformatted: [0, 1] }, { name: "FFS_C", blocks: 3 }, { name: "EEFULL", blocks: 1 }] }, {
@@ -142,20 +179,19 @@ export const SCENARIOS = {
     "sgold no root": () => recordImage(SGOLD_LAYOUT, { FFS: { files: [{ name: "a.bin", data: pattern(10, 1) }] } }, (image) => {
         patchFitEntry(image, "SGOLD", layoutBlocks(SGOLD_LAYOUT, "FFS"), 6, "id", 0x1234);
     }),
-    "sgold root without the directory attribute": () => {
-        const builder = new RecordsBuilder(SGOLD_LAYOUT);
-
-        for (const [id, data] of filesystemRecords("SGOLD", [{ name: "a.bin", data: pattern(10, 1) }], { chunkSize: 1024 })) {
-            // Its attributes are 0xFFFF0010
-            builder.add("FFS", id, id === 6 ? Uint8Array.from(data, (byte, i) => i === 10 ? 0 : byte) : data);
-        }
-
-        return builder.build();
-    },
+    "sgold root too short": () => recordImage(SGOLD_LAYOUT, { FFS: { files: [] } }, (image) => {
+        patchFitEntry(image, "SGOLD", layoutBlocks(SGOLD_LAYOUT, "FFS"), 6, "size", 3);
+    }),
+    "sgold root without the directory attribute": () => changedImage(SGOLD_LAYOUT, "FFS", [{ name: "a.bin", data: pattern(10, 1) }], (records) => {
+        // Its attributes are 0xFFFF0010
+        records.get(6)![10] = 0;
+    }),
     "sgold zero-size block": () => recordImage(SGOLD_LAYOUT, { FFS: { files: sampleTree(true).slice(0, 2) } }, (image) => {
         // The size of the partition's first block in the table
         image.fill(0, 0x3804, 0x3808);
     }),
+    // As a dump cut short: the partition's last two blocks, at 0x160000 and 0x170000, are past its end
+    "sgold cut short": () => recordImage(SGOLD_LAYOUT, { FFS: { files: sampleTree(true).slice(0, 4) } }).slice(0, 0x160000),
     "sgold2 with an sgold table": () => {
         const image = recordImage(SGOLD_LAYOUT, { FFS: { files: sampleTree(true).slice(0, 5) } });
 
@@ -179,6 +215,10 @@ export const SCENARIOS = {
     "sgold without a table pointer": () => recordImage({ ...SGOLD_LAYOUT, noPointer: true, detectorFallbacks: true }, { FFS: { files: sampleTree(true).slice(0, 4) } }),
     "sgold2 without a table pointer": () => recordImage({ ...SGOLD2_LAYOUT, noPointer: true, detectorFallbacks: true }, { FFS_0: { files: sampleTree(false).slice(0, 4) }, FFS_C: { files: CACHE } }),
     "elka without a table pointer": () => recordImage({ ...ELKA_LAYOUT, noPointer: true, detectorFallbacks: true }, { FFS_0: { files: sampleTree(false).slice(0, 4) }, FFS_C: { files: CACHE } }),
+    // Found by their blocks' headers, which are of 128 KiB, and on ELKA of 256 KiB
+    "sgold with a broken table": () => recordImage({ ...SGOLD_LAYOUT, blockSize: 0x20000, partitions: [{ name: "FFS", blocks: 4 }, { name: "FFS_C", blocks: 2 }] }, { FFS: { files: sampleTree(true).slice(0, 4) }, FFS_C: { files: CACHE } }, breakTable),
+    "sgold2 with a broken table": () => recordImage({ ...SGOLD2_LAYOUT, blockSize: 0x20000 }, { FFS_0: { files: sampleTree(false).slice(0, 4) }, FFS_C: { files: CACHE } }, breakTable),
+    "elka with a broken table": () => recordImage({ ...ELKA_LAYOUT, blockSize: 0x40000 }, { FFS_0: { files: sampleTree(false).slice(0, 4) }, FFS_C: { files: CACHE } }, breakTable),
     "sgold2 sl75": () => recordImage({ ...SGOLD2_LAYOUT, model: "SL75", size: 0x2400000, blocksAddr: 0x2100000, blockAddressOffset: 0x2000000 }, { FFS_0: { files: sampleTree(false).slice(0, 4) }, FFS_C: { files: CACHE } }),
     "elka flags": () => recordImage(ELKA_LAYOUT, { FFS_0: { files: [{ name: "deleted.bin", data: pattern(100, 1) }, { name: "strange.bin", data: pattern(3000, 2) }] }, FFS_C: { files: CACHE } }, (image) => {
         patchFitEntry(image, "SGOLD2_ELKA", layoutBlocks(ELKA_LAYOUT, "FFS_0"), 13, "flags", 0xFFFFFF00);
@@ -228,6 +268,7 @@ export const SCENARIOS = {
     }),
     "egold lba_fs": () => fatImage(FAT_TREE),
     "egold lba_fs without a partition table, of 2-sector clusters": () => fatImage(FAT_TREE, { start: 0, clusterSectors: 2 }),
+    "egold lba_fs fat16": () => fatImage(FAT_TREE, { fat16: true }),
     "egold lba_fs broken": () => fatImage([
         { name: "fine.bin", data: pattern(100, 1) },
         { name: "broken chain.bin", data: pattern(3000, 2), brokenPart: true },

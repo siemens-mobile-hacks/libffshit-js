@@ -3,7 +3,7 @@
 // card's. The phones leave the sectors they never wrote to out, as the root directory's last ones,
 // which are then of zeros.
 
-import { concat, u16, u32 } from "../bytes.js";
+import { concat, decodeUtf16, u16, u32 } from "../bytes.js";
 import { FFSError } from "../errors.js";
 import { decodeName } from "./codepage.js";
 import { fatTimeToDate } from "./fattime.js";
@@ -15,9 +15,6 @@ import type { Child, Filesystem, Space, Volume } from "./volume.js";
 const SECTOR_SIZE   = 512;
 const ENTRY_SIZE    = 32;
 const ZEROS         = new Uint8Array(SECTOR_SIZE);
-
-// A name may start with U+FEFF, which is no byte order mark in it
-const utf16Decoder = new TextDecoder("utf-16le", { ignoreBOM: true });
 
 const LONG_NAME     = 0x0F;
 const VOLUME_LABEL  = 0x08;
@@ -67,7 +64,7 @@ function decodeLongName(parts: Uint8Array[]): string {
         end += 2;
     }
 
-    return utf16Decoder.decode(units.subarray(0, end));
+    return decodeUtf16(units.subarray(0, end));
 }
 
 export class FatVolume implements Filesystem {

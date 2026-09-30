@@ -12,7 +12,7 @@
             kay, AlexSid, SiNgle, Chaos, avkiev, Baloo
 */
 
-import { cString, hex, isPrintable, latin1 } from "../bytes.js";
+import { cString, hex, isPrintable, latin1, peek16, peek32 } from "../bytes.js";
 import { FFSError } from "../errors.js";
 import { Log } from "../log.js";
 import type { Platform } from "./detector.js";
@@ -45,7 +45,7 @@ interface Found {
 }
 
 // "OTP\0" and the address of the partition table
-const TABLE_POINTER = new Pattern("4F 54 50 00  ?? ?? ?? A?");
+export const TABLE_POINTER = new Pattern("4F 54 50 00  ?? ?? ?? A?");
 
 // The first entry of a partition table: its name, the size and address of its list of blocks, ...
 const SGOLD_TABLE = new Pattern(`
@@ -86,7 +86,6 @@ export function egoldLayout(platform: EgoldPlatform): EgoldLayout {
 export const LBA_FS = "LBA_FS";
 
 const ADDRESS_MASK      = 0x0FFFFFFF;
-const BLOCK_HEADER_SIZE = 16;
 const FORMATTED         = 0xFFFFFFF0;
 
 interface TableLayout {
@@ -103,14 +102,6 @@ interface TableLayout {
 const SGOLD_LAYOUT: TableLayout         = { platform: "SGOLD", pattern: SGOLD_TABLE, entrySize: 0x2C, sizeOffset: 0x14, listOffset: 0x18, headerAtEnd: false };
 const SGOLD2_LAYOUT: TableLayout        = { platform: "SGOLD2", pattern: NEW_SGOLD_TABLE, entrySize: 0x34, sizeOffset: 0x20, listOffset: 0x24, headerAtEnd: false };
 const SGOLD2_ELKA_LAYOUT: TableLayout   = { ...SGOLD2_LAYOUT, platform: "SGOLD2_ELKA", headerAtEnd: true };
-
-function peek16(data: Uint8Array, offset: number): number | undefined {
-    return offset >= 0 && offset + 2 <= data.length ? data[offset] | (data[offset + 1] << 8) : undefined;
-}
-
-function peek32(data: Uint8Array, offset: number): number | undefined {
-    return offset >= 0 && offset + 4 <= data.length ? (data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24)) >>> 0 : undefined;
-}
 
 function isFsName(name: Uint8Array): boolean {
     return name.length <= 8 && isPrintable(name) && latin1(name).includes("FFS");
@@ -134,6 +125,8 @@ function formattedBlockName(data: Uint8Array, header: number): string | undefine
 class Search {
     readonly partitions = new Map<string, Block[]>();
     readonly problems: string[] = [];
+    // Of a dump cut short, by partition: the addresses of the blocks past its end
+    private readonly cut = new Map<string, number[]>();
 
     constructor(readonly data: Uint8Array, readonly log: Log) {
     }
@@ -147,7 +140,7 @@ class Search {
         }
 
         if (block.addr + block.size > this.data.length) {
-            this.problems.push(`The block of ${name} at ${hex(block.addr)} of ${hex(block.size)} bytes ends past the end of the fullflash`);
+            this.cut.set(name, [...this.cut.get(name) ?? [], block.addr]);
 
             return;
         }
@@ -170,6 +163,12 @@ class Search {
     }
 
     found(platform: Platform): Found | undefined {
+        for (const [name, [first, ...others]] of this.cut) {
+            this.problems.push(others.length
+                ? `${others.length + 1} blocks of ${name}, starting from ${hex(first)}, end past the end of the fullflash`
+                : `The block of ${name} at ${hex(first)} ends past the end of the fullflash`);
+        }
+
         return this.partitions.size ? { platform, partitions: this.partitions, problems: this.problems } : undefined;
     }
 }
@@ -493,14 +492,15 @@ function searchSgoldBlocks(data: Uint8Array, platform: Platform, log: Log): Foun
     return search.found(platform);
 }
 
-// Blocks of 256 KiB, the header 32 bytes before their end
+// Blocks of 256 KiB, the header 32 bytes before their end. The last sector's start is no matter, as
+// the data grows up from the block's start and the FIT down from its end.
 function searchElkaBlocks(data: Uint8Array, log: Log): Found | undefined {
     const search = new Search(data, log);
 
     for (let addr = 0x30000; addr < data.length; addr += 0x10000) {
         const name = formattedBlockName(data, addr + 0x10000 - 0x20);
 
-        if (name?.includes("FFS") && !data.subarray(addr, addr + BLOCK_HEADER_SIZE).every((byte) => byte === 0xFF)) {
+        if (name?.includes("FFS")) {
             search.add(name, { addr: addr - 0x30000, size: 0x40000 });
         }
     }
