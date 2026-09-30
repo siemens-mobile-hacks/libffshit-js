@@ -134,7 +134,7 @@ const CASE_FOLDING: readonly (readonly [number, number, number, number])[] = [
     [0xFF21, 0xFF3A, 1, 32],
 ];
 
-function hash(codes: Iterable<number>): number {
+function hash(codes: readonly number[]): number {
     let sum      = 0;
     let previous = 0;
 
@@ -143,9 +143,7 @@ function hash(codes: Iterable<number>): number {
         previous = c;
     }
 
-    const result = (sum % HASH_MODULUS) & 0xFFFF;
-
-    return result ? result : 1;
+    return (sum % HASH_MODULUS) || 1;
 }
 
 // What the hashes fold the case with: two names the same after folding are the same name
@@ -177,26 +175,17 @@ export function foldCaseUtf16(c: number): number {
     return (c + delta) & 0xFFFF;
 }
 
+// The firmwares of SGOLD fold ASCII letters only
 export function foldCase8bit(c: number): number {
-    if (c >= 0x61 && c <= 0x7A) {
-        return c - 0x61 + 0x41;
-    }
-
-    return c;
+    return c >= 0x61 && c <= 0x7A ? c - 0x20 : c;
 }
 
-// SGOLD2 and SGOLD2_ELKA: the UTF-16 name, case-folded to lower case
-export function nameHashUtf16(name: string | readonly number[]): number {
-    const units: number[] = [];
-
-    for (let i = 0; i < name.length; ++i) {
-        units.push(typeof name === "string" ? name.charCodeAt(i) : name[i]);
-    }
-
-    return hash(units.map(foldCaseUtf16));
+// SGOLD2 and SGOLD2_ELKA: of the UTF-16 name, case-folded
+export function nameHashUtf16(name: string): number {
+    return hash(Array.from({ length: name.length }, (_, i) => foldCaseUtf16(name.charCodeAt(i))));
 }
 
-// SGOLD: the 8-bit name as it is stored, upper-cased
-export function nameHash8bit(name: Uint8Array | readonly number[]): number {
+// SGOLD: of the 8-bit name as it is stored, upper-cased
+export function nameHash8bit(name: Uint8Array): number {
     return hash(Array.from(name, foldCase8bit));
 }

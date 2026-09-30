@@ -1,9 +1,9 @@
 {
     "compilerOptions": {
-        "target": "ES2022",
+        "target": "ES2024",
         "module": "NodeNext",
         "moduleResolution": "NodeNext",
-        "lib": ["ES2022"],
+        "lib": ["ES2024"],
         "types": ["node"],
         "strict": true,
         "noImplicitOverride": true,
@@ -15,6 +15,5 @@
         "sourceMap": true,
         "outDir": "./dist"
     },
-    "include": ["src", "tests"],
-    "exclude": ["tests/reference/build"]
+    "include": ["src", "tests"]
 }

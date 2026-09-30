@@ -1,78 +1,76 @@
-// The API of @sie-js/libffshit, the WebAssembly build of libffshit: a fullflash's files by
-// absolute paths, looked up without regard to the case of ASCII letters, e.g. "/FFS/Pictures".
+import { concat } from "./bytes.js";
+import { FFSError } from "./errors.js";
+import { resolveCodepage } from "./filesystem/codepage.js";
+import { EgoldFormat } from "./filesystem/egold.js";
+import { dateToFatTime, fatTimeToDate } from "./filesystem/fattime.js";
+import { Attributes, isDirectory, type Header } from "./filesystem/format.js";
+import { NewSgoldFormat } from "./filesystem/newsgold.js";
+import { Records } from "./filesystem/records.js";
+import { PROTOTYPE_ID_OFFSET, SgoldFormat } from "./filesystem/sgold.js";
+import { Volume } from "./filesystem/volume.js";
+import { detect, PLATFORMS, type Platform } from "./fullflash/detector.js";
+import { findPartitions } from "./fullflash/partitions.js";
+import { Image } from "./image.js";
+import { Log, type Logger } from "./log.js";
 
-import { FilesystemError, FullflashError, PartitionsError } from "./errors.js";
-import type { Filesystem } from "./filesystem/platform/base.js";
-import { buildFilesystem } from "./filesystem/platform/builder.js";
-import type { TimePoint } from "./filesystem/help.js";
-import type { Directory, File } from "./filesystem/structure.js";
-import { FullFlash } from "./fullflash.js";
-import { Logger, type LogInterface } from "./log.js";
-import type { Partitions } from "./partition/partitions.js";
-import { isPlatformType, type PlatformType } from "./platform/types.js";
-
-export interface FFSOpenOptions {
-    isOldSearchAlgorithm?: boolean;
-    searchStartAddress?: number;
-    platform?: "auto" | "EGOLD_CE" | "SGOLD" | "SGOLD2" | "SGOLD2_ELKA";
-    skipBroken?: boolean;
-    skipDuplicates?: boolean;
-    // Prints every message to the console
-    debug?: boolean;
-    verboseProcessing?: boolean;
-    verboseHeaders?: boolean;
-    verboseData?: boolean;
-    // The codepage SGOLD file names are in, CP1252 by default
+export interface OpenOptions {
+    // The platform, when it is not to be detected
+    platform?: Platform;
+    // The codepage of SGOLD and EGOLD names, which is the phone's language's: CP1252 (the default)
+    // for Western European languages, CP1251 for Cyrillic ones, CP1250 for Central European ones.
+    // By any name iconv knows it by.
     codepage?: string;
+    // Fails on anything broken, instead of leaving it out with a warning
+    strict?: boolean;
+    logger?: Logger;
 }
 
 export interface FFSEntry {
     name: string;
-    // The parent directory
+    // Absolute, e.g. "/FFS_0/Misc/photo.jpg"
     path: string;
-    size: number;
-    // Milliseconds since the epoch
-    timestamp: number;
-    isFile: boolean;
     isDirectory: boolean;
-    isReadonly: boolean;
-    isHidden: boolean;
-    isSystem: boolean;
+    // 0 for a directory
+    size: number;
+    timestamp: Date;
+    readonly: boolean;
+    hidden: boolean;
+    system: boolean;
 }
 
-export type FFSTreeEntry = FFSEntry & {
+export interface FFSTreeEntry extends FFSEntry {
+    // Of a directory
     children?: FFSTreeEntry[];
-};
-
-interface DirOrFile {
-    dir?: Directory;
-    file?: File;
 }
 
-function emptyEntry(): FFSEntry {
-    return { name: "", path: "", size: 0, timestamp: 0, isFile: false, isDirectory: false, isReadonly: false, isHidden: false, isSystem: false };
+// A file or directory a path leads to
+interface Node {
+    volume: Volume;
+    header: Header;
+    name: string;
+    path: string;
+    // The ids of the directories from the partition's root down to it, which a loop leads back to
+    ancestors: readonly number[];
 }
 
-// Lower case, of ASCII letters only
-function toLower(str: string): string {
-    return str.replace(/[A-Z]/g, (c) => c.toLowerCase());
+type Report = (problem: string) => void;
+
+// The root, which holds the partitions
+function rootEntry(): FFSEntry {
+    return { name: "", path: "/", isDirectory: true, size: 0, timestamp: new Date(0), readonly: false, hidden: false, system: false };
 }
 
-function splitPath(input: string): string[] {
-    if (!input.startsWith("/")) {
-        throw new Error("Path must be absolute");
-    }
+// x65flasher puts a 16 byte header before the fullflash
+const X65FLASHER_MAGIC          = [0x46, 0x42, 0x4B];
+const X65FLASHER_HEADER_SIZE    = 16;
 
+function splitPath(path: string): string[] {
     const parts: string[] = [];
 
-    for (const part of input.split("/")) {
-        if (part === "" || part === ".") {
-            continue;
-        }
-
+    for (const part of path.split("/")) {
         if (part === "..") {
             parts.pop();
-        } else {
+        } else if (part !== "" && part !== ".") {
             parts.push(part);
         }
     }
@@ -81,382 +79,450 @@ function splitPath(input: string): string[] {
 }
 
 function joinPath(parts: readonly string[]): string {
-    return parts.length ? parts.map((part) => `/${part}`).join("") : "/";
+    return `/${parts.join("/")}`;
 }
 
-function getParentDir(path: string): string {
-    return joinPath(splitPath(path).slice(0, -1));
+// What makes a name one no path leads to
+function nameProblem(name: string): string | undefined {
+    if (name === "") {
+        return "an entry without a name";
+    }
+
+    if (name === "." || name === ".." || name.includes("/")) {
+        return `an entry named '${name}'`;
+    }
+
+    return undefined;
 }
 
-function getBaseName(path: string): string {
-    return splitPath(path).pop() ?? "";
+function rootProblem(volume: Volume): string | undefined {
+    try {
+        return volume.root() ? undefined : "no root directory";
+    } catch (e) {
+        if (e instanceof FFSError) {
+            return `its root directory's ${e.message}`;
+        }
+
+        throw e;
+    }
 }
 
-// Warnings and errors, e.g. broken files skipped while loading; everything when debugging
-class FFSLogInterface implements LogInterface {
-    readonly warnings: string[] = [];
-    private readonly debug: boolean;
+function createVolume(platform: Platform, name: string, records: Records, codepage: string, log: Log): Volume {
+    switch (platform) {
+        case "SGOLD": {
+            // Prototypes keep the root at 6006
+            const prototype = !records.has(6) && records.has(6 + PROTOTYPE_ID_OFFSET);
 
-    constructor(debug: boolean) {
-        this.debug = debug;
-    }
+            if (prototype) {
+                log.debug(`${name} is a prototype's, with ids from ${PROTOTYPE_ID_OFFSET}`);
+            }
 
-    onInfo(msg: string): void {
-        this.print("I", msg);
-    }
+            const format = new SgoldFormat(records, codepage, prototype ? PROTOTYPE_ID_OFFSET : 0);
 
-    onWarning(msg: string): void {
-        this.warnings.push(msg);
-        this.print("W", msg);
-    }
+            return new Volume(name, records, format, prototype ? "a prototype's filesystem is read only" : undefined);
+        }
 
-    onError(msg: string): void {
-        this.warnings.push(msg);
-        this.print("E", msg);
-    }
+        case "SGOLD2":
+        case "SGOLD2_ELKA": {
+            return new Volume(name, records, new NewSgoldFormat(records));
+        }
 
-    onDebug(msg: string): void {
-        this.print("D", msg);
-    }
-
-    private print(level: string, msg: string): void {
-        if (this.debug) {
-            console.error(`[FFS] [${level}] ${msg}`);
+        case "EGOLD_CE": {
+            return new Volume(name, records, new EgoldFormat(records, codepage, (problem) => log.warn(problem)), "EGOLD filesystems are read only");
         }
     }
 }
 
-interface Opened {
-    fullflash: FullFlash;
-    partitions: Partitions;
-    filesystem: Filesystem;
-    rootDir: Directory;
-    platform: PlatformType;
-    warnings: string[];
-}
-
+// The filesystem of a fullflash, its partitions the directories in the root: "/FFS_0/Misc/a.txt".
+// Paths are found as the phone finds them, without regard to case as far as its firmware folds it,
+// the partitions' names without regard to case.
+//
+// The fullflash is read where it is, so it must not change while in use. Writes go to a copy made
+// on the first one, which save() returns: the fullflash given is never changed.
 export class FFS {
-    private handle: { opened: Opened | undefined } | undefined;
+    // The filesystem's, which may differ from the one detected
+    readonly platform: Platform;
+    readonly model: string | undefined;
+    readonly imei: string | undefined;
+    // What was found broken, and left out
+    readonly warnings: readonly string[];
 
-    // The buffer is used as it is, and must not change while it is open
-    async open(buffer: Uint8Array, options: FFSOpenOptions = {}): Promise<void> {
-        const handle = this.handle ??= { opened: undefined };
-        const opts = {
-            isOldSearchAlgorithm: false,
-            searchStartAddress: 0,
-            platform: "auto",
-            skipBroken: true,
-            skipDuplicates: true,
-            debug: false,
-            verboseData: false,
-            verboseHeaders: false,
-            verboseProcessing: false,
-            ...options,
-        };
+    private constructor(
+        platform: Platform,
+        detection: { model: string | undefined, imei: string | undefined },
+        warnings: readonly string[],
+        private readonly image: Image,
+        // What came before the fullflash, which save() puts back
+        private readonly prefix: Uint8Array,
+        private readonly volumes: ReadonlyMap<string, Volume>,
+    ) {
+        this.platform   = platform;
+        this.model      = detection.model;
+        this.imei       = detection.imei;
+        this.warnings   = warnings;
+    }
 
-        const logger         = new FFSLogInterface(opts.debug);
-        const previousLogger = Logger.getInterface();
+    static open(data: Uint8Array, options: OpenOptions = {}): FFS {
+        const log       = new Log(options.logger, options.strict);
+        const codepage  = resolveCodepage(options.codepage ?? "CP1252");
+        let   prefix: Uint8Array = new Uint8Array(0);
 
-        Logger.init(logger);
+        if (options.platform !== undefined && !PLATFORMS.includes(options.platform)) {
+            throw new FFSError(`Unknown platform ${options.platform}`);
+        }
 
-        handle.opened = undefined;
+        // A plain view, of whose subarrays slice() copies, which a Buffer's does not
+        data = new Uint8Array(data.buffer, data.byteOffset, data.length);
 
-        try {
-            let fullflash: FullFlash;
-            let partitions: Partitions;
-            let platform: PlatformType;
+        if (X65FLASHER_MAGIC.every((byte, i) => data[i] === byte)) {
+            log.debug("x65flasher's header");
 
-            if (opts.platform === "auto") {
-                fullflash = new FullFlash(buffer);
-                platform  = fullflash.getDetector().getPlatform();
+            prefix  = data.subarray(0, X65FLASHER_HEADER_SIZE);
+            data    = data.subarray(X65FLASHER_HEADER_SIZE);
+        }
 
-                if (platform === "UNK") {
-                    throw new FullflashError("Unknown platform");
-                }
+        if (!data.length) {
+            throw new FFSError("The fullflash is empty");
+        }
 
-                fullflash.loadPartitions(opts.isOldSearchAlgorithm, opts.searchStartAddress);
-                partitions = fullflash.getPartitions()!;
+        const detection = detect(data, options.platform);
 
-                if (partitions.getFsPlatform() !== platform) {
-                    platform = partitions.getFsPlatform();
-                }
+        if (!detection.platform) {
+            throw new FFSError("The fullflash is of an unknown platform");
+        }
+
+        const { platform, partitions }  = findPartitions(data, detection.platform, detection.sl75, log);
+        const image                     = new Image(data);
+        const volumes                   = new Map<string, Volume>();
+
+        for (const partition of partitions) {
+            const records = Records.open(platform, image, partition);
+
+            for (const problem of records.problems) {
+                log.warn(problem);
+            }
+
+            const volume    = createVolume(platform, partition.name, records, codepage, log);
+            const problem   = rootProblem(volume);
+
+            if (problem) {
+                log.warn(`${partition.name}: ${problem}`);
             } else {
-                if (!isPlatformType(opts.platform)) {
-                    throw new Error(`Unknown platform ${opts.platform}`);
-                }
-
-                platform  = opts.platform;
-                fullflash = new FullFlash(buffer, platform);
-
-                fullflash.loadPartitions(opts.isOldSearchAlgorithm, opts.searchStartAddress);
-                partitions = fullflash.getPartitions()!;
+                volumes.set(partition.name, volume);
             }
-
-            const filesystem = buildFilesystem(platform, partitions);
-
-            filesystem.logVerboseProcessing(opts.verboseProcessing);
-            filesystem.logVerboseHeaders(opts.verboseHeaders);
-            filesystem.logVerboseData(opts.verboseData);
-
-            if (opts.codepage !== undefined) {
-                filesystem.setCodepage(opts.codepage);
-            }
-
-            filesystem.load(opts.skipBroken, opts.skipDuplicates);
-
-            handle.opened = { fullflash, partitions, filesystem, rootDir: filesystem.getRoot(), platform, warnings: logger.warnings };
-        } catch (e) {
-            if (e instanceof PartitionsError) {
-                throw new Error(`[FULLFLASH::Partitions::Exception] ${e.message}`);
-            }
-
-            if (e instanceof FilesystemError) {
-                throw new Error(`[FULLFLASH::Filesystem::Exception] ${e.message}`);
-            }
-
-            if (e instanceof FullflashError) {
-                throw new Error(`[FULLFLASH::Exception] ${e.message}`);
-            }
-
-            throw e;
-        } finally {
-            Logger.init(previousLogger);
-        }
-    }
-
-    close(): void {
-        if (!this.handle) {
-            throw new Error("FFS is not opened");
         }
 
-        this.handle.opened = undefined;
+        const ffs = new FFS(platform, detection, log.warnings, image, prefix, volumes);
+
+        for (const node of ffs.partitions()) {
+            ffs.check(node, (problem) => log.warn(problem));
+        }
+
+        Object.freeze(log.warnings);
+
+        return ffs;
     }
 
-    getPlatform(): string {
-        return this.opened().platform;
-    }
-
-    getModel(): string {
-        return this.opened().fullflash.getDetector().getModel();
-    }
-
-    getIMEI(): string {
-        return this.opened().fullflash.getDetector().getIMEI();
-    }
-
-    // Problems found while opening, e.g. broken files that were skipped
-    getWarnings(): string[] {
-        return [...this.opened().warnings];
-    }
-
+    // Undefined when there is no such file or directory, or when it is broken
     stat(path: string): FFSEntry | undefined {
-        const opened        = this.opened();
-        const parentPath    = getParentDir(path);
-        const dirOrFile     = this.getDirOrFile(path);
+        const node = this.resolve(splitPath(path));
 
-        if (dirOrFile.dir) {
-            return this.dirEntry(opened, dirOrFile.dir, parentPath);
+        if (node === null) {
+            return rootEntry();
         }
 
-        if (dirOrFile.file) {
-            return this.fileEntry(dirOrFile.file, parentPath);
-        }
+        const entry = node && this.describe(node);
 
-        return undefined;
+        return typeof entry === "string" ? undefined : entry;
     }
 
-    isExists(path: string): boolean {
-        return this.stat(path) != null;
-    }
-
-    readFile(path: string): Buffer | undefined {
-        this.opened();
-
-        const { file } = this.getDirOrFile(path);
-
-        return file ? Buffer.from(file.getData()) : undefined;
+    exists(path: string): boolean {
+        return this.stat(path) !== undefined;
     }
 
     readDir(path: string): FFSEntry[] {
-        const opened                = this.opened();
-        const [dir, canonicalPath]  = this.getDir(path);
-        const entries: FFSEntry[]   = [];
+        return this.list(this.directory(path)).map(([, entry]) => entry);
+    }
 
-        if (dir) {
-            for (const subdir of dir.getSubdirs()) {
-                entries.push(this.dirEntry(opened, subdir, canonicalPath));
-            }
+    readFile(path: string): Uint8Array {
+        const parts = splitPath(path);
+        const node  = this.resolve(parts);
 
-            for (const file of dir.getFiles()) {
-                entries.push(this.fileEntry(file, canonicalPath));
-            }
+        if (node === undefined) {
+            throw new FFSError(`${joinPath(parts)}: no such file`);
         }
 
-        return entries;
-    }
-
-    getFilesTree(): FFSTreeEntry {
-        const rootDirStat = this.stat("/");
-
-        if (!rootDirStat) {
-            throw new Error("Root directory is not found");
+        if (node === null || isDirectory(node.header)) {
+            throw new FFSError(`${node?.path ?? "/"}: is a directory`);
         }
 
-        return {
-            ...rootDirStat,
-            children: this.readDirRecursive("/"),
-        };
+        try {
+            return node.volume.read(node.header);
+        } catch (e) {
+            throw e instanceof FFSError ? new FFSError(`${node.path}: ${e.message}`) : e;
+        }
     }
 
-    readDirRecursive(path: string): FFSTreeEntry[] {
-        const entries: FFSTreeEntry[] = [];
+    // The directory and everything in it
+    tree(path = "/"): FFSTreeEntry {
+        const node = this.directory(path);
 
-        for (const entry of this.readDir(path)) {
-            if (entry.isDirectory) {
-                entries.push({
-                    ...entry,
-                    children: this.readDirRecursive(`${entry.path}/${entry.name}`),
-                });
-            } else {
-                entries.push({
-                    ...entry,
-                    children: [],
-                });
+        return this.subtree(node, node ? this.describe(node) as FFSEntry : rootEntry());
+    }
+
+    // Creates the file, or replaces the file of that name. The directory it is in must exist.
+    writeFile(path: string, data: Uint8Array, timestamp: Date | number = new Date()): void {
+        const target = this.parentOf(path);
+        const { volume, parent, name } = target;
+
+        const fatTime   = dateToFatTime(timestamp);
+        const stored    = volume.encodeName(name);
+        const existing  = volume.find(parent.header, name);
+
+        if (existing && isDirectory(existing.header)) {
+            throw new FFSError(`${target.path}: is a directory`);
+        }
+
+        volume.transaction(() => {
+            if (existing) {
+                volume.delete(existing);
             }
+
+            volume.createFile(parent.header, stored, data, fatTime);
+        });
+    }
+
+    // The directory it is in must exist
+    mkdir(path: string, timestamp: Date | number = new Date()): void {
+        const target = this.parentOf(path);
+        const { volume, parent, name } = target;
+
+        const fatTime   = dateToFatTime(timestamp);
+        const stored    = volume.encodeName(name);
+
+        if (volume.find(parent.header, name)) {
+            throw new FFSError(`${target.path}: exists already`);
         }
 
-        return entries;
-    }
-
-    // Creates the file, or replaces the file of that name. The parent directory must exist.
-    writeFile(path: string, data: Uint8Array, timestamp: TimePoint = Date.now()): void {
-        const opened = this.opened();
-
-        opened.filesystem.writeFile(this.writePath(opened, path), data, timestamp);
-    }
-
-    // The parent directory must exist
-    mkdir(path: string, timestamp: TimePoint = Date.now()): void {
-        const opened = this.opened();
-
-        opened.filesystem.createDirectory(this.writePath(opened, path), timestamp);
+        volume.transaction(() => volume.createDirectory(parent.header, stored, fatTime));
     }
 
     // Removes a file or an empty directory
     remove(path: string): void {
-        const opened = this.opened();
+        const target = this.parentOf(path);
+        const { volume, parent, name } = target;
 
-        opened.filesystem.remove(this.writePath(opened, path));
+        const child = volume.find(parent.header, name);
+
+        if (!child) {
+            throw new FFSError(`${target.path}: no such file or directory`);
+        }
+
+        if (isDirectory(child.header) && !volume.isEmpty(child.header)) {
+            throw new FFSError(`${target.path}: directory not empty`);
+        }
+
+        volume.transaction(() => volume.delete(child));
     }
 
-    // The fullflash with what was written to it, to save
-    getFullflash(): Buffer {
-        return Buffer.from(this.opened().fullflash.save().buffer);
+    // The fullflash, with what was written to it
+    save(): Uint8Array {
+        return concat([this.prefix, this.image.data]);
     }
 
-    private opened(): Opened {
-        if (!this.handle) {
-            throw new Error("FFS is not opened");
-        }
+    // =========================================================================
 
-        if (!this.handle.opened) {
-            throw new Error("FFS is closed.");
-        }
-
-        return this.handle.opened;
+    private volume(name: string): Volume | undefined {
+        return [...this.volumes.values()].find((volume) => volume.name.toLowerCase() === name.toLowerCase());
     }
 
-    // A path of the filesystem's own: its partition's name as the partition has it
-    private writePath(opened: Opened, path: string): string {
-        const parts = splitPath(path);
-
-        if (parts.length) {
-            const partition = opened.rootDir.getSubdirs().find((dir) => toLower(dir.getName()) === toLower(parts[0]));
-
-            if (partition) {
-                parts[0] = partition.getName();
-            }
-        }
-
-        return parts.join("/");
-    }
-
-    private getDir(path: string): [Directory | undefined, string] {
-        let   dir: Directory = this.opened().rootDir;
-        const parts = splitPath(toLower(path));
-        const canonicalPathParts: string[] = [];
-
-        if (!parts.length) {
-            return [dir, "/"];
-        }
-
-        for (const part of parts) {
-            const subdir = dir.getSubdirs().find((subdir) => toLower(subdir.getName()) === part);
-
-            if (!subdir) {
-                return [undefined, ""];
-            }
-
-            dir = subdir;
-            canonicalPathParts.push(dir.getName());
-        }
-
-        return [dir, joinPath(canonicalPathParts)];
-    }
-
-    private getDirOrFile(path: string): DirOrFile {
-        const normalizedPath = joinPath(splitPath(path));
-
-        if (normalizedPath === "/") {
-            return { dir: this.opened().rootDir };
-        }
-
-        const [parentDir]   = this.getDir(getParentDir(normalizedPath));
-        const baseNameLC    = getBaseName(toLower(path));
-
-        if (!parentDir) {
-            return {};
-        }
-
-        const dir = parentDir.getSubdirs().find((subdir) => toLower(subdir.getName()) === baseNameLC);
-
-        if (dir) {
-            return { dir };
-        }
-
-        const file = parentDir.getFiles().find((file) => toLower(file.getName()) === baseNameLC);
-
-        return file ? { file } : {};
-    }
-
-    private fileEntry(file: File, parentPath: string): FFSEntry {
-        const attributes = file.getAttributes();
+    // A partition's root is a directory whatever its attributes
+    private partition(volume: Volume): Node {
+        const root = volume.root()!;
 
         return {
-            ...emptyEntry(),
-            name:           file.getName(),
-            path:           parentPath,
-            timestamp:      file.getTimestamp().getTime(),
-            size:           file.getSize(),
-            isFile:         true,
-            isReadonly:     attributes.isReadonly(),
-            isHidden:       attributes.isHidden(),
-            isSystem:       attributes.isSystem(),
+            volume,
+            header:     { ...root, attributes: root.attributes | Attributes.DIRECTORY },
+            name:       volume.name,
+            path:       `/${volume.name}`,
+            ancestors:  [root.id],
         };
     }
 
-    private dirEntry(opened: Opened, dir: Directory, parentPath: string): FFSEntry {
-        const attributes = dir.getAttributes();
+    private partitions(): Node[] {
+        return [...this.volumes.values()].map((volume) => this.partition(volume));
+    }
+
+    // The partition and the files and directories the names lead to, as far as they are found
+    private follow(parts: readonly string[]): Node[] {
+        const volume = parts.length ? this.volume(parts[0]) : undefined;
+
+        if (!volume) {
+            return [];
+        }
+
+        const nodes = [this.partition(volume)];
+
+        for (const name of parts.slice(1)) {
+            const node = nodes[nodes.length - 1];
+
+            if (!isDirectory(node.header)) {
+                break;
+            }
+
+            const child = volume.find(node.header, name);
+
+            if (!child || node.ancestors.includes(child.header.id)) {
+                break;
+            }
+
+            nodes.push({ volume, header: child.header, name: child.name, path: `${node.path}/${child.name}`, ancestors: [...node.ancestors, child.header.id] });
+        }
+
+        return nodes;
+    }
+
+    // null for the root
+    private resolve(parts: readonly string[]): Node | null | undefined {
+        if (!parts.length) {
+            return null;
+        }
+
+        const nodes = this.follow(parts);
+
+        return nodes.length === parts.length ? nodes[nodes.length - 1] : undefined;
+    }
+
+    // null for the root
+    private directory(path: string): Node | null {
+        const parts = splitPath(path);
+        const node  = this.resolve(parts);
+
+        if (node === undefined) {
+            throw new FFSError(`${joinPath(parts)}: no such directory`);
+        }
+
+        if (node && !isDirectory(node.header)) {
+            throw new FFSError(`${node.path}: not a directory`);
+        }
+
+        return node;
+    }
+
+    // The volume a file or directory would be created or removed in, and the directory in it
+    private parentOf(path: string): { volume: Volume, parent: Node, name: string, path: string } {
+        const parts     = splitPath(path);
+        const volume    = parts.length ? this.volume(parts[0]) : undefined;
+
+        if (!volume) {
+            throw new FFSError(`${joinPath(parts)}: no such partition`);
+        }
+
+        volume.prepareWrite();
+
+        if (parts.length === 1) {
+            throw new FFSError(`/${volume.name}: is a partition's root directory`);
+        }
+
+        const nodes     = this.follow(parts.slice(0, -1));
+        const parent    = nodes[nodes.length - 1];
+
+        if (!isDirectory(parent.header)) {
+            throw new FFSError(`${parent.path}: not a directory`);
+        }
+
+        if (nodes.length < parts.length - 1) {
+            throw new FFSError(`${parent.path}/${parts[nodes.length]}: no such directory`);
+        }
+
+        return { volume, parent, name: parts[parts.length - 1], path: `${parent.path}/${parts[parts.length - 1]}` };
+    }
+
+    // The entry, or what is broken about it
+    private describe(node: Node): FFSEntry | string {
+        const { header, volume } = node;
+
+        let size = 0;
+
+        if (!isDirectory(header)) {
+            const chain = volume.chain(header);
+
+            if (chain.problem) {
+                return chain.problem;
+            }
+
+            size = volume.dataSize(chain);
+        }
 
         return {
-            ...emptyEntry(),
-            name:           dir === opened.rootDir ? "" : dir.getName(),
-            path:           parentPath,
-            timestamp:      dir.getTimestamp().getTime(),
-            isDirectory:    true,
-            isReadonly:     attributes.isReadonly(),
-            isHidden:       attributes.isHidden(),
-            isSystem:       attributes.isSystem(),
+            name:           node.name,
+            path:           node.path,
+            isDirectory:    isDirectory(header),
+            size,
+            timestamp:      fatTimeToDate(header.fatTime),
+            readonly:       (header.attributes & Attributes.READONLY) !== 0,
+            hidden:         (header.attributes & Attributes.HIDDEN) !== 0,
+            system:         (header.attributes & Attributes.SYSTEM) !== 0,
+        };
+    }
+
+    // The files and directories in a directory, except the broken ones, which are reported
+    private list(dir: Node | null, report: Report = () => {}): [Node, FFSEntry][] {
+        if (!dir) {
+            return this.partitions().map((node) => [node, this.describe(node) as FFSEntry]);
+        }
+
+        const result: [Node, FFSEntry][] = [];
+
+        for (const child of dir.volume.children(dir.header, (problem) => report(`${dir.path}: ${problem}`))) {
+            if (isDirectory(child.header) && dir.ancestors.includes(child.header.id)) {
+                report(`${dir.path}: entry ${child.header.id} leads back to a directory it is in`);
+
+                continue;
+            }
+
+            const problem = nameProblem(child.name);
+
+            if (problem) {
+                report(`${dir.path}: ${problem}`);
+
+                continue;
+            }
+
+            const node: Node = {
+                volume:     dir.volume,
+                header:     child.header,
+                name:       child.name,
+                path:       `${dir.path}/${child.name}`,
+                ancestors:  [...dir.ancestors, child.header.id],
+            };
+
+            const entry = this.describe(node);
+
+            if (typeof entry === "string") {
+                report(`${node.path}: ${entry}`);
+
+                continue;
+            }
+
+            result.push([node, entry]);
+        }
+
+        return result;
+    }
+
+    private check(dir: Node, report: Report): void {
+        for (const [node, entry] of this.list(dir, report)) {
+            if (entry.isDirectory) {
+                this.check(node, report);
+            }
+        }
+    }
+
+    private subtree(dir: Node | null, entry: FFSEntry): FFSTreeEntry {
+        return {
+            ...entry,
+            children: this.list(dir).map(([node, child]) => child.isDirectory ? this.subtree(node, child) : child),
         };
     }
 }

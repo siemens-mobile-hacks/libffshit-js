@@ -1,13 +1,11 @@
-// FFS, the API of the WebAssembly build: what it answers, what it throws, and the writes it adds.
-// tests/compat/wasm.test.ts compares it with the WebAssembly build itself.
-
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { FFS, Logger, type LogInterface } from "../src/index.js";
+import { FFS, FFSError } from "../src/index.js";
+import { equalBytes, pattern } from "./helpers/data.js";
+import { SCENARIOS } from "./helpers/scenarios.js";
 import { egoldDirectory, egoldImage, fatTime, filesystemRecords, formattedImage, RecordsBuilder, type FsFile } from "./helpers/synthetic.js";
-import { pattern } from "./helpers/write.js";
 
-function sgoldImage(files: FsFile[]): Buffer {
+function sgoldImage(files: FsFile[]): Uint8Array {
     const layout  = { platform: "SGOLD" as const, size: 0x800000, blockSize: 0x10000, partitions: [{ name: "FFS", blocks: 8 }] };
     const builder = new RecordsBuilder(formattedImage(layout), "SGOLD");
 
@@ -15,7 +13,7 @@ function sgoldImage(files: FsFile[]): Buffer {
         builder.add("FFS", id, data);
     }
 
-    return Buffer.from(builder.image());
+    return builder.build();
 }
 
 const FILES: FsFile[] = [
@@ -26,120 +24,88 @@ const FILES: FsFile[] = [
     { name: Uint8Array.of(0xF4, 0xE0, 0xE9, 0xEB), data: pattern(6, 3) },
 ];
 
-async function opened(image = sgoldImage(FILES), options = {}): Promise<FFS> {
-    const ffs = new FFS();
-
-    await ffs.open(image, options);
-
-    return ffs;
-}
+const open = (options = {}) => FFS.open(sgoldImage(FILES), options);
 
 describe("FFS", () => {
-    it("tells the platform, model and IMEI", async () => {
-        const ffs = await opened();
+    it("tells the platform, model and IMEI", () => {
+        const ffs = open();
 
-        assert.equal(ffs.getPlatform(), "SGOLD");
-        assert.equal(ffs.getModel(), "SYN");
-        assert.equal(ffs.getIMEI(), "490154203237518");
-        assert.deepEqual(ffs.getWarnings(), []);
+        assert.equal(ffs.platform, "SGOLD");
+        assert.equal(ffs.model, "SYN");
+        assert.equal(ffs.imei, "490154203237518");
+        assert.deepEqual(ffs.warnings, []);
     });
 
-    it("lists directories, with paths and names as the fullflash has them", async () => {
-        const ffs = await opened();
+    it("lists directories, with paths and names as the fullflash has them", () => {
+        const ffs = open();
 
-        assert.deepEqual(ffs.readDir("/").map((entry) => [entry.path, entry.name, entry.isDirectory]), [["/", "FFS", true]]);
-        assert.deepEqual(ffs.readDir("/ffs").map((entry) => [entry.path, entry.name]), [["/FFS", "Misc"], ["/FFS", "empty.txt"], ["/FFS", "Ärger"], ["/FFS", "ôàéë"]]);
+        assert.deepEqual(ffs.readDir("/").map((entry) => [entry.path, entry.isDirectory]), [["/FFS", true]]);
+        assert.deepEqual(ffs.readDir("/ffs").map((entry) => entry.path), ["/FFS/Misc", "/FFS/empty.txt", "/FFS/Ärger", "/FFS/ôàéë"]);
 
-        const [photo] = ffs.readDir("/FFS/MISC/");
+        assert.deepEqual(ffs.readDir("/FFS/MISC/"), [{
+            name:           "Photo.JPG",
+            path:           "/FFS/Misc/Photo.JPG",
+            isDirectory:    false,
+            size:           3000,
+            timestamp:      new Date(2008, 6, 6, 5, 4, 2),
+            readonly:       true,
+            hidden:         false,
+            system:         false,
+        }]);
 
-        assert.deepEqual(photo, {
-            name: "Photo.JPG",
-            path: "/FFS/Misc",
-            size: 3000,
-            timestamp: new Date(2008, 6, 6, 5, 4, 2).getTime(),
-            isFile: true,
-            isDirectory: false,
-            isReadonly: true,
-            isHidden: false,
-            isSystem: false,
-        });
-
-        assert.deepEqual(ffs.readDir("/nope"), []);
-        assert.deepEqual(ffs.readDir("/FFS/empty.txt"), []);
+        assert.throws(() => ffs.readDir("/nope"), { name: "FFSError", message: "/nope: no such directory" });
+        assert.throws(() => ffs.readDir("/FFS/empty.txt"), { name: "FFSError", message: "/FFS/empty.txt: not a directory" });
     });
 
-    it("finds files without regard to the case of ASCII letters", async () => {
-        const ffs = await opened();
+    it("finds files without regard to the case of ASCII letters, as SGOLD phones do", () => {
+        const ffs = open();
 
-        assert.equal(ffs.stat("/ffs/misc/photo.jpg")?.name, "Photo.JPG");
-        // The path as it was asked for
-        assert.equal(ffs.stat("/ffs/misc/photo.jpg")?.path, "/ffs/misc");
-        assert.equal(ffs.stat("/ffs/misc/./../misc/photo.jpg")?.size, 3000);
+        assert.equal(ffs.stat("/ffs/misc/photo.jpg")?.path, "/FFS/Misc/Photo.JPG");
+        assert.equal(ffs.stat("ffs/misc/./../misc/photo.jpg")?.size, 3000);
         assert.equal(ffs.stat("/FFS/ärger"), undefined);
         assert.equal(ffs.stat("/FFS/Ärger")?.size, 5);
         assert.equal(ffs.stat("/FFS/Misc/nope"), undefined);
         assert.equal(ffs.stat("/nope/deeper"), undefined);
-        assert.equal(ffs.isExists("/FFS/EMPTY.TXT"), true);
-        assert.equal(ffs.stat("/")?.name, "");
+        assert.equal(ffs.exists("/FFS/EMPTY.TXT"), true);
+        assert.equal(ffs.stat("/")?.path, "/");
     });
 
-    it("reads files", async () => {
-        const ffs = await opened();
+    it("reads files", () => {
+        const ffs = open();
 
-        assert.ok(ffs.readFile("/FFS/Misc/Photo.JPG")?.equals(Buffer.from(pattern(3000, 1))));
-        assert.equal(ffs.readFile("/FFS/empty.txt")?.length, 0);
-        assert.equal(ffs.readFile("/FFS/Misc"), undefined);
-        assert.equal(ffs.readFile("/FFS/nope"), undefined);
+        assert.ok(equalBytes(ffs.readFile("/FFS/Misc/Photo.JPG"), pattern(3000, 1)));
+        assert.equal(ffs.readFile("/FFS/empty.txt").length, 0);
+        assert.throws(() => ffs.readFile("/FFS/Misc"), { name: "FFSError", message: "/FFS/Misc: is a directory" });
+        assert.throws(() => ffs.readFile("/FFS/nope"), { name: "FFSError", message: "/FFS/nope: no such file" });
     });
 
-    it("gives the whole tree", async () => {
-        const ffs  = await opened();
-        const tree = ffs.getFilesTree();
+    it("gives whole trees", () => {
+        const ffs  = open();
+        const tree = ffs.tree();
 
-        assert.equal(tree.children?.[0].name, "FFS");
-        assert.deepEqual(tree.children?.[0].children?.[0].children?.map((entry) => [entry.name, entry.children]), [["Photo.JPG", []]]);
+        assert.equal(tree.path, "/");
+        assert.equal(tree.children?.[0].path, "/FFS");
+        assert.deepEqual(tree.children?.[0].children?.[0].children?.map((entry) => [entry.name, entry.children]), [["Photo.JPG", undefined]]);
+        assert.deepEqual(ffs.tree("/FFS/Misc").children?.map((entry) => entry.name), ["Photo.JPG"]);
     });
 
-    it("reads SGOLD names in the codepage asked for", async () => {
-        const ffs = await opened(sgoldImage(FILES), { codepage: "CP1251" });
+    it("reads SGOLD names in the codepage asked for", () => {
+        const ffs = open({ codepage: "CP1251" });
 
         assert.ok(ffs.stat("/FFS/файл"));
         // Ä in CP1252 is Д in CP1251
         assert.ok(ffs.stat("/FFS/Дrger"));
     });
 
-    it("takes absolute paths only", async () => {
-        const ffs = await opened();
-
-        assert.throws(() => ffs.stat("FFS"), { message: "Path must be absolute" });
-        assert.throws(() => ffs.readDir(""), { message: "Path must be absolute" });
+    it("throws what it cannot open", () => {
+        assert.throws(() => FFS.open(new Uint8Array(0x100000)), { name: "FFSError", message: "The fullflash is of an unknown platform" });
+        assert.throws(() => FFS.open(new Uint8Array(0x100000), { platform: "SGOLD" }), { name: "FFSError", message: "No filesystem partitions found" });
+        assert.throws(() => FFS.open(new Uint8Array(0)), { name: "FFSError", message: "The fullflash is empty" });
+        assert.throws(() => open({ codepage: "NOPE" }), { name: "FFSError", message: "Unknown codepage NOPE" });
+        assert.throws(() => open({ platform: "NOPE" }), { name: "FFSError", message: "Unknown platform NOPE" });
     });
 
-    it("throws before it is opened, and once it is closed", async () => {
-        const ffs = new FFS();
-
-        assert.throws(() => ffs.getPlatform(), { message: "FFS is not opened" });
-        assert.throws(() => ffs.close(), { message: "FFS is not opened" });
-
-        await ffs.open(sgoldImage(FILES));
-        ffs.close();
-
-        assert.throws(() => ffs.getPlatform(), { message: "FFS is closed." });
-        assert.throws(() => ffs.readDir("/"), { message: "FFS is closed." });
-    });
-
-    it("throws what the library throws, named by the C++ exception", async () => {
-        const ffs = new FFS();
-
-        await assert.rejects(ffs.open(Buffer.alloc(0x100000)), { message: "[FULLFLASH::Exception] Unknown platform" });
-        await assert.rejects(ffs.open(Buffer.alloc(0x100000), { platform: "SGOLD" }), { message: "[FULLFLASH::Partitions::Exception] Partitions not found" });
-        await assert.rejects(ffs.open(sgoldImage(FILES), { codepage: "NOPE" }), { message: "[FULLFLASH::Filesystem::Exception] Unknown codepage NOPE" });
-
-        // Closed by a failed open
-        assert.throws(() => ffs.getPlatform(), { message: "FFS is closed." });
-    });
-
-    it("collects the warnings of opening", async () => {
+    it("collects the warnings, or in strict mode throws them", () => {
         const image = egoldImage({
             size: 0x800000,
             blocks: 1,
@@ -150,85 +116,103 @@ describe("FFS", () => {
             ],
         });
 
-        const ffs = await opened(Buffer.from(image));
+        const ffs = FFS.open(image);
 
-        assert.deepEqual(ffs.getWarnings(), ["Couldn't detect IMEI", "File id 0007 already exists in map"]);
+        assert.deepEqual(ffs.warnings, ["FFS: two files with id 7"]);
+        assert.deepEqual(ffs.readDir("/FFS").map((entry) => entry.name), ["a"]);
+        assert.throws(() => FFS.open(image, { strict: true }), { name: "FFSError", message: "FFS: two files with id 7" });
     });
 
-    it("leaves the logger it found installed", async () => {
+    it("logs to the logger it is given", () => {
         const messages: string[] = [];
-        const logger: LogInterface = {
-            onInfo: (msg) => messages.push(msg),
-            onWarning: (msg) => messages.push(msg),
-            onError: (msg) => messages.push(msg),
-            onDebug: (msg) => messages.push(msg),
-        };
 
-        const image = sgoldImage(FILES);
+        FFS.open(SCENARIOS["sgold broken"](), { logger: { debug: (msg) => messages.push(`D ${msg}`), warn: (msg) => messages.push(`W ${msg}`) } });
 
-        Logger.init(logger);
+        assert.ok(messages.some((msg) => msg.startsWith("D ")));
+        assert.ok(messages.includes("W FFS: two records with id 10"));
+    });
 
-        try {
-            await opened(image);
+    it("takes Buffers, and leaves them alone", () => {
+        const image = Buffer.from(sgoldImage(FILES));
+        const copy  = Buffer.from(image);
+        const ffs   = FFS.open(image);
 
-            assert.equal(Logger.getInterface(), logger);
-            assert.deepEqual(messages, []);
-        } finally {
-            Logger.init(undefined);
-        }
+        ffs.writeFile("/FFS/b.bin", pattern(10000, 9));
+
+        assert.ok(image.equals(copy));
+        assert.ok(!equalBytes(ffs.save(), copy));
     });
 
     describe("writes", () => {
-        it("files and directories, which it shows at once", async () => {
-            const ffs = await opened();
+        it("files and directories, which it shows at once", () => {
+            const ffs = open();
 
             ffs.mkdir("/ffs/misc/New", new Date(2020, 1, 2, 3, 4, 6));
             ffs.writeFile("/ffs/misc/new/a.txt", pattern(2500, 7), new Date(2021, 1, 2, 3, 4, 6));
             ffs.writeFile("/FFS/Ärger", pattern(1, 8));
 
-            assert.deepEqual(ffs.readDir("/FFS/Misc/New").map((entry) => [entry.name, entry.size, entry.timestamp]), [["a.txt", 2500, new Date(2021, 1, 2, 3, 4, 6).getTime()]]);
-            assert.ok(ffs.readFile("/ffs/misc/new/A.TXT")?.equals(Buffer.from(pattern(2500, 7))));
+            assert.deepEqual(ffs.readDir("/FFS/Misc/New").map((entry) => [entry.path, entry.size, entry.timestamp]), [["/FFS/Misc/New/a.txt", 2500, new Date(2021, 1, 2, 3, 4, 6)]]);
+            assert.ok(equalBytes(ffs.readFile("/ffs/misc/new/A.TXT"), pattern(2500, 7)));
             assert.equal(ffs.stat("/FFS/Ärger")?.size, 1);
         });
 
-        it("into a fullflash it returns, leaving the buffer it was given alone", async () => {
-            const image = sgoldImage(FILES);
-            const copy  = Buffer.from(image);
-            const ffs   = await opened(image);
+        it("into a fullflash it saves", () => {
+            const ffs = open();
 
             ffs.writeFile("/FFS/b.bin", pattern(10000, 9));
             ffs.remove("/FFS/empty.txt");
             ffs.remove("/FFS/Misc/Photo.JPG");
             ffs.remove("/FFS/Misc");
 
-            assert.ok(image.equals(copy));
-
-            const reopened = await opened(ffs.getFullflash());
+            const reopened = FFS.open(ffs.save());
 
             assert.deepEqual(reopened.readDir("/FFS").map((entry) => entry.name), ["Ärger", "ôàéë", "b.bin"]);
-            assert.ok(reopened.readFile("/FFS/B.BIN")?.equals(Buffer.from(pattern(10000, 9))));
+            assert.ok(equalBytes(reopened.readFile("/FFS/B.BIN"), pattern(10000, 9)));
         });
 
-        it("throws what the library throws, and changes nothing then", async () => {
-            const ffs = await opened();
+        it("replaces a file whichever way its name is kept", () => {
+            // "Ärger" as 0x1F and UTF-8, which the codepage could have kept
+            const ffs = FFS.open(sgoldImage([{ name: "Ärger", data: pattern(5, 1) }]));
 
-            assert.throws(() => ffs.remove("/FFS/Misc"), { message: "Directory Misc is not empty" });
-            assert.throws(() => ffs.writeFile("/FFS/nope/a", pattern(1, 1)), { message: "Directory nope not found" });
-            assert.throws(() => ffs.writeFile("/NOPE/a", pattern(1, 1)), { message: "'NOPE/a': no such partition" });
-            assert.throws(() => ffs.mkdir("/FFS"), { message: "'FFS' is a partition's root directory" });
-            assert.throws(() => ffs.writeFile("relative", pattern(1, 1)), { message: "Path must be absolute" });
+            ffs.writeFile("/FFS/Ärger", pattern(7, 2));
 
-            assert.ok(ffs.getFullflash().equals(sgoldImage(FILES)));
+            assert.deepEqual(ffs.readDir("/FFS").map((entry) => [entry.name, entry.size]), [["Ärger", 7]]);
         });
 
-        it("not to EGOLD", async () => {
-            const ffs = await opened(Buffer.from(egoldImage({
-                size: 0x800000,
-                blocks: 1,
-                files: [{ id: 6, parentId: 6, name: new Uint8Array(0), attributes: 0x10, fat: 0, data: egoldDirectory([]) }],
-            })));
+        it("throws what it cannot do, and changes nothing then", () => {
+            const ffs = open();
 
-            assert.throws(() => ffs.writeFile("/FFS/a", pattern(1, 1)), { message: "Writing is not supported on this platform" });
+            assert.throws(() => ffs.remove("/FFS/Misc"), { name: "FFSError", message: "/FFS/Misc: directory not empty" });
+            assert.throws(() => ffs.writeFile("/FFS/nope/a/b", pattern(1, 1)), { name: "FFSError", message: "/FFS/nope: no such directory" });
+            assert.throws(() => ffs.writeFile("/FFS/empty.txt/a", pattern(1, 1)), { name: "FFSError", message: "/FFS/empty.txt: not a directory" });
+            assert.throws(() => ffs.writeFile("/NOPE/a", pattern(1, 1)), { name: "FFSError", message: "/NOPE/a: no such partition" });
+            assert.throws(() => ffs.writeFile("/FFS/Misc", pattern(1, 1)), { name: "FFSError", message: "/FFS/Misc: is a directory" });
+            assert.throws(() => ffs.writeFile("/FFS/a:b", pattern(1, 1)), { name: "FFSError", message: "Invalid name 'a:b': no control characters and none of \\/:*?\"<>|" });
+            assert.throws(() => ffs.writeFile("/FFS/a", pattern(1, 1), NaN), { name: "FFSError", message: "Invalid timestamp: NaN" });
+            assert.throws(() => ffs.writeFile("/FFS/big", pattern(8 * 0x10000, 1)), { name: "FFSError", message: "Not enough free space in FFS" });
+            assert.throws(() => ffs.mkdir("/ffs"), { name: "FFSError", message: "/FFS: is a partition's root directory" });
+            assert.throws(() => ffs.mkdir("/FFS/misc"), { name: "FFSError", message: "/FFS/misc: exists already" });
+            assert.throws(() => ffs.remove("/FFS/nope"), { name: "FFSError", message: "/FFS/nope: no such file or directory" });
+
+            assert.ok(equalBytes(ffs.save(), sgoldImage(FILES)));
+        });
+
+        it("not to EGOLD", () => {
+            const ffs = FFS.open(SCENARIOS.egold());
+
+            assert.throws(() => ffs.writeFile("/FFS/a", pattern(1, 1)), { name: "FFSError", message: "FFS: EGOLD filesystems are read only" });
+        });
+
+        it("not to a prototype's filesystem", () => {
+            const ffs = FFS.open(SCENARIOS["sgold prototype"]());
+
+            assert.throws(() => ffs.mkdir("/FFS/a"), { name: "FFSError", message: "FFS: a prototype's filesystem is read only" });
+        });
+
+        it("not to a broken partition", () => {
+            const ffs = FFS.open(SCENARIOS["sgold broken"]());
+
+            assert.throws(() => ffs.mkdir("/FFS/a"), FFSError);
         });
     });
 });

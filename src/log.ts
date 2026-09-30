@@ -1,35 +1,28 @@
-export interface LogInterface {
-    onInfo(msg: string): void;
-    onWarning(msg: string): void;
-    onError(msg: string): void;
-    onDebug(msg: string): void;
+import { FFSError } from "./errors.js";
+
+export interface Logger {
+    debug?(message: string): void;
+    warn?(message: string): void;
 }
 
-let logInterface: LogInterface | undefined;
+// What opening a fullflash reports: debug messages, and the warnings about what is broken, which in
+// strict mode fail it
+export class Log {
+    readonly warnings: string[] = [];
 
-// Where the messages of every loader and writer go. Without an interface they are dropped.
-export const Logger = {
-    init(newInterface: LogInterface | undefined): void {
-        logInterface = newInterface;
-    },
+    constructor(private readonly logger: Logger = {}, private readonly strict = false) {
+    }
 
-    getInterface(): LogInterface | undefined {
-        return logInterface;
-    },
+    debug(message: string): void {
+        this.logger.debug?.(message);
+    }
 
-    info(msg: string): void {
-        logInterface?.onInfo(msg);
-    },
+    warn(message: string): void {
+        if (this.strict) {
+            throw new FFSError(message);
+        }
 
-    warn(msg: string): void {
-        logInterface?.onWarning(msg);
-    },
-
-    error(msg: string): void {
-        logInterface?.onError(msg);
-    },
-
-    debug(msg: string): void {
-        logInterface?.onDebug(msg);
-    },
-};
+        this.warnings.push(message);
+        this.logger.warn?.(message);
+    }
+}

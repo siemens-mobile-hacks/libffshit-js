@@ -1,47 +1,35 @@
-// SGOLD keeps a name in the 8-bit codepage of the phone's language when the codepage has all of
-// its characters, and else as 0x1F followed by the name in UTF-8.
+// SGOLD and EGOLD keep a name in the 8-bit codepage of the phone's language when the codepage has
+// all of its characters, and else as 0x1F followed by the name in UTF-8.
 //
-// The codepages are glibc's, which the C++ library converts with through iconv: the single-byte
-// ones in codepages.ts, and UTF-8. iconv knows more, which are unknown here.
+// The codepages are glibc's single-byte ones, and UTF-8.
 
-import { FilesystemError } from "../errors.js";
-import { decodeUtf8, toBinaryString } from "../rawdata.js";
+import { latin1 } from "../bytes.js";
+import { FFSError } from "../errors.js";
 import { CODEPAGE_ALIASES, CODEPAGE_TABLES } from "./codepages.js";
 
-const UTF8_NAME_PREFIX = 0x1F;
+const UTF8_PREFIX = 0x1F;
 const UTF8 = "UTF-8";
 
 interface Codepage {
+    // Of the bytes from 0x80 on
     decode: readonly number[];
     encode: Map<number, number>;
 }
 
 const codepages = new Map<string, Codepage>();
+const utf8Decoder = new TextDecoder("utf-8", { ignoreBOM: true });
+const utf8Encoder = new TextEncoder();
 
-function canonicalName(codepage: string): string | undefined {
-    const name = codepage.toUpperCase();
-
-    if (name === UTF8 || name === "UTF8") {
-        return UTF8;
-    }
-
-    if (name in CODEPAGE_TABLES) {
-        return name;
-    }
-
-    return CODEPAGE_ALIASES[name];
-}
-
-function getCodepage(name: string): Codepage {
+function table(name: string): Codepage {
     let codepage = codepages.get(name);
 
     if (!codepage) {
         const decode = CODEPAGE_TABLES[name];
         const encode = new Map<number, number>();
 
-        decode.forEach((codePoint, byte) => {
+        decode.forEach((codePoint, i) => {
             if (codePoint >= 0) {
-                encode.set(codePoint, byte);
+                encode.set(codePoint, 0x80 + i);
             }
         });
 
@@ -52,37 +40,40 @@ function getCodepage(name: string): Codepage {
     return codepage;
 }
 
-function isAscii(name: string): boolean {
-    return /^[\x00-\x7F]*$/.test(name);
+function isAscii(bytes: Uint8Array): boolean {
+    return bytes.every((byte) => byte < 0x80);
 }
 
-// Whether the string is valid UTF-16, which is what it takes to be valid UTF-8
-function isWellFormed(name: string): boolean {
-    return !/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(name);
-}
+// The canonical name of a codepage, which may be given by any name iconv knows it by, e.g. "cp1251",
+// "windows-1251", "latin1"
+export function resolveCodepage(codepage: string): string {
+    const name = codepage.toUpperCase();
 
-// The name of the codepage the library knows it by. Throws when the codepage is unknown.
-export function checkCodepage(codepage: string): string {
-    const name = canonicalName(codepage);
-
-    if (name === undefined) {
-        throw new FilesystemError(`Unknown codepage ${codepage}`);
+    if (name === UTF8 || name === "UTF8") {
+        return UTF8;
     }
 
-    return name;
+    const canonical = name in CODEPAGE_TABLES ? name : CODEPAGE_ALIASES[name];
+
+    if (canonical === undefined) {
+        throw new FFSError(`Unknown codepage ${codepage}`);
+    }
+
+    return canonical;
 }
 
 // The name in the codepage, or undefined when the codepage lacks one of its characters
 function encode(name: string, codepage: string): Uint8Array | undefined {
     if (codepage === UTF8) {
-        return new TextEncoder().encode(name);
+        return utf8Encoder.encode(name);
     }
 
-    const table = getCodepage(codepage).encode;
+    const { encode } = table(codepage);
     const bytes: number[] = [];
 
     for (const c of name) {
-        const byte = table.get(c.codePointAt(0)!);
+        const codePoint = c.codePointAt(0)!;
+        const byte      = codePoint < 0x80 ? codePoint : encode.get(codePoint);
 
         if (byte === undefined) {
             return undefined;
@@ -104,28 +95,26 @@ function decode(stored: Uint8Array, codepage: string): string | undefined {
         }
     }
 
-    const table = getCodepage(codepage).decode;
-    let   name  = "";
+    const { decode } = table(codepage);
+    let   name = "";
 
     for (const byte of stored) {
-        if (table[byte] < 0) {
+        const codePoint = byte < 0x80 ? byte : decode[byte - 0x80];
+
+        if (codePoint < 0) {
             return undefined;
         }
 
-        name += String.fromCodePoint(table[byte]);
+        name += String.fromCodePoint(codePoint);
     }
 
     return name;
 }
 
-// The name as an SGOLD header keeps it. Throws when the name is not valid Unicode.
-export function sgoldNameFromUtf8(name: string, codepage: string): Uint8Array {
-    if (isAscii(name)) {
-        return Uint8Array.from(name, (c) => c.charCodeAt(0));
-    }
-
-    if (!isWellFormed(name)) {
-        throw new FilesystemError(`'${name}' is not UTF-8`);
+// The name as a header keeps it
+export function encodeName(name: string, codepage: string): Uint8Array {
+    if (!name.isWellFormed()) {
+        throw new FFSError(`'${name}' is not valid Unicode`);
     }
 
     const stored = encode(name, codepage);
@@ -134,25 +123,24 @@ export function sgoldNameFromUtf8(name: string, codepage: string): Uint8Array {
         return stored;
     }
 
-    const utf8   = new TextEncoder().encode(name);
+    const utf8   = utf8Encoder.encode(name);
     const result = new Uint8Array(utf8.length + 1);
 
-    result[0] = UTF8_NAME_PREFIX;
+    result[0] = UTF8_PREFIX;
     result.set(utf8, 1);
 
     return result;
 }
 
-// The name as a string. A name the codepage cannot decode is taken for UTF-8, as the C++ library
-// leaves it as it is.
-export function sgoldNameToUtf8(stored: Uint8Array, codepage: string): string {
-    if (stored.length >= 2 && stored[0] === UTF8_NAME_PREFIX) {
-        return decodeUtf8(stored.subarray(1));
+// The name as a string. A name the codepage cannot decode is taken for UTF-8.
+export function decodeName(stored: Uint8Array, codepage: string): string {
+    if (stored.length >= 2 && stored[0] === UTF8_PREFIX) {
+        return utf8Decoder.decode(stored.subarray(1));
     }
 
-    if (stored.every((byte) => byte < 0x80)) {
-        return toBinaryString(stored);
+    if (isAscii(stored)) {
+        return latin1(stored);
     }
 
-    return decode(stored, codepage) ?? decodeUtf8(stored);
+    return decode(stored, codepage) ?? utf8Decoder.decode(stored);
 }

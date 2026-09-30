@@ -1,7 +1,7 @@
 {
     "name": "@sie-js/libffshit-js",
     "version": "0.1.0",
-    "description": "Siemens filesystem library: a TypeScript rewrite of libffshit",
+    "description": "Reads and writes the filesystem of Siemens phones' fullflashes",
     "repository": {
         "url": "git+https://github.com/siemens-mobile-hacks/libffshit-js.git"
     },
@@ -20,14 +20,13 @@
     "scripts": {
         "build": "tsc -p tsconfig.build.json",
         "typecheck": "tsc --noEmit",
-        "test": "tsx --test --test-reporter=spec \"tests/**/*.test.ts\"",
-        "build:reference": "node scripts/build-reference.mjs"
+        "test": "tsx --test --test-reporter=spec \"tests/**/*.test.ts\""
     },
     "keywords": [],
     "author": "Siemens Mobile Hackers",
     "license": "MIT",
     "engines": {
-        "node": ">=18"
+        "node": ">=20"
     },
     "packageManager": "pnpm@10.12.4",
     "devDependencies": {

@@ -1,0 +1,428 @@
+/*
+    Thanks to:
+
+        Partitions search algorithm:
+            Azq2, marry_on_me, Feyman
+
+        SGOLD/SGOLD2/ELKA partitions table start address:
+            Feyman
+
+        EGOLD Disk resizing patches
+        (Their patches assisted in the analysis of the disk partition table):
+            kay, AlexSid, SiNgle, Chaos, avkiev, Baloo
+*/
+
+import { cString, hex, isPrintable, latin1 } from "../bytes.js";
+import { FFSError } from "../errors.js";
+import type { Log } from "../log.js";
+import type { Platform } from "./detector.js";
+import { Pattern } from "./pattern.js";
+
+export interface Block {
+    addr: number;
+    size: number;
+}
+
+// Only the filesystem's partitions are kept: FFS, FFS_0, FFS_C, ...
+export interface Partition {
+    name: string;
+    blocks: Block[];
+}
+
+export interface Partitions {
+    // The filesystem's, which the partition table may tell apart from the detected one
+    platform: Platform;
+    partitions: Partition[];
+}
+
+// The partitions found, and what was wrong with the blocks, which is only reported if they are used
+interface Found {
+    platform: Platform;
+    partitions: Map<string, Block[]>;
+    problems: string[];
+}
+
+// "OTP\0" and the address of the partition table
+const TABLE_POINTER = new Pattern("4F 54 50 00  ?? ?? ?? A?");
+
+// The first entry of a partition table: its name, the size and address of its list of blocks, ...
+const SGOLD_TABLE = new Pattern(`
+    ?? ?? ?? A?  ?? ?? 00 00  ?? ?? 00 00  ?? ?? ?? A?  ?? ?? 00 00  ?? ?? 00 00
+    ?? ?? ?? A?  ?? ?? ?? ??  ?? ?? ?? A?  ?? ?? ?? A?  ?? ?? ?? ??
+`);
+
+const NEW_SGOLD_TABLE = new Pattern(`
+    ?? ?? ?? A?  ?? ?? 00 00  ?? ?? 00 00  ?? ?? ?? ??  ?? ?? ?? ??  ?? ?? ?? ??  ?? ?? ?? A?
+    ?? ?? 00 00  ?? ?? 00 00  ?? ?? ?? A?  ?? ?? ?? ??  ?? ?? ?? A?  ?? ?? ?? ??
+`);
+
+// The number of records, the number of blocks of the first, and the table's segment address
+const EGOLD_TABLE_POINTER = new Pattern("?? 00 00 00  0? 00  ?? ?? ?? 0?");
+
+// A block header between FE FE and FE FE
+const EGOLD_BLOCK = new Pattern("FE FE ?? ??  ?? ?? ?? ??  ?? ?? ?? ??  ?? ?? FE FE");
+
+const ADDRESS_MASK      = 0x0FFFFFFF;
+const BLOCK_HEADER_SIZE = 16;
+const FORMATTED         = 0xFFFFFFF0;
+
+interface TableLayout {
+    platform: Platform;
+    pattern: Pattern;
+    entrySize: number;
+    // Where an entry has the size and the address of its list of blocks
+    sizeOffset: number;
+    listOffset: number;
+    // Where a block has its header: at its start, or 32 bytes before its end
+    headerAtEnd: boolean;
+}
+
+const SGOLD_LAYOUT: TableLayout         = { platform: "SGOLD", pattern: SGOLD_TABLE, entrySize: 0x2C, sizeOffset: 0x14, listOffset: 0x18, headerAtEnd: false };
+const SGOLD2_LAYOUT: TableLayout        = { platform: "SGOLD2", pattern: NEW_SGOLD_TABLE, entrySize: 0x34, sizeOffset: 0x20, listOffset: 0x24, headerAtEnd: false };
+const SGOLD2_ELKA_LAYOUT: TableLayout   = { ...SGOLD2_LAYOUT, platform: "SGOLD2_ELKA", headerAtEnd: true };
+
+function peek16(data: Uint8Array, offset: number): number | undefined {
+    return offset >= 0 && offset + 2 <= data.length ? data[offset] | (data[offset + 1] << 8) : undefined;
+}
+
+function peek32(data: Uint8Array, offset: number): number | undefined {
+    return offset >= 0 && offset + 4 <= data.length ? (data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24)) >>> 0 : undefined;
+}
+
+function isFsName(name: Uint8Array): boolean {
+    return name.length <= 8 && isPrintable(name) && latin1(name).includes("FFS");
+}
+
+// An SGOLD, SGOLD2 or ELKA block's header ends with 0xFFFFFFF0 once the block is formatted
+function isFormatted(data: Uint8Array, header: number): boolean {
+    return peek32(data, header + 12) === FORMATTED;
+}
+
+function formattedBlockName(data: Uint8Array, header: number): string | undefined {
+    if (!isFormatted(data, header)) {
+        return undefined;
+    }
+
+    const name = cString(data, header, 8);
+
+    return name.length < 8 && isPrintable(name) ? latin1(name) : undefined;
+}
+
+class Search {
+    readonly partitions = new Map<string, Block[]>();
+    readonly problems: string[] = [];
+
+    constructor(readonly data: Uint8Array, readonly log: Log) {
+    }
+
+    add(name: string, block: Block): void {
+        if (block.size === 0) {
+            this.problems.push(`The block of ${name} at ${hex(block.addr)} is empty`);
+
+            return;
+        }
+
+        if (block.addr + block.size > this.data.length) {
+            this.problems.push(`The block of ${name} at ${hex(block.addr)} of ${hex(block.size)} bytes ends past the end of the fullflash`);
+
+            return;
+        }
+
+        this.log.debug(`${name}: block at ${hex(block.addr)}, ${hex(block.size)} bytes`);
+
+        const blocks = this.partitions.get(name);
+
+        if (blocks) {
+            blocks.push(block);
+        } else {
+            this.partitions.set(name, [block]);
+        }
+    }
+
+    found(platform: Platform): Found | undefined {
+        return this.partitions.size ? { platform, partitions: this.partitions, problems: this.problems } : undefined;
+    }
+}
+
+// =========================================================================
+// The partition table of SGOLD, SGOLD2 and ELKA
+
+// Where the partition tables may be: where "OTP\0" points to, else wherever the pattern matches
+function* tableCandidates(data: Uint8Array, pattern: Pattern): Generator<{ addr: number, pointed: boolean }> {
+    let pointed = false;
+
+    for (const pointer of TABLE_POINTER.find(data, 4)) {
+        pointed = true;
+
+        yield { addr: peek32(data, pointer + 4)! & ADDRESS_MASK, pointed: true };
+    }
+
+    if (!pointed) {
+        for (const addr of pattern.find(data, 4)) {
+            yield { addr, pointed: false };
+        }
+    }
+}
+
+function parseTable(data: Uint8Array, table: number, layout: TableLayout, sl75: boolean, log: Log): Found | undefined {
+    const search = new Search(data, log);
+
+    log.debug(`${layout.platform} partition table at ${hex(table)}`);
+
+    for (let entry = table; entry < table + 64 * layout.entrySize; entry += layout.entrySize) {
+        const nameAddr  = peek32(data, entry);
+        const size      = peek32(data, entry + layout.sizeOffset);
+        const list      = peek32(data, entry + layout.listOffset);
+
+        if (nameAddr === undefined || size === undefined || list === undefined) {
+            break;
+        }
+
+        if ((nameAddr & 0xF0000000) >>> 0 !== 0xA0000000 || (list & 0xF0000000) >>> 0 !== 0xA0000000) {
+            break;
+        }
+
+        const nameBytes = cString(data, nameAddr & ADDRESS_MASK);
+
+        if (!size || !isFsName(nameBytes) || nameBytes.includes(0x20)) {
+            continue;
+        }
+
+        const name      = latin1(nameBytes);
+        const listAddr  = list & ADDRESS_MASK;
+
+        for (let i = 0; i < size; ++i) {
+            let   addr      = peek32(data, listAddr + i * 8);
+            const blockSize = peek32(data, listAddr + i * 8 + 4);
+
+            if (addr === undefined || blockSize === undefined) {
+                break;
+            }
+
+            // Its fullflash is mapped from 0xA2000000, its flash from 0xA4000000
+            if (sl75 && layout === SGOLD2_LAYOUT && (addr & 0xFF000000) >>> 0 > 0xA2000000) {
+                addr -= 0x2000000;
+            }
+
+            const block  = { addr: addr & ADDRESS_MASK, size: blockSize & ADDRESS_MASK };
+            const header = layout.headerAtEnd ? block.addr + block.size - 0x20 : block.addr;
+
+            if (!isFormatted(data, header)) {
+                search.problems.push(`The block of ${name} at ${hex(block.addr)} is not formatted`);
+
+                continue;
+            }
+
+            search.add(name, block);
+        }
+    }
+
+    return search.found(layout.platform);
+}
+
+function searchTables(data: Uint8Array, layout: TableLayout, sl75: boolean, log: Log): Found | undefined {
+    for (const candidate of tableCandidates(data, layout.pattern)) {
+        const { addr } = candidate;
+
+        if (layout === SGOLD2_LAYOUT && !NEW_SGOLD_TABLE.matches(data, addr)) {
+            if (SGOLD_TABLE.matches(data, addr)) {
+                log.debug(`The partition table at ${hex(addr)} is an SGOLD one: the filesystem is SGOLD's`);
+
+                return searchTables(data, SGOLD_LAYOUT, sl75, log);
+            }
+
+            log.debug(`No partition table at ${hex(addr)}`);
+
+            continue;
+        }
+
+        if (layout === SGOLD_LAYOUT && candidate.pointed && !SGOLD_TABLE.matches(data, addr)) {
+            log.debug(`No partition table at ${hex(addr)}`);
+
+            continue;
+        }
+
+        const found = parseTable(data, addr, layout, sl75, log);
+
+        if (found) {
+            return found;
+        }
+    }
+
+    // An ELKA prototype, with an SGOLD2 boot core
+    if (layout === SGOLD2_LAYOUT) {
+        return searchTables(data, SGOLD2_ELKA_LAYOUT, sl75, log);
+    }
+
+    return undefined;
+}
+
+// =========================================================================
+// The partition table of EGOLD
+
+// Addresses are segment:offset, with 16 KiB segments
+function segmentToPage(segmentAddr: number): number {
+    return (segmentAddr >>> 16) * 0x4000 + (segmentAddr & 0xFFFF);
+}
+
+// The fullflash ends at 16 MiB in the phone's address space
+function egoldBase(data: Uint8Array): number {
+    return 0x1000000 - data.length;
+}
+
+// The record of a block in a table: its number of blocks, and where its address is
+function egoldRecord(data: Uint8Array, offset: number): { blocks: number, addr: number, wide: boolean, name: Uint8Array } | undefined {
+    const base      = egoldBase(data);
+    const blocks    = peek16(data, offset);
+    const segment   = peek32(data, offset + 2);
+
+    if (blocks === undefined || segment === undefined) {
+        return undefined;
+    }
+
+    const page      = segmentToPage(segment) - base;
+    const address   = peek32(data, page);
+    const flags     = peek16(data, page + 4);
+
+    if (page <= 0 || address === undefined || flags === undefined || flags > 0x80) {
+        return undefined;
+    }
+
+    const addr = address - base;
+
+    if (addr < 0 || (addr & 0xFFF) !== 0 || ((addr + 2) | 0x80) + 12 >= data.length) {
+        return undefined;
+    }
+
+    return { blocks, addr, wide: flags === 0x80, name: cString(data, (addr + 2) | 0x80, 6) };
+}
+
+function searchEgoldTables(data: Uint8Array, log: Log): Found | undefined {
+    const search = new Search(data, log);
+    const tables = new Set<number>();
+
+    for (const pointer of [...EGOLD_TABLE_POINTER.find(data, 2)].reverse()) {
+        const records   = peek32(data, pointer)!;
+        const blocks    = peek16(data, pointer + 4)!;
+        const table     = segmentToPage(peek32(data, pointer + 6)!) - egoldBase(data);
+
+        if (!records || !blocks || blocks > 4 || table <= 0 || table >= data.length || tables.has(table)) {
+            continue;
+        }
+
+        const entries = Array.from({ length: records }, (_, i) => egoldRecord(data, table + i * 6));
+
+        if (entries.some((entry) => !entry || !isPrintable(entry.name))) {
+            continue;
+        }
+
+        log.debug(`EGOLD partition table at ${hex(table)}, ${records} records`);
+
+        tables.add(table);
+
+        for (const entry of entries) {
+            const name = latin1(entry!.name);
+
+            if (name.includes("FFS")) {
+                // New EGOLD's blocks are of 128 KiB
+                search.add(name, { addr: entry!.addr, size: (entry!.wide ? 0x20000 : 0x10000) * entry!.blocks });
+            }
+        }
+    }
+
+    return search.found("EGOLD_CE");
+}
+
+// =========================================================================
+// Without a partition table: the blocks by their headers
+
+function searchEgoldBlocks(data: Uint8Array, log: Log): Found | undefined {
+    const search = new Search(data, log);
+    const blocks: [number, string][] = [];
+
+    for (const addr of EGOLD_BLOCK.find(data, 4)) {
+        const name = cString(data, addr + 2, 6);
+
+        if ((addr & 0xFFF) === 0x80 && isFsName(name)) {
+            blocks.push([addr - 0x80, latin1(name)]);
+        }
+    }
+
+    // What lies between the first two
+    const blockSize = blocks.length >= 2 ? blocks[1][0] - blocks[0][0] : 0x10000;
+
+    for (const [addr, name] of blocks) {
+        search.add(name, { addr, size: blockSize });
+    }
+
+    return search.found("EGOLD_CE");
+}
+
+// Blocks of 64 KiB, the first of every partition's pair with a header
+function searchSgoldBlocks(data: Uint8Array, platform: Platform, log: Log): Found | undefined {
+    const search = new Search(data, log);
+
+    for (let addr = 0; addr < data.length; addr += 0x10000) {
+        const name = formattedBlockName(data, addr);
+
+        if (name?.includes("FFS")) {
+            search.add(name, { addr, size: 0x20000 });
+
+            addr += 0x10000;
+        }
+    }
+
+    return search.found(platform);
+}
+
+// Blocks of 256 KiB, the header 32 bytes before their end
+function searchElkaBlocks(data: Uint8Array, log: Log): Found | undefined {
+    const search = new Search(data, log);
+
+    for (let addr = 0x30000; addr < data.length; addr += 0x10000) {
+        const name = formattedBlockName(data, addr + 0x10000 - 0x20);
+
+        if (name?.includes("FFS") && !data.subarray(addr, addr + BLOCK_HEADER_SIZE).every((byte) => byte === 0xFF)) {
+            search.add(name, { addr: addr - 0x30000, size: 0x40000 });
+        }
+    }
+
+    return search.found("SGOLD2_ELKA");
+}
+
+// =========================================================================
+
+export function findPartitions(data: Uint8Array, platform: Platform, sl75: boolean, log: Log): Partitions {
+    let found: Found | undefined;
+
+    switch (platform) {
+        case "SGOLD":       found = searchTables(data, SGOLD_LAYOUT, sl75, log); break;
+        case "SGOLD2":      found = searchTables(data, SGOLD2_LAYOUT, sl75, log); break;
+        case "SGOLD2_ELKA": found = searchTables(data, SGOLD2_ELKA_LAYOUT, sl75, log); break;
+        case "EGOLD_CE":    found = searchEgoldTables(data, log); break;
+    }
+
+    if (!found) {
+        log.debug("No partition table found, searching for the blocks");
+
+        switch (platform) {
+            case "SGOLD":
+            case "SGOLD2":      found = searchSgoldBlocks(data, platform, log); break;
+            case "SGOLD2_ELKA": found = searchElkaBlocks(data, log); break;
+            case "EGOLD_CE":    found = searchEgoldBlocks(data, log); break;
+        }
+    }
+
+    if (!found) {
+        throw new FFSError("No filesystem partitions found");
+    }
+
+    for (const problem of found.problems) {
+        log.warn(problem);
+    }
+
+    return {
+        platform:   found.platform,
+        partitions: [...found.partitions].map(([name, blocks]) => ({ name, blocks })),
+    };
+}

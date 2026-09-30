@@ -1,10 +1,10 @@
-// The C++ library's hash_test.cpp: the hashes the phones keep next to these names in their
+// The hashes the phones keep next to these names in their
 // directories, of the S75 v40 and the EL71 v41 for UTF-16 names, of the CX70 v56 and the SL65 v49
 // for 8-bit names. The uploads are what the emulated phones stored for files sent to them over OBEX.
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { nameHash8bit, nameHashUtf16 } from "../../src/index.js";
+import { nameHash8bit, nameHashUtf16 } from "../../src/filesystem/hash.js";
 
 const latin1 = (str: string) => Uint8Array.from(Buffer.from(str, "latin1"));
 const stored = (str: string) => Uint8Array.from([0x1F, ...Buffer.from(str, "utf8")]);

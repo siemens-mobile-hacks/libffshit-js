@@ -2,8 +2,12 @@
 // table the search finds, formatted blocks, and filesystems with what the loaders have to cope with.
 // They are small, and not the phones' firmware, so they can be part of the repository's tests.
 
-import { Records } from "../../src/filesystem/write/records.js";
-import { FullFlash, nameHash8bit, nameHashUtf16, type PlatformType } from "../../src/index.js";
+import { nameHash8bit, nameHashUtf16 } from "../../src/filesystem/hash.js";
+import { Records } from "../../src/filesystem/records.js";
+import { detect } from "../../src/fullflash/detector.js";
+import { findPartitions, type Partition } from "../../src/fullflash/partitions.js";
+import { Image } from "../../src/image.js";
+import { Log } from "../../src/log.js";
 
 type RecordPlatform = "SGOLD" | "SGOLD2" | "SGOLD2_ELKA";
 
@@ -168,31 +172,30 @@ export function formattedImage(layout: ImageLayout): Uint8Array {
     return data;
 }
 
-// Adds records to a formatted image's partitions, where the writer would put them
+// Adds records to a formatted image's partitions, where the library would write them
 export class RecordsBuilder {
-    private readonly fullflash: FullFlash;
+    private readonly image: Image;
+    private readonly partitions: Partition[];
     private readonly records = new Map<string, Records>();
-    private readonly platform: RecordPlatform;
 
-    constructor(image: Uint8Array, platform: RecordPlatform) {
-        this.platform   = platform;
-        this.fullflash  = new FullFlash(image);
-        this.fullflash.loadPartitions();
+    constructor(data: Uint8Array, private readonly platform: RecordPlatform) {
+        this.image      = new Image(data);
+        this.partitions = findPartitions(data, platform, detect(data, platform).sl75, new Log()).partitions;
     }
 
     add(partition: string, id: number, data: Uint8Array): void {
         let records = this.records.get(partition);
 
         if (!records) {
-            records = Records.build(this.platform, this.fullflash.getPartitions()!, partition);
+            records = Records.open(this.platform, this.image, this.partitions.find((p) => p.name === partition)!);
             this.records.set(partition, records);
         }
 
         records.add(id, data);
     }
 
-    image(): Uint8Array {
-        return this.fullflash.getPartitions()!.getImage().getData();
+    build(): Uint8Array {
+        return this.image.data;
     }
 }
 
@@ -352,7 +355,7 @@ export function filesystemRecords(platform: RecordPlatform, root: FsFile[], opti
         for (const child of children) {
             const childId = child.headerId ?? allocate();
             const stored  = storedName(child.name);
-            const hash    = sgold ? nameHash8bit(stored) : nameHashUtf16(Array.from({ length: stored.length >> 1 }, (_, i) => stored[i * 2] | (stored[i * 2 + 1] << 8)));
+            const hash    = sgold ? nameHash8bit(stored) : nameHashUtf16(String.fromCharCode(...Array.from({ length: stored.length >> 1 }, (_, i) => stored[i * 2] | (stored[i * 2 + 1] << 8))));
 
             entries.push(sgold ? concat(u16(childId), u16(hash)) : concat(u32(childId), u32((0xFFFF0000 | hash) >>> 0)));
 
@@ -537,8 +540,3 @@ export function egoldDirectory(ids: number[]): Uint8Array {
     return concat(...ids.map((id) => concat(u16(id), u16(0x1234))), new Uint8Array(8).fill(0xFF));
 }
 
-// =========================================================================
-
-export function platformOf(image: Uint8Array): PlatformType {
-    return new FullFlash(image).getDetector().getPlatform();
-}
