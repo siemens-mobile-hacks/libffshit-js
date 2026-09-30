@@ -402,7 +402,13 @@ function searchEgoldTables(data: Uint8Array, base: number, platform: EgoldPlatfo
     const tables = new Set<number>();
     const layout = egoldLayout(platform);
 
-    for (const pointer of [...EGOLD_TABLE_POINTER.find(data, 2)].reverse()) {
+    // From the last on. Where there are no records, or no blocks of the first, which the pattern
+    // matches wherever the fullflash is of zeros, is passed over at once.
+    for (let pointer = (data.length - EGOLD_TABLE_POINTER.length) & ~1; pointer >= 0; pointer -= 2) {
+        if (!data[pointer] || !data[pointer + 4] || !EGOLD_TABLE_POINTER.matches(data, pointer)) {
+            continue;
+        }
+
         const records   = peek32(data, pointer)!;
         const blocks    = peek16(data, pointer + 4)!;
         const table     = segmentToPage(peek32(data, pointer + 6)!) - base;
