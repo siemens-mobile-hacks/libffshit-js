@@ -317,7 +317,7 @@ for (const phone of PHONES) {
 
             const taken = before.free - ffs.statfs(dirPath()).free;
 
-            // Its headers, parts and indexes too
+            // As the phones count it: its data and more, of headers, parts and FIT entries
             assert.ok(taken > 70000 && taken < 77000, String(taken));
 
             ffs.remove(dirPath("sie-ffs-space.bin"));

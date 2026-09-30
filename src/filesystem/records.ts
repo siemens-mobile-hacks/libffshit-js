@@ -16,6 +16,7 @@ import type { Platform } from "../fullflash/detector.js";
 import { EGOLD_DELETED, EGOLD_FIT_ENTRY_SIZE, EGOLD_HEADER_SIZE, EGOLD_VALID, egoldLayout, type Block, type Partition } from "../fullflash/partitions.js";
 import type { Image } from "../image.js";
 import { EGOLD_ID_OFFSET } from "./egold.js";
+import type { Usage } from "./space.js";
 import type { Space } from "./volume.js";
 
 const FLAGS_FREE    = 0xFFFFFFFF;
@@ -260,17 +261,27 @@ export abstract class Records {
     // what compacting every block would leave free
     space(): Space {
         let size = 0;
-        let used = 0;
 
         for (let i = 0; i < this.blocks.length; ++i) {
-            if (i === this.spare) {
-                continue;
+            if (i !== this.spare) {
+                size += this.capacity(this.blocks[i]);
             }
+        }
 
-            const block = this.blocks[i];
+        return { size, free: Math.max(size - this.validCost(), 0) };
+    }
 
-            size += this.capacity(block);
+    usage(): Usage {
+        const first = this.blocks[0];
 
+        return { blocks: this.blocks.length, blockSize: first.size, room: this.capacity(first), used: this.validCost() };
+    }
+
+    // What the valid records take up of the blocks, their FIT entries included
+    private validCost(): number {
+        let used = 0;
+
+        for (const block of this.blocks) {
             for (const entry of block.entries) {
                 if (entry.flags === FLAGS_VALID && this.inBlock(block, entry)) {
                     used += this.cost(entry.size);
@@ -278,7 +289,7 @@ export abstract class Records {
             }
         }
 
-        return { size, free: Math.max(size - used, 0) };
+        return used;
     }
 
     // Everything the operation writes, or on an error nothing

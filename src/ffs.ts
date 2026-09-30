@@ -43,7 +43,7 @@ export interface FFSTreeEntry extends FFSEntry {
 }
 
 export interface FFSStatFs {
-    // In bytes, of which files take up more than their size: their headers and indexes too
+    // In bytes, as the phones reckon them, which tell them over OBEX
     size: number;
     free: number;
     // Whether it is not written to

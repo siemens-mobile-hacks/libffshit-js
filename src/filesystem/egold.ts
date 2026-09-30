@@ -26,6 +26,8 @@ function sizes(records: Records): { headerSize: number, entrySize: number } {
 
 export class EgoldFormat extends SgoldFormat {
     override readonly entrySize: number;
+    // Its firmware runs on the C166, which no emulator runs, so it is counted in bytes of the flash
+    override readonly space = undefined;
     // Longer than any of the phones' own is not known to work
     protected override readonly nameSizeMax = 62;
 

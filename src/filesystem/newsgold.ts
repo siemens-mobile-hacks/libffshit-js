@@ -11,6 +11,7 @@ import { concat, le16, le32, u16, u32 } from "../bytes.js";
 import { FFSError } from "../errors.js";
 import { WritableFormat, type Header, type Part } from "./format.js";
 import { foldCaseUtf16, nameHashUtf16 } from "./hash.js";
+import { NEW_SGOLD_SPACE } from "./space.js";
 
 const HEADER_SIZE       = 28;
 // Keeps a header inline in an ELKA FIT, where it can be changed in place
@@ -31,6 +32,7 @@ export class NewSgoldFormat extends WritableFormat {
     readonly directoryRecordSize    = 256;
     readonly fileAttributes         = 0x0000;
     readonly directoryAttributes    = 0x0010;
+    readonly space                  = NEW_SGOLD_SPACE;
 
     header(id: number): Header | undefined {
         const data = this.record(id, HEADER_SIZE, "header");

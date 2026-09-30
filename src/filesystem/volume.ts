@@ -3,6 +3,7 @@ import { FFSError } from "../errors.js";
 import { dateToFatTime, fatTimeToDate } from "./fattime.js";
 import { isDirectory, WritableFormat, type Format, type Header, type Part } from "./format.js";
 import type { Records } from "./records.js";
+import { firmwareSpace } from "./space.js";
 
 // Where a directory lists an entry: the id of its header, in a record of the directory's entries
 interface EntryRef {
@@ -35,6 +36,10 @@ interface Listing {
 }
 
 const FORBIDDEN = "\\/:*?\"<>|";
+
+function isPieceSize(size: number): boolean {
+    return size >= 256 && size <= 4096 && (size & (size - 1)) === 0;
+}
 
 // In bytes
 export interface Space {
@@ -79,8 +84,26 @@ export class Volume implements Filesystem {
         return this.format.header(this.format.rootId);
     }
 
+    // As the firmware reckons it where that is known, else in bytes of the flash
     space(): Space {
+        const format = this.format;
+
+        if (format instanceof WritableFormat && format.space) {
+            const pieceSize = this.pieceSize(format);
+
+            if (pieceSize) {
+                return firmwareSpace(format.space, this.records.usage(), pieceSize);
+            }
+        }
+
         return this.records.space();
+    }
+
+    // Of the configuration record, when it is there and tells a size the library knows
+    private pieceSize(format: WritableFormat): number | undefined {
+        const size = this.records.has(format.configId) ? format.chunkSize(this.records.read(format.configId)) : 0;
+
+        return isPieceSize(size) ? size : undefined;
     }
 
     private chain(header: Header): Chain {
@@ -258,7 +281,7 @@ export class Volume implements Filesystem {
 
         const chunkSize = format.chunkSize(this.records.read(format.configId));
 
-        if (chunkSize < 256 || chunkSize > 4096 || (chunkSize & (chunkSize - 1))) {
+        if (!isPieceSize(chunkSize)) {
             throw new FFSError(`${this.name}: unknown chunk size ${chunkSize}, not writing to it`);
         }
 

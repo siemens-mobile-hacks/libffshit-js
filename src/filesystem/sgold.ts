@@ -14,6 +14,7 @@ import { decodeName, encodeName } from "./codepage.js";
 import { WritableFormat, type Header, type Part } from "./format.js";
 import { foldCase8bit, nameHash8bit } from "./hash.js";
 import type { Records } from "./records.js";
+import { SGOLD_SPACE, type SpaceConstants } from "./space.js";
 
 const HEADER_SIZE   = 16;
 const NAME_SIZE_MAX = 255;
@@ -37,6 +38,7 @@ export class SgoldFormat extends WritableFormat {
     readonly directoryRecordSize    = 128;
     readonly fileAttributes         = 0xFFFF0000;
     readonly directoryAttributes    = 0xFFFF0010;
+    readonly space: SpaceConstants | undefined = SGOLD_SPACE;
     protected readonly nameSizeMax: number = NAME_SIZE_MAX;
 
     // Headers and parts may be longer than 16 bytes, of 0xFF after the fields

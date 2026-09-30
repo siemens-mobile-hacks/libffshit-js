@@ -67,11 +67,12 @@ has no characters for as spaces.
   read what it writes: keep a backup of the fullflash.
 - `logger`: `{ debug?(message), warn?(message) }`.
 
-`statfs()` tells a partition's size and free space in bytes of its flash blocks, but for the one
-left for the firmware to reclaim into, as compacting them would leave them: files take up their
-headers and indexes as well as their data. The phones tell less over OBEX, keeping some in reserve:
-the S75, EL71 and CX70 in the emulator told of 4 to 7 % less in all, and of 0.4 to 1.4 MiB less
-free. `readonly` is of partitions the library does not write to. The root's is of all partitions.
+`statfs()` tells a partition's size and free space as the phones' firmware reckons them, which they
+tell of their data partition over OBEX: the blocks but one, less a reserve of 4 % or more, and less
+what the parts and FIT entries of files would take. The CX70, SL65, S75 and EL71 tell the same in
+pmb887x-emu. An EGOLD phone's, whose firmware reckons them in a way not known, are in bytes of the
+flash, and a FAT disk's in clusters. `readonly` is of partitions the library does not write to. The
+root's is of all partitions.
 
 Timestamps are kept to 2 seconds. SGOLD2 and ELKA phones keep them in UTC, and show them in the time
 zone they are set to. SGOLD and EGOLD phones keep them in their local time, which the library takes

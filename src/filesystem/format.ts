@@ -1,5 +1,6 @@
 import { FFSError } from "../errors.js";
 import type { Records } from "./records.js";
+import type { SpaceConstants } from "./space.js";
 
 export const Attributes = {
     READONLY:   0x01,
@@ -85,6 +86,8 @@ export abstract class WritableFormat extends Format {
     abstract readonly directoryRecordSize: number;
     abstract readonly fileAttributes: number;
     abstract readonly directoryAttributes: number;
+    // How the firmware reckons capacity and free space, where that is known
+    abstract readonly space: SpaceConstants | undefined;
 
     abstract chunkSize(config: Uint8Array): number;
     // The name as a header keeps it. Throws when the firmware could not take it.

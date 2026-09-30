@@ -108,19 +108,25 @@ describe("FFS", () => {
         assert.deepEqual(ffs.tree("/FFS/Misc").children?.map((entry) => entry.name), ["Photo.JPG"]);
     });
 
-    it("tells what a partition holds, and how much of it is free", () => {
+    it("tells what a partition holds, and how much of it is free, as the phones do", () => {
         const ffs    = open();
         const before = ffs.statfs("/ffs/misc/photo.jpg");
 
-        // Of 8 blocks the one left alone aside, less their headers and the free entries ending the FITs
-        assert.equal(before.size, 7 * (0x10000 - 32));
+        // Of 8 blocks of 64 KiB, 7 less 32 bytes each: 458528. Less a reserve of 4 % of that, 18341,
+        // and of a file of 64 KiB in pieces of 1 KiB, 65 × 1040, and 348 × 48 of the rest for the
+        // pieces' parts and FIT entries.
+        assert.equal(before.size, 458528 - 18341 - 65 * 1040 - 348 * 48);
         assert.equal(before.readonly, false);
         assert.deepEqual(ffs.statfs("/"), { ...before, readonly: true });
 
         ffs.writeFile("/FFS/b.bin", pattern(2500, 9));
 
-        // Its data in 3 pieces, 2 parts and its header, and an entry in the FIT for each
-        assert.equal(before.free - ffs.statfs("/FFS").free, 2500 + 2 * 16 + 22 + 6 * 16);
+        // Its data in 3 pieces, 2 parts and its header, and an entry in the FIT for each, less the
+        // 48 bytes of each 1072 that the free space had kept for pieces' parts and FIT entries
+        const taken = before.free - ffs.statfs("/FFS").free;
+        const cost  = 2500 + 2 * 16 + 22 + 6 * 16;
+
+        assert.ok(taken <= cost - 2 * 48 && taken >= cost - 3 * 48, String(taken));
 
         ffs.remove("/FFS/b.bin");
 

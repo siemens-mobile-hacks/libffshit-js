@@ -118,6 +118,16 @@ function libraryFiles(phone: Phone): TestFile[] {
     ];
 }
 
+// The capacity and free space the phone tells over OBEX are the library's of the flash as the phone
+// has it now
+async function assertSpace(session: Session, fullflash: string, partition: string): Promise<void> {
+    const capacity  = await session.obex.getCapacity();
+    const available = await session.obex.getAvailable();
+    const { size, free } = FFS.open(fs.readFileSync(fullflash)).statfs(`/${partition}`);
+
+    assert.deepEqual({ size, free }, { size: capacity, free: available });
+}
+
 export function phoneSuite(name: string, phone: Phone): void {
     const dir       = "Misc/sie-ffs-e2e";
     const files     = libraryFiles(phone);
@@ -213,6 +223,10 @@ export function phoneSuite(name: string, phone: Phone): void {
             assert.equal(findPanic(session!.received()), undefined);
         });
 
+        it("tells the capacity and free space the library tells", { timeout: TEST_TIMEOUT }, async () => {
+            await assertSpace(session!, work.fullflash, phone.partition);
+        });
+
         it("lists the library's files and directories, with their sizes and timestamps", { timeout: TEST_TIMEOUT }, async () => {
             const entries = await listing(session!, ["Misc", dir, `${dir}/sub`]);
 
@@ -272,6 +286,8 @@ export function phoneSuite(name: string, phone: Phone): void {
                 ...[kept, replaced, ...written].map((file) => `${file.path} ${file.data.length}`),
             ].sort());
             assert.equal(findPanic(session!.received()), undefined);
+
+            await assertSpace(session!, work.fullflash, phone.partition);
         });
 
         // It writes to the flash as it runs, and may move the records around
