@@ -1,0 +1,3194 @@
+{
+ "loads": {
+  "defaults": {
+   "stage": "filesystem",
+   "log": [
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "Searching partitions from 0x00000000"
+    ],
+    [
+     "D",
+     "Searching pattern: 0050544F A??????? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Pattern find, addr: 00001000"
+    ],
+    [
+     "D",
+     "Table start addr: 00002000"
+    ],
+    [
+     "D",
+     "Header. Name addr: 00003000, Table addr: 00003800, size 00000008, FFS"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00100000, size: 00010000, table: 00003800"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0001, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00110000, size: 00010000, table: 00003808"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0002, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00120000, size: 00010000, table: 00003810"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0003, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00130000, size: 00010000, table: 00003818"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0004, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00140000, size: 00010000, table: 00003820"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0005, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00150000, size: 00010000, table: 00003828"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0006, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00160000, size: 00010000, table: 00003830"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0007, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00170000, size: 00010000, table: 00003838"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0008, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "Found 1 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS      8"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS, Blocks 8"
+    ],
+    [
+     "D",
+     "  Block 00100000 Size: 65536, end: 00110000"
+    ],
+    [
+     "D",
+     "  Block 00110000 Size: 65536, end: 00120000"
+    ]
+   ],
+   "detector": {
+    "platform": "SGOLD",
+    "model": "SYN",
+    "imei": "490154203237518",
+    "base": "2684354560",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "SGOLD",
+    "list": [
+     {
+      "name": "FFS",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1114112,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1179648,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 3,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1245184,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 4,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1310720,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 5,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1376256,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 6,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1441792,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 7,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1507328,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 8,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "error": {
+    "type": "FilesystemError",
+    "message": "Duplicate id 10"
+   }
+  },
+  "skipping": {
+   "stage": "done",
+   "log": [
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "Searching partitions from 0x00000000"
+    ],
+    [
+     "D",
+     "Searching pattern: 0050544F A??????? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Pattern find, addr: 00001000"
+    ],
+    [
+     "D",
+     "Table start addr: 00002000"
+    ],
+    [
+     "D",
+     "Header. Name addr: 00003000, Table addr: 00003800, size 00000008, FFS"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00100000, size: 00010000, table: 00003800"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0001, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00110000, size: 00010000, table: 00003808"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0002, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00120000, size: 00010000, table: 00003810"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0003, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00130000, size: 00010000, table: 00003818"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0004, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00140000, size: 00010000, table: 00003820"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0005, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00150000, size: 00010000, table: 00003828"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0006, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00160000, size: 00010000, table: 00003830"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0007, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00170000, size: 00010000, table: 00003838"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0008, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "Found 1 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS      8"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS, Blocks 8"
+    ],
+    [
+     "D",
+     "  Block 00100000 Size: 65536, end: 00110000"
+    ],
+    [
+     "D",
+     "  Block 00110000 Size: 65536, end: 00120000"
+    ],
+    [
+     "D",
+     "Duplicate id 10"
+    ],
+    [
+     "D",
+     "  Block 00120000 Size: 65536, end: 00130000"
+    ],
+    [
+     "D",
+     "  Block 00130000 Size: 65536, end: 00140000"
+    ],
+    [
+     "D",
+     "  Block 00140000 Size: 65536, end: 00150000"
+    ],
+    [
+     "D",
+     "  Block 00150000 Size: 65536, end: 00160000"
+    ],
+    [
+     "D",
+     "  Block 00160000 Size: 65536, end: 00170000"
+    ],
+    [
+     "D",
+     "  Block 00170000 Size: 65536, end: 00180000"
+    ],
+    [
+     "W",
+     "Skip. Broken file/directory: Reading part. Couldn't find block with id: 30583"
+    ],
+    [
+     "W",
+     "Skip. FFS Block ID 20 not found"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ]
+   ],
+   "detector": {
+    "platform": "SGOLD",
+    "model": "SYN",
+    "imei": "490154203237518",
+    "base": "2684354560",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "SGOLD",
+    "list": [
+     {
+      "name": "FFS",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1114112,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1179648,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 3,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1245184,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 4,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1310720,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 5,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1376256,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 6,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1441792,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 7,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1507328,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 8,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "tree": {
+    "n": "FFS",
+    "p": "/",
+    "a": 16,
+    "t": 0,
+    "d": [
+     {
+      "n": "FFS",
+      "p": "/FFS/",
+      "a": 16,
+      "t": 1181034182,
+      "d": [],
+      "f": [
+       {
+        "n": "fine.bin",
+        "p": "FFS/",
+        "a": 0,
+        "t": 1241611690,
+        "s": 100,
+        "h": 3676548769
+       },
+       {
+        "n": "no data.bin",
+        "p": "FFS/",
+        "a": 0,
+        "t": 1241611690,
+        "s": 0,
+        "h": 2166136261
+       },
+       {
+        "n": "missing header",
+        "p": "FFS/",
+        "a": 0,
+        "t": 1241611690,
+        "s": 10,
+        "h": 834697728
+       },
+       {
+        "n": "dup.bin",
+        "p": "FFS/",
+        "a": 0,
+        "t": 1241611690,
+        "s": 10,
+        "h": 206148932
+       }
+      ]
+     }
+    ],
+    "f": []
+   }
+  },
+  "old search": {
+   "stage": "done",
+   "log": [
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "Name addr: FFS, Addr: 00100000, size 00020000"
+    ],
+    [
+     "D",
+     "Name addr: FFS, Addr: 00120000, size 00020000"
+    ],
+    [
+     "D",
+     "Name addr: FFS, Addr: 00140000, size 00020000"
+    ],
+    [
+     "D",
+     "Name addr: FFS, Addr: 00160000, size 00020000"
+    ],
+    [
+     "D",
+     "Found 1 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS      4"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS, Blocks 4"
+    ],
+    [
+     "D",
+     "  Block 00100000 Size: 131072, end: 00120000"
+    ],
+    [
+     "D",
+     "Duplicate id 10"
+    ],
+    [
+     "D",
+     "  Block 00120000 Size: 131072, end: 00140000"
+    ],
+    [
+     "D",
+     "  Block 00140000 Size: 131072, end: 00160000"
+    ],
+    [
+     "D",
+     "  Block 00160000 Size: 131072, end: 00180000"
+    ],
+    [
+     "W",
+     "Skip. Broken directory: Reading file data. Couldn't find block with id: 65535"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ]
+   ],
+   "detector": {
+    "platform": "SGOLD",
+    "model": "SYN",
+    "imei": "490154203237518",
+    "base": "2684354560",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "SGOLD",
+    "list": [
+     {
+      "name": "FFS",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 131072,
+        "name": "4646530000000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1179648,
+        "size": 131072,
+        "name": "4646530000000000",
+        "u1": 3,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1310720,
+        "size": 131072,
+        "name": "4646530000000000",
+        "u1": 5,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1441792,
+        "size": 131072,
+        "name": "4646530000000000",
+        "u1": 7,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "tree": {
+    "n": "FFS",
+    "p": "/",
+    "a": 16,
+    "t": 0,
+    "d": [
+     {
+      "n": "FFS",
+      "p": "/FFS/",
+      "a": 23,
+      "t": 4362728642,
+      "d": [],
+      "f": []
+     }
+    ],
+    "f": []
+   }
+  },
+  "verbosely": {
+   "stage": "done",
+   "log": [
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "Searching partitions from 0x00000000"
+    ],
+    [
+     "D",
+     "Searching pattern: 0050544F A??????? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Pattern find, addr: 00001000"
+    ],
+    [
+     "D",
+     "Table start addr: 00002000"
+    ],
+    [
+     "D",
+     "Header. Name addr: 00003000, Table addr: 00003800, size 00000008, FFS"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00100000, size: 00010000, table: 00003800"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0001, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00110000, size: 00010000, table: 00003808"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0002, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00120000, size: 00010000, table: 00003810"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0003, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00130000, size: 00010000, table: 00003818"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0004, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00140000, size: 00010000, table: 00003820"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0005, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00150000, size: 00010000, table: 00003828"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0006, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00160000, size: 00010000, table: 00003830"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0007, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00170000, size: 00010000, table: 00003838"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0008, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "Found 1 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS      8"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS, Blocks 8"
+    ],
+    [
+     "D",
+     "  Block 00100000 Size: 65536, end: 00110000"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFFF"
+    ],
+    [
+     "D",
+     "ID:     4294967295"
+    ],
+    [
+     "D",
+     "Size:   4294967295"
+    ],
+    [
+     "D",
+     "Offset: FFFFFFFF"
+    ],
+    [
+     "D",
+     "  Block 00110000 Size: 65536, end: 00120000"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFF00"
+    ],
+    [
+     "D",
+     "ID:     0"
+    ],
+    [
+     "D",
+     "Size:   16"
+    ],
+    [
+     "D",
+     "Offset: 00000010"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     11"
+    ],
+    [
+     "D",
+     "Size:   100"
+    ],
+    [
+     "D",
+     "Offset: 00000020"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     10"
+    ],
+    [
+     "D",
+     "Size:   25"
+    ],
+    [
+     "D",
+     "Offset: 00000084"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     12"
+    ],
+    [
+     "D",
+     "Size:   28"
+    ],
+    [
+     "D",
+     "Offset: 0000009D"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     15"
+    ],
+    [
+     "D",
+     "Size:   1024"
+    ],
+    [
+     "D",
+     "Offset: 000000B9"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     16"
+    ],
+    [
+     "D",
+     "Size:   16"
+    ],
+    [
+     "D",
+     "Offset: 000004B9"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     17"
+    ],
+    [
+     "D",
+     "Size:   1024"
+    ],
+    [
+     "D",
+     "Offset: 000004C9"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     18"
+    ],
+    [
+     "D",
+     "Size:   16"
+    ],
+    [
+     "D",
+     "Offset: 000008C9"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     19"
+    ],
+    [
+     "D",
+     "Size:   952"
+    ],
+    [
+     "D",
+     "Offset: 000008D9"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     14"
+    ],
+    [
+     "D",
+     "Size:   32"
+    ],
+    [
+     "D",
+     "Offset: 00000C91"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     26215"
+    ],
+    [
+     "D",
+     "Size:   10"
+    ],
+    [
+     "D",
+     "Offset: 00000CB1"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     26214"
+    ],
+    [
+     "D",
+     "Size:   31"
+    ],
+    [
+     "D",
+     "Offset: 00000CBB"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     23"
+    ],
+    [
+     "D",
+     "Size:   10"
+    ],
+    [
+     "D",
+     "Offset: 00000CDA"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     22"
+    ],
+    [
+     "D",
+     "Size:   26"
+    ],
+    [
+     "D",
+     "Offset: 00000CE4"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     26216"
+    ],
+    [
+     "D",
+     "Size:   24"
+    ],
+    [
+     "D",
+     "Offset: 00000CFE"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     21"
+    ],
+    [
+     "D",
+     "Size:   128"
+    ],
+    [
+     "D",
+     "Offset: 00000D16"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     10"
+    ],
+    [
+     "D",
+     "Size:   20"
+    ],
+    [
+     "D",
+     "Offset: 00000D96"
+    ],
+    [
+     "D",
+     "Duplicate id 10"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     25"
+    ],
+    [
+     "D",
+     "Size:   10"
+    ],
+    [
+     "D",
+     "Offset: 00000DAA"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     24"
+    ],
+    [
+     "D",
+     "Size:   24"
+    ],
+    [
+     "D",
+     "Offset: 00000DB4"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     7"
+    ],
+    [
+     "D",
+     "Size:   128"
+    ],
+    [
+     "D",
+     "Offset: 00000DCC"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFC0"
+    ],
+    [
+     "D",
+     "ID:     6"
+    ],
+    [
+     "D",
+     "Size:   17"
+    ],
+    [
+     "D",
+     "Offset: 00000E4C"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFFF"
+    ],
+    [
+     "D",
+     "ID:     4294967295"
+    ],
+    [
+     "D",
+     "Size:   4294967295"
+    ],
+    [
+     "D",
+     "Offset: FFFFFFFF"
+    ],
+    [
+     "D",
+     "  Block 00120000 Size: 65536, end: 00130000"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFFF"
+    ],
+    [
+     "D",
+     "ID:     4294967295"
+    ],
+    [
+     "D",
+     "Size:   4294967295"
+    ],
+    [
+     "D",
+     "Offset: FFFFFFFF"
+    ],
+    [
+     "D",
+     "  Block 00130000 Size: 65536, end: 00140000"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFFF"
+    ],
+    [
+     "D",
+     "ID:     4294967295"
+    ],
+    [
+     "D",
+     "Size:   4294967295"
+    ],
+    [
+     "D",
+     "Offset: FFFFFFFF"
+    ],
+    [
+     "D",
+     "  Block 00140000 Size: 65536, end: 00150000"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFFF"
+    ],
+    [
+     "D",
+     "ID:     4294967295"
+    ],
+    [
+     "D",
+     "Size:   4294967295"
+    ],
+    [
+     "D",
+     "Offset: FFFFFFFF"
+    ],
+    [
+     "D",
+     "  Block 00150000 Size: 65536, end: 00160000"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFFF"
+    ],
+    [
+     "D",
+     "ID:     4294967295"
+    ],
+    [
+     "D",
+     "Size:   4294967295"
+    ],
+    [
+     "D",
+     "Offset: FFFFFFFF"
+    ],
+    [
+     "D",
+     "  Block 00160000 Size: 65536, end: 00170000"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFFF"
+    ],
+    [
+     "D",
+     "ID:     4294967295"
+    ],
+    [
+     "D",
+     "Size:   4294967295"
+    ],
+    [
+     "D",
+     "Offset: FFFFFFFF"
+    ],
+    [
+     "D",
+     "  Block 00170000 Size: 65536, end: 00180000"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "FIT:"
+    ],
+    [
+     "D",
+     "Flags:  FFFFFFFF"
+    ],
+    [
+     "D",
+     "ID:     4294967295"
+    ],
+    [
+     "D",
+     "Size:   4294967295"
+    ],
+    [
+     "D",
+     "Offset: FFFFFFFF"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "File:"
+    ],
+    [
+     "D",
+     "ID:            6"
+    ],
+    [
+     "D",
+     "Parent ID:     6"
+    ],
+    [
+     "D",
+     "FAT timestamp: 36C52061 918888545"
+    ],
+    [
+     "D",
+     "Data ID:       7"
+    ],
+    [
+     "D",
+     "Attributes:    FFFF0010"
+    ],
+    [
+     "D",
+     "Next part ID:  65535"
+    ],
+    [
+     "D",
+     "Name:          "
+    ],
+    [
+     "I",
+     "Processing ID:    10, Path: FFS/fine.bin"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "File:"
+    ],
+    [
+     "D",
+     "ID:            10"
+    ],
+    [
+     "D",
+     "Parent ID:     6"
+    ],
+    [
+     "D",
+     "FAT timestamp: 3AA63905 983972101"
+    ],
+    [
+     "D",
+     "Data ID:       11"
+    ],
+    [
+     "D",
+     "Attributes:    FFFF0000"
+    ],
+    [
+     "D",
+     "Next part ID:  65535"
+    ],
+    [
+     "D",
+     "Name:          fine.bin"
+    ],
+    [
+     "I",
+     "Processing ID:    12, Path: FFS/no data.bin"
+    ],
+    [
+     "I",
+     "Processing ID:    14, Path: FFS/broken part.bin"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "File:"
+    ],
+    [
+     "D",
+     "ID:            14"
+    ],
+    [
+     "D",
+     "Parent ID:     6"
+    ],
+    [
+     "D",
+     "FAT timestamp: 3AA63905 983972101"
+    ],
+    [
+     "D",
+     "Data ID:       15"
+    ],
+    [
+     "D",
+     "Attributes:    FFFF0000"
+    ],
+    [
+     "D",
+     "Next part ID:  16"
+    ],
+    [
+     "D",
+     "Name:          broken part.bin"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "File part:"
+    ],
+    [
+     "D",
+     "ID:            16"
+    ],
+    [
+     "D",
+     "Parent ID:     6"
+    ],
+    [
+     "D",
+     "Unknown:       3AA63905"
+    ],
+    [
+     "D",
+     "Data ID:       17"
+    ],
+    [
+     "D",
+     "Unknown2:      0000"
+    ],
+    [
+     "D",
+     "Prev ID:       14"
+    ],
+    [
+     "D",
+     "Next part ID:  18"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "File part:"
+    ],
+    [
+     "D",
+     "ID:            18"
+    ],
+    [
+     "D",
+     "Parent ID:     6"
+    ],
+    [
+     "D",
+     "Unknown:       3AA63905"
+    ],
+    [
+     "D",
+     "Data ID:       19"
+    ],
+    [
+     "D",
+     "Unknown2:      0000"
+    ],
+    [
+     "D",
+     "Prev ID:       16"
+    ],
+    [
+     "D",
+     "Next part ID:  30583"
+    ],
+    [
+     "W",
+     "Skip. Broken file/directory: Reading part. Couldn't find block with id: 30583"
+    ],
+    [
+     "I",
+     "Processing ID: 26214, Path: FFS/missing header"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "File:"
+    ],
+    [
+     "D",
+     "ID:            26214"
+    ],
+    [
+     "D",
+     "Parent ID:     6"
+    ],
+    [
+     "D",
+     "FAT timestamp: 3AA63905 983972101"
+    ],
+    [
+     "D",
+     "Data ID:       26215"
+    ],
+    [
+     "D",
+     "Attributes:    FFFF0000"
+    ],
+    [
+     "D",
+     "Next part ID:  65535"
+    ],
+    [
+     "D",
+     "Name:          missing header"
+    ],
+    [
+     "W",
+     "Skip. FFS Block ID 20 not found"
+    ],
+    [
+     "I",
+     "Processing ID:    24, Path: FFS/dup.bin"
+    ],
+    [
+     "D",
+     "==========================="
+    ],
+    [
+     "D",
+     "File:"
+    ],
+    [
+     "D",
+     "ID:            24"
+    ],
+    [
+     "D",
+     "Parent ID:     6"
+    ],
+    [
+     "D",
+     "FAT timestamp: 3AA63905 983972101"
+    ],
+    [
+     "D",
+     "Data ID:       25"
+    ],
+    [
+     "D",
+     "Attributes:    FFFF0000"
+    ],
+    [
+     "D",
+     "Next part ID:  65535"
+    ],
+    [
+     "D",
+     "Name:          dup.bin"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ]
+   ],
+   "detector": {
+    "platform": "SGOLD",
+    "model": "SYN",
+    "imei": "490154203237518",
+    "base": "2684354560",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "SGOLD",
+    "list": [
+     {
+      "name": "FFS",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1114112,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1179648,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 3,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1245184,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 4,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1310720,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 5,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1376256,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 6,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1441792,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 7,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1507328,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 8,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "tree": {
+    "n": "FFS",
+    "p": "/",
+    "a": 16,
+    "t": 0,
+    "d": [
+     {
+      "n": "FFS",
+      "p": "/FFS/",
+      "a": 16,
+      "t": 1181034182,
+      "d": [],
+      "f": [
+       {
+        "n": "fine.bin",
+        "p": "FFS/",
+        "a": 0,
+        "t": 1241611690,
+        "s": 100,
+        "h": 3676548769
+       },
+       {
+        "n": "no data.bin",
+        "p": "FFS/",
+        "a": 0,
+        "t": 1241611690,
+        "s": 0,
+        "h": 2166136261
+       },
+       {
+        "n": "missing header",
+        "p": "FFS/",
+        "a": 0,
+        "t": 1241611690,
+        "s": 10,
+        "h": 834697728
+       },
+       {
+        "n": "dup.bin",
+        "p": "FFS/",
+        "a": 0,
+        "t": 1241611690,
+        "s": 10,
+        "h": 206148932
+       }
+      ]
+     }
+    ],
+    "f": []
+   }
+  },
+  "dumping the data": {
+   "stage": "done",
+   "log": [
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "Searching partitions from 0x00000000"
+    ],
+    [
+     "D",
+     "Searching pattern: 0050544F A??????? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Pattern find, addr: 00001000"
+    ],
+    [
+     "D",
+     "Table start addr: 00002000"
+    ],
+    [
+     "D",
+     "Header. Name addr: 00003000, Table addr: 00003800, size 00000008, FFS"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00100000, size: 00010000, table: 00003800"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0001, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00110000, size: 00010000, table: 00003808"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0002, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00120000, size: 00010000, table: 00003810"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0003, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00130000, size: 00010000, table: 00003818"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0004, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00140000, size: 00010000, table: 00003820"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0005, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00150000, size: 00010000, table: 00003828"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0006, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00160000, size: 00010000, table: 00003830"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0007, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00170000, size: 00010000, table: 00003838"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0008, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "Found 1 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS      8"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS, Blocks 8"
+    ],
+    [
+     "D",
+     "  Block 00100000 Size: 65536, end: 00110000"
+    ],
+    [
+     "D",
+     "  Block 00110000 Size: 65536, end: 00120000"
+    ],
+    [
+     "D",
+     "    07 26 45 64 83 A2 C1 E0 FF 1E 3D 5C 7B 9A B9 D8 "
+    ],
+    [
+     "D",
+     "    F7 16 35 54 73 92 B1 D0 EF 0E 2D 4C 6B 8A A9 C8 "
+    ],
+    [
+     "D",
+     "    E7 06 25 44 63 82 A1 C0 DF FE 1D 3C 5B 7A 99 B8 "
+    ],
+    [
+     "D",
+     "    D7 F6 15 34 53 72 91 B0 CF EE 0D 2C 4B 6A 89 A8 "
+    ],
+    [
+     "D",
+     "    C7 E6 05 24 43 62 81 A0 BF DE FD 1C 3B 5A 79 98 "
+    ],
+    [
+     "D",
+     "    B7 D6 F5 14 33 52 71 90 AF CE ED 0C 2B 4A 69 88 "
+    ],
+    [
+     "D",
+     "    A7 C6 E5 04 "
+    ],
+    [
+     "D",
+     "    0A 00 06 00 05 39 A6 3A 0B 00 00 00 FF FF FF FF "
+    ],
+    [
+     "D",
+     "    66 69 6E 65 2E 62 69 6E 00 "
+    ],
+    [
+     "D",
+     "    0C 00 06 00 05 39 A6 3A 0D 00 00 00 FF FF FF FF "
+    ],
+    [
+     "D",
+     "    6E 6F 20 64 61 74 61 2E 62 69 6E 00 "
+    ],
+    [
+     "D",
+     "    15 34 53 72 91 B0 CF EE 0D 2C 4B 6A 89 A8 C7 E6 "
+    ],
+    [
+     "D",
+     "    05 24 43 62 81 A0 BF DE FD 1C 3B 5A 79 98 B7 D6 "
+    ],
+    [
+     "D",
+     "    F5 14 33 52 71 90 AF CE ED 0C 2B 4A 69 88 A7 C6 "
+    ],
+    [
+     "D",
+     "    E5 04 23 42 61 80 9F BE DD FC 1B 3A 59 78 97 B6 "
+    ],
+    [
+     "D",
+     "    D5 F4 13 32 51 70 8F AE CD EC 0B 2A 49 68 87 A6 "
+    ],
+    [
+     "D",
+     "    C5 E4 03 22 41 60 7F 9E BD DC FB 1A 39 58 77 96 "
+    ],
+    [
+     "D",
+     "    B5 D4 F3 12 31 50 6F 8E AD CC EB 0A 29 48 67 86 "
+    ],
+    [
+     "D",
+     "    A5 C4 E3 02 21 40 5F 7E 9D BC DB FA 19 38 57 76 "
+    ],
+    [
+     "D",
+     "    95 B4 D3 F2 11 30 4F 6E 8D AC CB EA 09 28 47 66 "
+    ],
+    [
+     "D",
+     "    85 A4 C3 E2 01 20 3F 5E 7D 9C BB DA F9 18 37 56 "
+    ],
+    [
+     "D",
+     "    75 94 B3 D2 F1 10 2F 4E 6D 8C AB CA E9 08 27 46 "
+    ],
+    [
+     "D",
+     "    65 84 A3 C2 E1 00 1F 3E 5D 7C 9B BA D9 F8 17 36 "
+    ],
+    [
+     "D",
+     "    55 74 93 B2 D1 F0 0F 2E 4D 6C 8B AA C9 E8 07 26 "
+    ],
+    [
+     "D",
+     "    45 64 83 A2 C1 E0 FF 1E 3D 5C 7B 9A B9 D8 F7 16 "
+    ],
+    [
+     "D",
+     "    35 54 73 92 B1 D0 EF 0E 2D 4C 6B 8A A9 C8 E7 06 "
+    ],
+    [
+     "D",
+     "    25 44 63 82 A1 C0 DF FE 1D 3C 5B 7A 99 B8 D7 F6 "
+    ],
+    [
+     "D",
+     "    16 35 54 73 92 B1 D0 EF 0E 2D 4C 6B 8A A9 C8 E7 "
+    ],
+    [
+     "D",
+     "    06 25 44 63 82 A1 C0 DF FE 1D 3C 5B 7A 99 B8 D7 "
+    ],
+    [
+     "D",
+     "    F6 15 34 53 72 91 B0 CF EE 0D 2C 4B 6A 89 A8 C7 "
+    ],
+    [
+     "D",
+     "    E6 05 24 43 62 81 A0 BF DE FD 1C 3B 5A 79 98 B7 "
+    ],
+    [
+     "D",
+     "    D6 F5 14 33 52 71 90 AF CE ED 0C 2B 4A 69 88 A7 "
+    ],
+    [
+     "D",
+     "    C6 E5 04 23 42 61 80 9F BE DD FC 1B 3A 59 78 97 "
+    ],
+    [
+     "D",
+     "    B6 D5 F4 13 32 51 70 8F AE CD EC 0B 2A 49 68 87 "
+    ],
+    [
+     "D",
+     "    A6 C5 E4 03 22 41 60 7F 9E BD DC FB 1A 39 58 77 "
+    ],
+    [
+     "D",
+     "    96 B5 D4 F3 12 31 50 6F 8E AD CC EB 0A 29 48 67 "
+    ],
+    [
+     "D",
+     "    86 A5 C4 E3 02 21 40 5F 7E 9D BC DB FA 19 38 57 "
+    ],
+    [
+     "D",
+     "    76 95 B4 D3 F2 11 30 4F 6E 8D AC CB EA 09 28 47 "
+    ],
+    [
+     "D",
+     "    66 85 A4 C3 E2 01 20 3F 5E 7D 9C BB DA F9 18 37 "
+    ],
+    [
+     "D",
+     "    56 75 94 B3 D2 F1 10 2F 4E 6D 8C AB CA E9 08 27 "
+    ],
+    [
+     "D",
+     "    46 65 84 A3 C2 E1 00 1F 3E 5D 7C 9B BA D9 F8 17 "
+    ],
+    [
+     "D",
+     "    36 55 74 93 B2 D1 F0 0F 2E 4D 6C 8B AA C9 E8 07 "
+    ],
+    [
+     "D",
+     "    26 45 64 83 A2 C1 E0 FF 1E 3D 5C 7B 9A B9 D8 F7 "
+    ],
+    [
+     "D",
+     "    17 36 55 74 93 B2 D1 F0 0F 2E 4D 6C 8B AA C9 E8 "
+    ],
+    [
+     "D",
+     "    07 26 45 64 83 A2 C1 E0 FF 1E 3D 5C 7B 9A B9 D8 "
+    ],
+    [
+     "D",
+     "    F7 16 35 54 73 92 B1 D0 EF 0E 2D 4C 6B 8A A9 C8 "
+    ],
+    [
+     "D",
+     "    E7 06 25 44 63 82 A1 C0 DF FE 1D 3C 5B 7A 99 B8 "
+    ],
+    [
+     "D",
+     "    D7 F6 15 34 53 72 91 B0 CF EE 0D 2C 4B 6A 89 A8 "
+    ],
+    [
+     "D",
+     "    C7 E6 05 24 43 62 81 A0 BF DE FD 1C 3B 5A 79 98 "
+    ],
+    [
+     "D",
+     "    B7 D6 F5 14 33 52 71 90 AF CE ED 0C 2B 4A 69 88 "
+    ],
+    [
+     "D",
+     "    A7 C6 E5 04 23 42 61 80 9F BE DD FC 1B 3A 59 78 "
+    ],
+    [
+     "D",
+     "    97 B6 D5 F4 13 32 51 70 8F AE CD EC 0B 2A 49 68 "
+    ],
+    [
+     "D",
+     "    87 A6 C5 E4 03 22 41 60 7F 9E BD DC FB 1A 39 58 "
+    ],
+    [
+     "D",
+     "    77 96 B5 D4 F3 12 31 50 6F 8E AD CC EB 0A 29 48 "
+    ],
+    [
+     "D",
+     "    67 86 A5 C4 E3 02 21 40 5F 7E 9D BC DB FA 19 38 "
+    ],
+    [
+     "D",
+     "    57 76 95 B4 D3 F2 11 30 4F 6E 8D AC CB EA 09 28 "
+    ],
+    [
+     "D",
+     "    47 66 85 A4 C3 E2 01 20 3F 5E 7D 9C BB DA F9 18 "
+    ],
+    [
+     "D",
+     "    37 56 75 94 B3 D2 F1 10 2F 4E 6D 8C AB CA E9 08 "
+    ],
+    [
+     "D",
+     "    27 46 65 84 A3 C2 E1 00 1F 3E 5D 7C 9B BA D9 F8 "
+    ],
+    [
+     "D",
+     "    18 37 56 75 94 B3 D2 F1 10 2F 4E 6D 8C AB CA E9 "
+    ],
+    [
+     "D",
+     "    08 27 46 65 84 A3 C2 E1 00 1F 3E 5D 7C 9B BA D9 "
+    ],
+    [
+     "D",
+     "    F8 17 36 55 74 93 B2 D1 F0 0F 2E 4D 6C 8B AA C9 "
+    ],
+    [
+     "D",
+     "    E8 07 26 45 64 83 A2 C1 E0 FF 1E 3D 5C 7B 9A B9 "
+    ],
+    [
+     "D",
+     "    D8 F7 16 35 54 73 92 B1 D0 EF 0E 2D 4C 6B 8A A9 "
+    ],
+    [
+     "D",
+     "    C8 E7 06 25 44 63 82 A1 C0 DF FE 1D 3C 5B 7A 99 "
+    ],
+    [
+     "D",
+     "    B8 D7 F6 15 34 53 72 91 B0 CF EE 0D 2C 4B 6A 89 "
+    ],
+    [
+     "D",
+     "    A8 C7 E6 05 24 43 62 81 A0 BF DE FD 1C 3B 5A 79 "
+    ],
+    [
+     "D",
+     "    98 B7 D6 F5 14 33 52 71 90 AF CE ED 0C 2B 4A 69 "
+    ],
+    [
+     "D",
+     "    88 A7 C6 E5 04 23 42 61 80 9F BE DD FC 1B 3A 59 "
+    ],
+    [
+     "D",
+     "    78 97 B6 D5 F4 13 32 51 70 8F AE CD EC 0B 2A 49 "
+    ],
+    [
+     "D",
+     "    68 87 A6 C5 E4 03 22 41 60 7F 9E BD DC FB 1A 39 "
+    ],
+    [
+     "D",
+     "    58 77 96 B5 D4 F3 12 31 50 6F 8E AD CC EB 0A 29 "
+    ],
+    [
+     "D",
+     "    48 67 86 A5 C4 E3 02 21 40 5F 7E 9D BC DB FA 19 "
+    ],
+    [
+     "D",
+     "    38 57 76 95 B4 D3 F2 11 30 4F 6E 8D AC CB EA 09 "
+    ],
+    [
+     "D",
+     "    28 47 66 85 A4 C3 E2 01 20 3F 5E 7D 9C BB DA F9 "
+    ],
+    [
+     "D",
+     "    10 00 06 00 05 39 A6 3A 11 00 00 00 0E 00 12 00 "
+    ],
+    [
+     "D",
+     "    19 38 57 76 95 B4 D3 F2 11 30 4F 6E 8D AC CB EA "
+    ],
+    [
+     "D",
+     "    09 28 47 66 85 A4 C3 E2 01 20 3F 5E 7D 9C BB DA "
+    ],
+    [
+     "D",
+     "    F9 18 37 56 75 94 B3 D2 F1 10 2F 4E 6D 8C AB CA "
+    ],
+    [
+     "D",
+     "    E9 08 27 46 65 84 A3 C2 E1 00 1F 3E 5D 7C 9B BA "
+    ],
+    [
+     "D",
+     "    D9 F8 17 36 55 74 93 B2 D1 F0 0F 2E 4D 6C 8B AA "
+    ],
+    [
+     "D",
+     "    C9 E8 07 26 45 64 83 A2 C1 E0 FF 1E 3D 5C 7B 9A "
+    ],
+    [
+     "D",
+     "    B9 D8 F7 16 35 54 73 92 B1 D0 EF 0E 2D 4C 6B 8A "
+    ],
+    [
+     "D",
+     "    A9 C8 E7 06 25 44 63 82 A1 C0 DF FE 1D 3C 5B 7A "
+    ],
+    [
+     "D",
+     "    99 B8 D7 F6 15 34 53 72 91 B0 CF EE 0D 2C 4B 6A "
+    ],
+    [
+     "D",
+     "    89 A8 C7 E6 05 24 43 62 81 A0 BF DE FD 1C 3B 5A "
+    ],
+    [
+     "D",
+     "    79 98 B7 D6 F5 14 33 52 71 90 AF CE ED 0C 2B 4A "
+    ],
+    [
+     "D",
+     "    69 88 A7 C6 E5 04 23 42 61 80 9F BE DD FC 1B 3A "
+    ],
+    [
+     "D",
+     "    59 78 97 B6 D5 F4 13 32 51 70 8F AE CD EC 0B 2A "
+    ],
+    [
+     "D",
+     "    49 68 87 A6 C5 E4 03 22 41 60 7F 9E BD DC FB 1A "
+    ],
+    [
+     "D",
+     "    39 58 77 96 B5 D4 F3 12 31 50 6F 8E AD CC EB 0A "
+    ],
+    [
+     "D",
+     "    29 48 67 86 A5 C4 E3 02 21 40 5F 7E 9D BC DB FA "
+    ],
+    [
+     "D",
+     "    1A 39 58 77 96 B5 D4 F3 12 31 50 6F 8E AD CC EB "
+    ],
+    [
+     "D",
+     "    0A 29 48 67 86 A5 C4 E3 02 21 40 5F 7E 9D BC DB "
+    ],
+    [
+     "D",
+     "    FA 19 38 57 76 95 B4 D3 F2 11 30 4F 6E 8D AC CB "
+    ],
+    [
+     "D",
+     "    EA 09 28 47 66 85 A4 C3 E2 01 20 3F 5E 7D 9C BB "
+    ],
+    [
+     "D",
+     "    DA F9 18 37 56 75 94 B3 D2 F1 10 2F 4E 6D 8C AB "
+    ],
+    [
+     "D",
+     "    CA E9 08 27 46 65 84 A3 C2 E1 00 1F 3E 5D 7C 9B "
+    ],
+    [
+     "D",
+     "    BA D9 F8 17 36 55 74 93 B2 D1 F0 0F 2E 4D 6C 8B "
+    ],
+    [
+     "D",
+     "    AA C9 E8 07 26 45 64 83 A2 C1 E0 FF 1E 3D 5C 7B "
+    ],
+    [
+     "D",
+     "    9A B9 D8 F7 16 35 54 73 92 B1 D0 EF 0E 2D 4C 6B "
+    ],
+    [
+     "D",
+     "    8A A9 C8 E7 06 25 44 63 82 A1 C0 DF FE 1D 3C 5B "
+    ],
+    [
+     "D",
+     "    7A 99 B8 D7 F6 15 34 53 72 91 B0 CF EE 0D 2C 4B "
+    ],
+    [
+     "D",
+     "    6A 89 A8 C7 E6 05 24 43 62 81 A0 BF DE FD 1C 3B "
+    ],
+    [
+     "D",
+     "    5A 79 98 B7 D6 F5 14 33 52 71 90 AF CE ED 0C 2B "
+    ],
+    [
+     "D",
+     "    4A 69 88 A7 C6 E5 04 23 42 61 80 9F BE DD FC 1B "
+    ],
+    [
+     "D",
+     "    3A 59 78 97 B6 D5 F4 13 32 51 70 8F AE CD EC 0B "
+    ],
+    [
+     "D",
+     "    2A 49 68 87 A6 C5 E4 03 22 41 60 7F 9E BD DC FB "
+    ],
+    [
+     "D",
+     "    1B 3A 59 78 97 B6 D5 F4 13 32 51 70 8F AE CD EC "
+    ],
+    [
+     "D",
+     "    0B 2A 49 68 87 A6 C5 E4 03 22 41 60 7F 9E BD DC "
+    ],
+    [
+     "D",
+     "    FB 1A 39 58 77 96 B5 D4 F3 12 31 50 6F 8E AD CC "
+    ],
+    [
+     "D",
+     "    EB 0A 29 48 67 86 A5 C4 E3 02 21 40 5F 7E 9D BC "
+    ],
+    [
+     "D",
+     "    DB FA 19 38 57 76 95 B4 D3 F2 11 30 4F 6E 8D AC "
+    ],
+    [
+     "D",
+     "    CB EA 09 28 47 66 85 A4 C3 E2 01 20 3F 5E 7D 9C "
+    ],
+    [
+     "D",
+     "    BB DA F9 18 37 56 75 94 B3 D2 F1 10 2F 4E 6D 8C "
+    ],
+    [
+     "D",
+     "    AB CA E9 08 27 46 65 84 A3 C2 E1 00 1F 3E 5D 7C "
+    ],
+    [
+     "D",
+     "    9B BA D9 F8 17 36 55 74 93 B2 D1 F0 0F 2E 4D 6C "
+    ],
+    [
+     "D",
+     "    8B AA C9 E8 07 26 45 64 83 A2 C1 E0 FF 1E 3D 5C "
+    ],
+    [
+     "D",
+     "    7B 9A B9 D8 F7 16 35 54 73 92 B1 D0 EF 0E 2D 4C "
+    ],
+    [
+     "D",
+     "    6B 8A A9 C8 E7 06 25 44 63 82 A1 C0 DF FE 1D 3C "
+    ],
+    [
+     "D",
+     "    5B 7A 99 B8 D7 F6 15 34 53 72 91 B0 CF EE 0D 2C "
+    ],
+    [
+     "D",
+     "    4B 6A 89 A8 C7 E6 05 24 43 62 81 A0 BF DE FD 1C "
+    ],
+    [
+     "D",
+     "    3B 5A 79 98 B7 D6 F5 14 33 52 71 90 AF CE ED 0C "
+    ],
+    [
+     "D",
+     "    2B 4A 69 88 A7 C6 E5 04 23 42 61 80 9F BE DD FC "
+    ],
+    [
+     "D",
+     "    1C 3B 5A 79 98 B7 D6 F5 14 33 52 71 90 AF CE ED "
+    ],
+    [
+     "D",
+     "    0C 2B 4A 69 88 A7 C6 E5 04 23 42 61 80 9F BE DD "
+    ],
+    [
+     "D",
+     "    FC 1B 3A 59 78 97 B6 D5 F4 13 32 51 70 8F AE CD "
+    ],
+    [
+     "D",
+     "    EC 0B 2A 49 68 87 A6 C5 E4 03 22 41 60 7F 9E BD "
+    ],
+    [
+     "D",
+     "    DC FB 1A 39 58 77 96 B5 D4 F3 12 31 50 6F 8E AD "
+    ],
+    [
+     "D",
+     "    CC EB 0A 29 48 67 86 A5 C4 E3 02 21 40 5F 7E 9D "
+    ],
+    [
+     "D",
+     "    BC DB FA 19 38 57 76 95 B4 D3 F2 11 30 4F 6E 8D "
+    ],
+    [
+     "D",
+     "    AC CB EA 09 28 47 66 85 A4 C3 E2 01 20 3F 5E 7D "
+    ],
+    [
+     "D",
+     "    9C BB DA F9 18 37 56 75 94 B3 D2 F1 10 2F 4E 6D "
+    ],
+    [
+     "D",
+     "    8C AB CA E9 08 27 46 65 84 A3 C2 E1 00 1F 3E 5D "
+    ],
+    [
+     "D",
+     "    7C 9B BA D9 F8 17 36 55 74 93 B2 D1 F0 0F 2E 4D "
+    ],
+    [
+     "D",
+     "    6C 8B AA C9 E8 07 26 45 64 83 A2 C1 E0 FF 1E 3D "
+    ],
+    [
+     "D",
+     "    5C 7B 9A B9 D8 F7 16 35 54 73 92 B1 D0 EF 0E 2D "
+    ],
+    [
+     "D",
+     "    4C 6B 8A A9 C8 E7 06 25 44 63 82 A1 C0 DF FE 1D "
+    ],
+    [
+     "D",
+     "    3C 5B 7A 99 B8 D7 F6 15 34 53 72 91 B0 CF EE 0D "
+    ],
+    [
+     "D",
+     "    2C 4B 6A 89 A8 C7 E6 05 24 43 62 81 A0 BF DE FD "
+    ],
+    [
+     "D",
+     "    12 00 06 00 05 39 A6 3A 13 00 00 00 10 00 77 77 "
+    ],
+    [
+     "D",
+     "    1D 3C 5B 7A 99 B8 D7 F6 15 34 53 72 91 B0 CF EE "
+    ],
+    [
+     "D",
+     "    0D 2C 4B 6A 89 A8 C7 E6 05 24 43 62 81 A0 BF DE "
+    ],
+    [
+     "D",
+     "    FD 1C 3B 5A 79 98 B7 D6 F5 14 33 52 71 90 AF CE "
+    ],
+    [
+     "D",
+     "    ED 0C 2B 4A 69 88 A7 C6 E5 04 23 42 61 80 9F BE "
+    ],
+    [
+     "D",
+     "    DD FC 1B 3A 59 78 97 B6 D5 F4 13 32 51 70 8F AE "
+    ],
+    [
+     "D",
+     "    CD EC 0B 2A 49 68 87 A6 C5 E4 03 22 41 60 7F 9E "
+    ],
+    [
+     "D",
+     "    BD DC FB 1A 39 58 77 96 B5 D4 F3 12 31 50 6F 8E "
+    ],
+    [
+     "D",
+     "    AD CC EB 0A 29 48 67 86 A5 C4 E3 02 21 40 5F 7E "
+    ],
+    [
+     "D",
+     "    9D BC DB FA 19 38 57 76 95 B4 D3 F2 11 30 4F 6E "
+    ],
+    [
+     "D",
+     "    8D AC CB EA 09 28 47 66 85 A4 C3 E2 01 20 3F 5E "
+    ],
+    [
+     "D",
+     "    7D 9C BB DA F9 18 37 56 75 94 B3 D2 F1 10 2F 4E "
+    ],
+    [
+     "D",
+     "    6D 8C AB CA E9 08 27 46 65 84 A3 C2 E1 00 1F 3E "
+    ],
+    [
+     "D",
+     "    5D 7C 9B BA D9 F8 17 36 55 74 93 B2 D1 F0 0F 2E "
+    ],
+    [
+     "D",
+     "    4D 6C 8B AA C9 E8 07 26 45 64 83 A2 C1 E0 FF 1E "
+    ],
+    [
+     "D",
+     "    3D 5C 7B 9A B9 D8 F7 16 35 54 73 92 B1 D0 EF 0E "
+    ],
+    [
+     "D",
+     "    2D 4C 6B 8A A9 C8 E7 06 25 44 63 82 A1 C0 DF FE "
+    ],
+    [
+     "D",
+     "    1E 3D 5C 7B 9A B9 D8 F7 16 35 54 73 92 B1 D0 EF "
+    ],
+    [
+     "D",
+     "    0E 2D 4C 6B 8A A9 C8 E7 06 25 44 63 82 A1 C0 DF "
+    ],
+    [
+     "D",
+     "    FE 1D 3C 5B 7A 99 B8 D7 F6 15 34 53 72 91 B0 CF "
+    ],
+    [
+     "D",
+     "    EE 0D 2C 4B 6A 89 A8 C7 E6 05 24 43 62 81 A0 BF "
+    ],
+    [
+     "D",
+     "    DE FD 1C 3B 5A 79 98 B7 D6 F5 14 33 52 71 90 AF "
+    ],
+    [
+     "D",
+     "    CE ED 0C 2B 4A 69 88 A7 C6 E5 04 23 42 61 80 9F "
+    ],
+    [
+     "D",
+     "    BE DD FC 1B 3A 59 78 97 B6 D5 F4 13 32 51 70 8F "
+    ],
+    [
+     "D",
+     "    AE CD EC 0B 2A 49 68 87 A6 C5 E4 03 22 41 60 7F "
+    ],
+    [
+     "D",
+     "    9E BD DC FB 1A 39 58 77 96 B5 D4 F3 12 31 50 6F "
+    ],
+    [
+     "D",
+     "    8E AD CC EB 0A 29 48 67 86 A5 C4 E3 02 21 40 5F "
+    ],
+    [
+     "D",
+     "    7E 9D BC DB FA 19 38 57 76 95 B4 D3 F2 11 30 4F "
+    ],
+    [
+     "D",
+     "    6E 8D AC CB EA 09 28 47 66 85 A4 C3 E2 01 20 3F "
+    ],
+    [
+     "D",
+     "    5E 7D 9C BB DA F9 18 37 56 75 94 B3 D2 F1 10 2F "
+    ],
+    [
+     "D",
+     "    4E 6D 8C AB CA E9 08 27 46 65 84 A3 C2 E1 00 1F "
+    ],
+    [
+     "D",
+     "    3E 5D 7C 9B BA D9 F8 17 36 55 74 93 B2 D1 F0 0F "
+    ],
+    [
+     "D",
+     "    2E 4D 6C 8B AA C9 E8 07 26 45 64 83 A2 C1 E0 FF "
+    ],
+    [
+     "D",
+     "    1F 3E 5D 7C 9B BA D9 F8 17 36 55 74 93 B2 D1 F0 "
+    ],
+    [
+     "D",
+     "    0F 2E 4D 6C 8B AA C9 E8 07 26 45 64 83 A2 C1 E0 "
+    ],
+    [
+     "D",
+     "    FF 1E 3D 5C 7B 9A B9 D8 F7 16 35 54 73 92 B1 D0 "
+    ],
+    [
+     "D",
+     "    EF 0E 2D 4C 6B 8A A9 C8 E7 06 25 44 63 82 A1 C0 "
+    ],
+    [
+     "D",
+     "    DF FE 1D 3C 5B 7A 99 B8 D7 F6 15 34 53 72 91 B0 "
+    ],
+    [
+     "D",
+     "    CF EE 0D 2C 4B 6A 89 A8 C7 E6 05 24 43 62 81 A0 "
+    ],
+    [
+     "D",
+     "    BF DE FD 1C 3B 5A 79 98 B7 D6 F5 14 33 52 71 90 "
+    ],
+    [
+     "D",
+     "    AF CE ED 0C 2B 4A 69 88 A7 C6 E5 04 23 42 61 80 "
+    ],
+    [
+     "D",
+     "    9F BE DD FC 1B 3A 59 78 97 B6 D5 F4 13 32 51 70 "
+    ],
+    [
+     "D",
+     "    8F AE CD EC 0B 2A 49 68 87 A6 C5 E4 03 22 41 60 "
+    ],
+    [
+     "D",
+     "    7F 9E BD DC FB 1A 39 58 77 96 B5 D4 F3 12 31 50 "
+    ],
+    [
+     "D",
+     "    6F 8E AD CC EB 0A 29 48 67 86 A5 C4 E3 02 21 40 "
+    ],
+    [
+     "D",
+     "    5F 7E 9D BC DB FA 19 38 57 76 95 B4 D3 F2 11 30 "
+    ],
+    [
+     "D",
+     "    4F 6E 8D AC CB EA 09 28 47 66 85 A4 C3 E2 01 20 "
+    ],
+    [
+     "D",
+     "    3F 5E 7D 9C BB DA F9 18 37 56 75 94 B3 D2 F1 10 "
+    ],
+    [
+     "D",
+     "    2F 4E 6D 8C AB CA E9 08 27 46 65 84 A3 C2 E1 00 "
+    ],
+    [
+     "D",
+     "    20 3F 5E 7D 9C BB DA F9 18 37 56 75 94 B3 D2 F1 "
+    ],
+    [
+     "D",
+     "    10 2F 4E 6D 8C AB CA E9 08 27 46 65 84 A3 C2 E1 "
+    ],
+    [
+     "D",
+     "    00 1F 3E 5D 7C 9B BA D9 F8 17 36 55 74 93 B2 D1 "
+    ],
+    [
+     "D",
+     "    F0 0F 2E 4D 6C 8B AA C9 E8 07 26 45 64 83 A2 C1 "
+    ],
+    [
+     "D",
+     "    E0 FF 1E 3D 5C 7B 9A B9 D8 F7 16 35 54 73 92 B1 "
+    ],
+    [
+     "D",
+     "    D0 EF 0E 2D 4C 6B 8A A9 C8 E7 06 25 44 63 82 A1 "
+    ],
+    [
+     "D",
+     "    C0 DF FE 1D 3C 5B 7A 99 B8 D7 F6 15 34 53 72 91 "
+    ],
+    [
+     "D",
+     "    B0 CF EE 0D 2C 4B 6A 89 A8 C7 E6 05 24 43 62 81 "
+    ],
+    [
+     "D",
+     "    A0 BF DE FD 1C 3B 5A 79 98 B7 D6 F5 14 33 52 71 "
+    ],
+    [
+     "D",
+     "    90 AF CE ED 0C 2B 4A 69 88 A7 C6 E5 04 23 42 61 "
+    ],
+    [
+     "D",
+     "    80 9F BE DD FC 1B 3A 59 78 97 B6 D5 F4 13 32 51 "
+    ],
+    [
+     "D",
+     "    70 8F AE CD EC 0B 2A 49 "
+    ],
+    [
+     "D",
+     "    0E 00 06 00 05 39 A6 3A 0F 00 00 00 FF FF 10 00 "
+    ],
+    [
+     "D",
+     "    62 72 6F 6B 65 6E 20 70 61 72 74 2E 62 69 6E 00 "
+    ],
+    [
+     "D",
+     "    1C 3B 5A 79 98 B7 D6 F5 14 33 "
+    ],
+    [
+     "D",
+     "    "
+    ],
+    [
+     "D",
+     "    66 66 06 00 05 39 A6 3A 67 66 00 00 FF FF FF FF "
+    ],
+    [
+     "D",
+     "    6D 69 73 73 69 6E 67 20 68 65 61 64 65 72 00 "
+    ],
+    [
+     "D",
+     "    23 42 61 80 9F BE DD FC 1B 3A "
+    ],
+    [
+     "D",
+     "    "
+    ],
+    [
+     "D",
+     "    16 00 14 00 05 39 A6 3A 17 00 00 00 FF FF FF FF "
+    ],
+    [
+     "D",
+     "    69 6E 6E 65 72 2E 62 69 6E 00 "
+    ],
+    [
+     "D",
+     "    68 66 14 00 05 39 A6 3A 69 66 00 00 FF FF FF FF "
+    ],
+    [
+     "D",
+     "    6D 69 73 73 69 6E 67 00 "
+    ],
+    [
+     "D",
+     "    16 00 6A 13 68 66 EF 85 FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    14 00 06 00 83 18 22 38 15 00 10 00 FF FF FF FF "
+    ],
+    [
+     "D",
+     "    44 69 72 00 "
+    ],
+    [
+     "D",
+     "Duplicate id 10"
+    ],
+    [
+     "D",
+     "    2A 49 68 87 A6 C5 E4 03 22 41 "
+    ],
+    [
+     "D",
+     "    "
+    ],
+    [
+     "D",
+     "    18 00 06 00 05 39 A6 3A 19 00 00 00 FF FF FF FF "
+    ],
+    [
+     "D",
+     "    64 75 70 2E 62 69 6E 00 "
+    ],
+    [
+     "D",
+     "    0A 00 D1 4A 0C 00 C8 08 0E 00 86 93 66 66 FE 00 "
+    ],
+    [
+     "D",
+     "    14 00 DA 0C 18 00 7C F8 FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    06 00 06 00 61 20 C5 36 07 00 10 00 FF FF FF FF "
+    ],
+    [
+     "D",
+     "    00 "
+    ],
+    [
+     "D",
+     "  Block 00120000 Size: 65536, end: 00130000"
+    ],
+    [
+     "D",
+     "  Block 00130000 Size: 65536, end: 00140000"
+    ],
+    [
+     "D",
+     "  Block 00140000 Size: 65536, end: 00150000"
+    ],
+    [
+     "D",
+     "  Block 00150000 Size: 65536, end: 00160000"
+    ],
+    [
+     "D",
+     "  Block 00160000 Size: 65536, end: 00170000"
+    ],
+    [
+     "D",
+     "  Block 00170000 Size: 65536, end: 00180000"
+    ],
+    [
+     "W",
+     "Skip. Broken file/directory: Reading part. Couldn't find block with id: 30583"
+    ],
+    [
+     "W",
+     "Skip. FFS Block ID 20 not found"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ]
+   ],
+   "detector": {
+    "platform": "SGOLD",
+    "model": "SYN",
+    "imei": "490154203237518",
+    "base": "2684354560",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "SGOLD",
+    "list": [
+     {
+      "name": "FFS",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1114112,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1179648,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 3,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1245184,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 4,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1310720,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 5,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1376256,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 6,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1441792,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 7,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1507328,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 8,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "tree": {
+    "n": "FFS",
+    "p": "/",
+    "a": 16,
+    "t": 0,
+    "d": [
+     {
+      "n": "FFS",
+      "p": "/FFS/",
+      "a": 16,
+      "t": 1181034182,
+      "d": [],
+      "f": [
+       {
+        "n": "fine.bin",
+        "p": "FFS/",
+        "a": 0,
+        "t": 1241611690,
+        "s": 100,
+        "h": 3676548769
+       },
+       {
+        "n": "no data.bin",
+        "p": "FFS/",
+        "a": 0,
+        "t": 1241611690,
+        "s": 0,
+        "h": 2166136261
+       },
+       {
+        "n": "missing header",
+        "p": "FFS/",
+        "a": 0,
+        "t": 1241611690,
+        "s": 10,
+        "h": 834697728
+       },
+       {
+        "n": "dup.bin",
+        "p": "FFS/",
+        "a": 0,
+        "t": 1241611690,
+        "s": 10,
+        "h": 206148932
+       }
+      ]
+     }
+    ],
+    "f": []
+   }
+  }
+ },
+ "writes": {}
+}

@@ -1,0 +1,2306 @@
+{
+ "loads": {
+  "defaults": {
+   "stage": "done",
+   "log": [
+    [
+     "W",
+     "Couldn't detect IMEI"
+    ],
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "EGOLD Base address: 00800000"
+    ],
+    [
+     "D",
+     "Searching partitions from 0x00000000"
+    ],
+    [
+     "D",
+     "Searching pattern: ?? 00 00 00 0? 00 ?? ?? ?? 0? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Found 4095968 matches"
+    ],
+    [
+     "D",
+     "00001000 00801000 02001000: Records count: 00000003, Blocks count: 0001, Segment addr: 02002000, Page addr: 00802000 00002000"
+    ],
+    [
+     "D",
+     "Table:     Page addr: 00802000 -> 00002000, Segment addr: 02002000, Records: "
+    ],
+    [
+     "D",
+     "  Segment addr: 02003000, Page addr: 00803000 -> 00003000"
+    ],
+    [
+     "D",
+     "    FFS    Block addr: 00900000 -> 00100000 WTF: 0000"
+    ],
+    [
+     "D",
+     "  Segment addr: 02003006, Page addr: 00803006 -> 00003006"
+    ],
+    [
+     "D",
+     "    FFS    Block addr: 00910000 -> 00110000 WTF: 0000"
+    ],
+    [
+     "D",
+     "  Segment addr: 0200300C, Page addr: 0080300C -> 0000300C"
+    ],
+    [
+     "D",
+     "    FFS    Block addr: 00920000 -> 00120000 WTF: 0000"
+    ],
+    [
+     "D",
+     "Found 1 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS      3"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS, Blocks 3"
+    ],
+    [
+     "D",
+     "Collecting FFS blocks"
+    ],
+    [
+     "D",
+     "  Block: 00100000, end: 00100000 ===="
+    ],
+    [
+     "D",
+     "  Block: 00110000, end: 00110000 ===="
+    ],
+    [
+     "D",
+     "  Block: 00120000, end: 00120000 ===="
+    ],
+    [
+     "D",
+     "Collecting FFS files"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ]
+   ],
+   "detector": {
+    "platform": "EGOLD_CE",
+    "model": "SYNE",
+    "imei": "",
+    "base": "8388608",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "EGOLD_CE",
+    "list": [
+     {
+      "name": "FFS",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 0,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       },
+       {
+        "addr": 1114112,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       },
+       {
+        "addr": 1179648,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "tree": {
+    "n": "FFS",
+    "p": "/",
+    "a": 16,
+    "t": 0,
+    "d": [
+     {
+      "n": "FFS",
+      "p": "/FFS/",
+      "a": 16,
+      "t": 1104559200,
+      "d": [
+       {
+        "n": "Dir",
+        "p": "FFS/",
+        "a": 16,
+        "t": 1170497106,
+        "d": [],
+        "f": [
+         {
+          "n": "inner.bin",
+          "p": "FFS/Dir/",
+          "a": 0,
+          "t": 312789600,
+          "s": 64,
+          "h": 318426117
+         }
+        ]
+       }
+      ],
+      "f": [
+       {
+        "n": "a.txt",
+        "p": "FFS/",
+        "a": 1,
+        "t": 1107425106,
+        "s": 100,
+        "h": 3676548769
+       },
+       {
+        "n": "parts.bin",
+        "p": "FFS/",
+        "a": 0,
+        "t": 1138961106,
+        "s": 5010,
+        "h": 3490574064
+       },
+       {
+        "n": "name.txt",
+        "p": "FFS/",
+        "a": 6,
+        "t": 312789600,
+        "s": 5,
+        "h": 2935495314
+       },
+       {
+        "n": "empty.bin",
+        "p": "FFS/",
+        "a": 0,
+        "t": 312789600,
+        "s": 0,
+        "h": 2166136261
+       }
+      ]
+     }
+    ],
+    "f": []
+   }
+  },
+  "skipping": {
+   "stage": "done",
+   "log": [
+    [
+     "W",
+     "Couldn't detect IMEI"
+    ],
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "EGOLD Base address: 00800000"
+    ],
+    [
+     "D",
+     "Searching partitions from 0x00000000"
+    ],
+    [
+     "D",
+     "Searching pattern: ?? 00 00 00 0? 00 ?? ?? ?? 0? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Found 4095968 matches"
+    ],
+    [
+     "D",
+     "00001000 00801000 02001000: Records count: 00000003, Blocks count: 0001, Segment addr: 02002000, Page addr: 00802000 00002000"
+    ],
+    [
+     "D",
+     "Table:     Page addr: 00802000 -> 00002000, Segment addr: 02002000, Records: "
+    ],
+    [
+     "D",
+     "  Segment addr: 02003000, Page addr: 00803000 -> 00003000"
+    ],
+    [
+     "D",
+     "    FFS    Block addr: 00900000 -> 00100000 WTF: 0000"
+    ],
+    [
+     "D",
+     "  Segment addr: 02003006, Page addr: 00803006 -> 00003006"
+    ],
+    [
+     "D",
+     "    FFS    Block addr: 00910000 -> 00110000 WTF: 0000"
+    ],
+    [
+     "D",
+     "  Segment addr: 0200300C, Page addr: 0080300C -> 0000300C"
+    ],
+    [
+     "D",
+     "    FFS    Block addr: 00920000 -> 00120000 WTF: 0000"
+    ],
+    [
+     "D",
+     "Found 1 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS      3"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS, Blocks 3"
+    ],
+    [
+     "D",
+     "Collecting FFS blocks"
+    ],
+    [
+     "D",
+     "  Block: 00100000, end: 00100000 ===="
+    ],
+    [
+     "D",
+     "  Block: 00110000, end: 00110000 ===="
+    ],
+    [
+     "D",
+     "  Block: 00120000, end: 00120000 ===="
+    ],
+    [
+     "D",
+     "Collecting FFS files"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ]
+   ],
+   "detector": {
+    "platform": "EGOLD_CE",
+    "model": "SYNE",
+    "imei": "",
+    "base": "8388608",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "EGOLD_CE",
+    "list": [
+     {
+      "name": "FFS",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 0,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       },
+       {
+        "addr": 1114112,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       },
+       {
+        "addr": 1179648,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "tree": {
+    "n": "FFS",
+    "p": "/",
+    "a": 16,
+    "t": 0,
+    "d": [
+     {
+      "n": "FFS",
+      "p": "/FFS/",
+      "a": 16,
+      "t": 1104559200,
+      "d": [
+       {
+        "n": "Dir",
+        "p": "FFS/",
+        "a": 16,
+        "t": 1170497106,
+        "d": [],
+        "f": [
+         {
+          "n": "inner.bin",
+          "p": "FFS/Dir/",
+          "a": 0,
+          "t": 312789600,
+          "s": 64,
+          "h": 318426117
+         }
+        ]
+       }
+      ],
+      "f": [
+       {
+        "n": "a.txt",
+        "p": "FFS/",
+        "a": 1,
+        "t": 1107425106,
+        "s": 100,
+        "h": 3676548769
+       },
+       {
+        "n": "parts.bin",
+        "p": "FFS/",
+        "a": 0,
+        "t": 1138961106,
+        "s": 5010,
+        "h": 3490574064
+       },
+       {
+        "n": "name.txt",
+        "p": "FFS/",
+        "a": 6,
+        "t": 312789600,
+        "s": 5,
+        "h": 2935495314
+       },
+       {
+        "n": "empty.bin",
+        "p": "FFS/",
+        "a": 0,
+        "t": 312789600,
+        "s": 0,
+        "h": 2166136261
+       }
+      ]
+     }
+    ],
+    "f": []
+   }
+  },
+  "old search": {
+   "stage": "done",
+   "log": [
+    [
+     "W",
+     "Couldn't detect IMEI"
+    ],
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "Searching pattern: ????FEFE ???????? ???????? FEFE???? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Block: 00100000 FFS 0000 0000 0000"
+    ],
+    [
+     "D",
+     "Block: 00110000 FFS 0001 0000 0000"
+    ],
+    [
+     "D",
+     "Block: 00120000 FFS 0002 0000 0000"
+    ],
+    [
+     "D",
+     "Detected block size: 00010000"
+    ],
+    [
+     "D",
+     "Found 1 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS      3"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS, Blocks 3"
+    ],
+    [
+     "D",
+     "Collecting FFS blocks"
+    ],
+    [
+     "D",
+     "  Block: 00100000, end: 00100000 ===="
+    ],
+    [
+     "D",
+     "  Block: 00110000, end: 00110000 ===="
+    ],
+    [
+     "D",
+     "  Block: 00120000, end: 00120000 ===="
+    ],
+    [
+     "D",
+     "Collecting FFS files"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ]
+   ],
+   "detector": {
+    "platform": "EGOLD_CE",
+    "model": "SYNE",
+    "imei": "",
+    "base": "8388608",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "EGOLD_CE",
+    "list": [
+     {
+      "name": "FFS",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 0,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       },
+       {
+        "addr": 1114112,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       },
+       {
+        "addr": 1179648,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "tree": {
+    "n": "FFS",
+    "p": "/",
+    "a": 16,
+    "t": 0,
+    "d": [
+     {
+      "n": "FFS",
+      "p": "/FFS/",
+      "a": 16,
+      "t": 1104559200,
+      "d": [
+       {
+        "n": "Dir",
+        "p": "FFS/",
+        "a": 16,
+        "t": 1170497106,
+        "d": [],
+        "f": [
+         {
+          "n": "inner.bin",
+          "p": "FFS/Dir/",
+          "a": 0,
+          "t": 312789600,
+          "s": 64,
+          "h": 318426117
+         }
+        ]
+       }
+      ],
+      "f": [
+       {
+        "n": "a.txt",
+        "p": "FFS/",
+        "a": 1,
+        "t": 1107425106,
+        "s": 100,
+        "h": 3676548769
+       },
+       {
+        "n": "parts.bin",
+        "p": "FFS/",
+        "a": 0,
+        "t": 1138961106,
+        "s": 5010,
+        "h": 3490574064
+       },
+       {
+        "n": "name.txt",
+        "p": "FFS/",
+        "a": 6,
+        "t": 312789600,
+        "s": 5,
+        "h": 2935495314
+       },
+       {
+        "n": "empty.bin",
+        "p": "FFS/",
+        "a": 0,
+        "t": 312789600,
+        "s": 0,
+        "h": 2166136261
+       }
+      ]
+     }
+    ],
+    "f": []
+   }
+  },
+  "verbosely": {
+   "stage": "done",
+   "log": [
+    [
+     "W",
+     "Couldn't detect IMEI"
+    ],
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "EGOLD Base address: 00800000"
+    ],
+    [
+     "D",
+     "Searching partitions from 0x00000000"
+    ],
+    [
+     "D",
+     "Searching pattern: ?? 00 00 00 0? 00 ?? ?? ?? 0? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Found 4095968 matches"
+    ],
+    [
+     "D",
+     "00001000 00801000 02001000: Records count: 00000003, Blocks count: 0001, Segment addr: 02002000, Page addr: 00802000 00002000"
+    ],
+    [
+     "D",
+     "Table:     Page addr: 00802000 -> 00002000, Segment addr: 02002000, Records: "
+    ],
+    [
+     "D",
+     "  Segment addr: 02003000, Page addr: 00803000 -> 00003000"
+    ],
+    [
+     "D",
+     "    FFS    Block addr: 00900000 -> 00100000 WTF: 0000"
+    ],
+    [
+     "D",
+     "  Segment addr: 02003006, Page addr: 00803006 -> 00003006"
+    ],
+    [
+     "D",
+     "    FFS    Block addr: 00910000 -> 00110000 WTF: 0000"
+    ],
+    [
+     "D",
+     "  Segment addr: 0200300C, Page addr: 0080300C -> 0000300C"
+    ],
+    [
+     "D",
+     "    FFS    Block addr: 00920000 -> 00120000 WTF: 0000"
+    ],
+    [
+     "D",
+     "Found 1 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS      3"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS, Blocks 3"
+    ],
+    [
+     "D",
+     "Collecting FFS blocks"
+    ],
+    [
+     "D",
+     "  Block: 00100000, end: 00100000 ===="
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFF4 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     001C"
+    ],
+    [
+     "D",
+     "    Offset:   00900100 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 1771"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFE8 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0011"
+    ],
+    [
+     "D",
+     "    Offset:   0090011C 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 0002"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFDC ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0064"
+    ],
+    [
+     "D",
+     "    Offset:   00900130 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 1773"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFD0 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0016"
+    ],
+    [
+     "D",
+     "    Offset:   00900194 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 0004"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFC4 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0BB8"
+    ],
+    [
+     "D",
+     "    Offset:   009001AC 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 1775"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFB8 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     001A"
+    ],
+    [
+     "D",
+     "    Offset:   00900D64 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 0006"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFAC ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0010"
+    ],
+    [
+     "D",
+     "    Offset:   00900D80 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 0008"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFA0 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     07D0"
+    ],
+    [
+     "D",
+     "    Offset:   00900D90 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 0009"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FF94 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0010"
+    ],
+    [
+     "D",
+     "    Offset:   00901560 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 000A"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FF88 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     000A"
+    ],
+    [
+     "D",
+     "    Offset:   00901570 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 000B"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FF7C ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0005"
+    ],
+    [
+     "D",
+     "    Offset:   0090157C 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 1777"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FF70 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     001E"
+    ],
+    [
+     "D",
+     "    Offset:   00901584 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 000C"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FF64 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     000C"
+    ],
+    [
+     "D",
+     "    Offset:   009015A4 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 1779"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FF58 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0014"
+    ],
+    [
+     "D",
+     "    Offset:   009015B0 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 000E"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FF4C ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     001A"
+    ],
+    [
+     "D",
+     "    Offset:   009015C4 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 0010"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FF40 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0040"
+    ],
+    [
+     "D",
+     "    Offset:   009015E0 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 177B"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FF34 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     001A"
+    ],
+    [
+     "D",
+     "    Offset:   00901620 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 0012"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "  Block: 00110000, end: 00110000 ===="
+    ],
+    [
+     "D",
+     "  Block: 00120000, end: 00120000 ===="
+    ],
+    [
+     "D",
+     "Collecting FFS files"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFF4 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     001C"
+    ],
+    [
+     "D",
+     "    Offset:   00900100 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 1771"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFE8 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0011"
+    ],
+    [
+     "D",
+     "    Offset:   0090011C 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 0002"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ID:           0006 6"
+    ],
+    [
+     "D",
+     "    Parent:       0006 6"
+    ],
+    [
+     "D",
+     "    Timestamp:    32210000"
+    ],
+    [
+     "D",
+     "    Attributes:   0010"
+    ],
+    [
+     "D",
+     "    Data ID:      0001 1771"
+    ],
+    [
+     "D",
+     "    Unk4:         FFFF"
+    ],
+    [
+     "D",
+     "    Next part ID: FFFF"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFDC ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0064"
+    ],
+    [
+     "D",
+     "    Offset:   00900130 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 1773"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFD0 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0016"
+    ],
+    [
+     "D",
+     "    Offset:   00900194 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 0004"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ID:           0007 7"
+    ],
+    [
+     "D",
+     "    Parent:       0006 6"
+    ],
+    [
+     "D",
+     "    Timestamp:    324320A3"
+    ],
+    [
+     "D",
+     "    Attributes:   0001"
+    ],
+    [
+     "D",
+     "    Data ID:      0003 1773"
+    ],
+    [
+     "D",
+     "    Unk4:         FFFF"
+    ],
+    [
+     "D",
+     "    Next part ID: FFFF"
+    ],
+    [
+     "D",
+     "    Name:      a.txt"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFC4 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0BB8"
+    ],
+    [
+     "D",
+     "    Offset:   009001AC 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 1775"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFB8 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     001A"
+    ],
+    [
+     "D",
+     "    Offset:   00900D64 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 0006"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ID:           0008 8"
+    ],
+    [
+     "D",
+     "    Parent:       0006 6"
+    ],
+    [
+     "D",
+     "    Timestamp:    344320A3"
+    ],
+    [
+     "D",
+     "    Attributes:   0000"
+    ],
+    [
+     "D",
+     "    Data ID:      0005 1775"
+    ],
+    [
+     "D",
+     "    Unk4:         FFFF"
+    ],
+    [
+     "D",
+     "    Next part ID: 4080"
+    ],
+    [
+     "D",
+     "    Name:      parts.bin"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFAC ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0010"
+    ],
+    [
+     "D",
+     "    Offset:   00900D80 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 0008"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ID:           4080 16512"
+    ],
+    [
+     "D",
+     "    Parent:       0008 8"
+    ],
+    [
+     "D",
+     "    Timestamp:    344320A3"
+    ],
+    [
+     "D",
+     "    Attributes:   0000"
+    ],
+    [
+     "D",
+     "    Data ID:      0000 1770"
+    ],
+    [
+     "D",
+     "    Unk4:         FFFF"
+    ],
+    [
+     "D",
+     "    Next part ID: 4081"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFA0 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     07D0"
+    ],
+    [
+     "D",
+     "    Offset:   00900D90 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 0009"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FF94 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0010"
+    ],
+    [
+     "D",
+     "    Offset:   00901560 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 000A"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ID:           4081 16513"
+    ],
+    [
+     "D",
+     "    Parent:       0008 8"
+    ],
+    [
+     "D",
+     "    Timestamp:    344320A3"
+    ],
+    [
+     "D",
+     "    Attributes:   0000"
+    ],
+    [
+     "D",
+     "    Data ID:      0000 1770"
+    ],
+    [
+     "D",
+     "    Unk4:         FFFF"
+    ],
+    [
+     "D",
+     "    Next part ID: FFFF"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FF88 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     000A"
+    ],
+    [
+     "D",
+     "    Offset:   00901570 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 000B"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FF7C ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0005"
+    ],
+    [
+     "D",
+     "    Offset:   0090157C 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 1777"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FF70 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     001E"
+    ],
+    [
+     "D",
+     "    Offset:   00901584 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 000C"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ID:           0009 9"
+    ],
+    [
+     "D",
+     "    Parent:       0006 6"
+    ],
+    [
+     "D",
+     "    Timestamp:    00000000"
+    ],
+    [
+     "D",
+     "    Attributes:   0006"
+    ],
+    [
+     "D",
+     "    Data ID:      0007 1777"
+    ],
+    [
+     "D",
+     "    Unk4:         FFFF"
+    ],
+    [
+     "D",
+     "    Next part ID: FFFF"
+    ],
+    [
+     "D",
+     "    Name:      name.txt"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FF64 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     000C"
+    ],
+    [
+     "D",
+     "    Offset:   009015A4 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 1779"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FF58 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0014"
+    ],
+    [
+     "D",
+     "    Offset:   009015B0 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 000E"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ID:           000A 10"
+    ],
+    [
+     "D",
+     "    Parent:       0006 6"
+    ],
+    [
+     "D",
+     "    Timestamp:    364320A3"
+    ],
+    [
+     "D",
+     "    Attributes:   0010"
+    ],
+    [
+     "D",
+     "    Data ID:      0009 1779"
+    ],
+    [
+     "D",
+     "    Unk4:         FFFF"
+    ],
+    [
+     "D",
+     "    Next part ID: FFFF"
+    ],
+    [
+     "D",
+     "    Name:      Dir"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FF4C ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     001A"
+    ],
+    [
+     "D",
+     "    Offset:   009015C4 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 0010"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ID:           000B 11"
+    ],
+    [
+     "D",
+     "    Parent:       0006 6"
+    ],
+    [
+     "D",
+     "    Timestamp:    00000000"
+    ],
+    [
+     "D",
+     "    Attributes:   0000"
+    ],
+    [
+     "D",
+     "    Data ID:      7000 8770"
+    ],
+    [
+     "D",
+     "    Unk4:         FFFF"
+    ],
+    [
+     "D",
+     "    Next part ID: FFFF"
+    ],
+    [
+     "D",
+     "    Name:      empty.bin"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FF40 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0040"
+    ],
+    [
+     "D",
+     "    Offset:   009015E0 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 177B"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FF34 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     001A"
+    ],
+    [
+     "D",
+     "    Offset:   00901620 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 0012"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ID:           000C 12"
+    ],
+    [
+     "D",
+     "    Parent:       000A 10"
+    ],
+    [
+     "D",
+     "    Timestamp:    00000000"
+    ],
+    [
+     "D",
+     "    Attributes:   0000"
+    ],
+    [
+     "D",
+     "    Data ID:      000B 177B"
+    ],
+    [
+     "D",
+     "    Unk4:         FFFF"
+    ],
+    [
+     "D",
+     "    Next part ID: FFFF"
+    ],
+    [
+     "D",
+     "    Name:      inner.bin"
+    ],
+    [
+     "I",
+     "Processing ID:     4     7, Path: FFS/a.txt"
+    ],
+    [
+     "D",
+     "    ID:           0007 7"
+    ],
+    [
+     "D",
+     "    Parent:       0006 6"
+    ],
+    [
+     "D",
+     "    Timestamp:    324320A3"
+    ],
+    [
+     "D",
+     "    Attributes:   0001"
+    ],
+    [
+     "D",
+     "    Data ID:      0003 1773"
+    ],
+    [
+     "D",
+     "    Unk4:         FFFF"
+    ],
+    [
+     "D",
+     "    Next part ID: FFFF"
+    ],
+    [
+     "D",
+     "    Name:      a.txt"
+    ],
+    [
+     "I",
+     "Processing ID:     6     8, Path: FFS/parts.bin"
+    ],
+    [
+     "D",
+     "    ID:           0008 8"
+    ],
+    [
+     "D",
+     "    Parent:       0006 6"
+    ],
+    [
+     "D",
+     "    Timestamp:    344320A3"
+    ],
+    [
+     "D",
+     "    Attributes:   0000"
+    ],
+    [
+     "D",
+     "    Data ID:      0005 1775"
+    ],
+    [
+     "D",
+     "    Unk4:         FFFF"
+    ],
+    [
+     "D",
+     "    Next part ID: 4080"
+    ],
+    [
+     "D",
+     "    Name:      parts.bin"
+    ],
+    [
+     "I",
+     "Processing ID:    12     9, Path: FFS/name.txt"
+    ],
+    [
+     "D",
+     "    ID:           0009 9"
+    ],
+    [
+     "D",
+     "    Parent:       0006 6"
+    ],
+    [
+     "D",
+     "    Timestamp:    00000000"
+    ],
+    [
+     "D",
+     "    Attributes:   0006"
+    ],
+    [
+     "D",
+     "    Data ID:      0007 1777"
+    ],
+    [
+     "D",
+     "    Unk4:         FFFF"
+    ],
+    [
+     "D",
+     "    Next part ID: FFFF"
+    ],
+    [
+     "D",
+     "    Name:      name.txt"
+    ],
+    [
+     "I",
+     "Processing ID:    14    10, Path: FFS/Dir"
+    ],
+    [
+     "D",
+     "    ID:           000A 10"
+    ],
+    [
+     "D",
+     "    Parent:       0006 6"
+    ],
+    [
+     "D",
+     "    Timestamp:    364320A3"
+    ],
+    [
+     "D",
+     "    Attributes:   0010"
+    ],
+    [
+     "D",
+     "    Data ID:      0009 1779"
+    ],
+    [
+     "D",
+     "    Unk4:         FFFF"
+    ],
+    [
+     "D",
+     "    Next part ID: FFFF"
+    ],
+    [
+     "D",
+     "    Name:      Dir"
+    ],
+    [
+     "I",
+     "Processing ID:    18    12, Path: FFS/Dir/inner.bin"
+    ],
+    [
+     "D",
+     "    ID:           000C 12"
+    ],
+    [
+     "D",
+     "    Parent:       000A 10"
+    ],
+    [
+     "D",
+     "    Timestamp:    00000000"
+    ],
+    [
+     "D",
+     "    Attributes:   0000"
+    ],
+    [
+     "D",
+     "    Data ID:      000B 177B"
+    ],
+    [
+     "D",
+     "    Unk4:         FFFF"
+    ],
+    [
+     "D",
+     "    Next part ID: FFFF"
+    ],
+    [
+     "D",
+     "    Name:      inner.bin"
+    ],
+    [
+     "I",
+     "Processing ID:    16    11, Path: FFS/empty.bin"
+    ],
+    [
+     "D",
+     "    ID:           000B 11"
+    ],
+    [
+     "D",
+     "    Parent:       0006 6"
+    ],
+    [
+     "D",
+     "    Timestamp:    00000000"
+    ],
+    [
+     "D",
+     "    Attributes:   0000"
+    ],
+    [
+     "D",
+     "    Data ID:      7000 8770"
+    ],
+    [
+     "D",
+     "    Unk4:         FFFF"
+    ],
+    [
+     "D",
+     "    Next part ID: FFFF"
+    ],
+    [
+     "D",
+     "    Name:      empty.bin"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ]
+   ],
+   "detector": {
+    "platform": "EGOLD_CE",
+    "model": "SYNE",
+    "imei": "",
+    "base": "8388608",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "EGOLD_CE",
+    "list": [
+     {
+      "name": "FFS",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 0,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       },
+       {
+        "addr": 1114112,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       },
+       {
+        "addr": 1179648,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "tree": {
+    "n": "FFS",
+    "p": "/",
+    "a": 16,
+    "t": 0,
+    "d": [
+     {
+      "n": "FFS",
+      "p": "/FFS/",
+      "a": 16,
+      "t": 1104559200,
+      "d": [
+       {
+        "n": "Dir",
+        "p": "FFS/",
+        "a": 16,
+        "t": 1170497106,
+        "d": [],
+        "f": [
+         {
+          "n": "inner.bin",
+          "p": "FFS/Dir/",
+          "a": 0,
+          "t": 312789600,
+          "s": 64,
+          "h": 318426117
+         }
+        ]
+       }
+      ],
+      "f": [
+       {
+        "n": "a.txt",
+        "p": "FFS/",
+        "a": 1,
+        "t": 1107425106,
+        "s": 100,
+        "h": 3676548769
+       },
+       {
+        "n": "parts.bin",
+        "p": "FFS/",
+        "a": 0,
+        "t": 1138961106,
+        "s": 5010,
+        "h": 3490574064
+       },
+       {
+        "n": "name.txt",
+        "p": "FFS/",
+        "a": 6,
+        "t": 312789600,
+        "s": 5,
+        "h": 2935495314
+       },
+       {
+        "n": "empty.bin",
+        "p": "FFS/",
+        "a": 0,
+        "t": 312789600,
+        "s": 0,
+        "h": 2166136261
+       }
+      ]
+     }
+    ],
+    "f": []
+   }
+  },
+  "forced": {
+   "stage": "filesystem",
+   "log": [
+    [
+     "W",
+     "Couldn't detect IMEI"
+    ],
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "EGOLD Base address: 00000000"
+    ],
+    [
+     "D",
+     "Searching partitions from 0x00000000"
+    ],
+    [
+     "D",
+     "Searching pattern: ?? 00 00 00 0? 00 ?? ?? ?? 0? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Found 4095968 matches"
+    ],
+    [
+     "W",
+     "Partitions not found. Trying to use old search algorithm"
+    ],
+    [
+     "D",
+     "Searching pattern: ????FEFE ???????? ???????? FEFE???? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Block: 00100000 FFS 0000 0000 0000"
+    ],
+    [
+     "D",
+     "Block: 00110000 FFS 0001 0000 0000"
+    ],
+    [
+     "D",
+     "Block: 00120000 FFS 0002 0000 0000"
+    ],
+    [
+     "D",
+     "Detected block size: 00010000"
+    ],
+    [
+     "D",
+     "Found 1 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS      3"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS, Blocks 3"
+    ],
+    [
+     "D",
+     "Collecting FFS blocks"
+    ],
+    [
+     "D",
+     "  Block: 00100000, end: 00100000 ===="
+    ]
+   ],
+   "detector": {
+    "platform": "EGOLD_CE",
+    "model": "",
+    "imei": "",
+    "base": "0",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "EGOLD_CE",
+    "list": [
+     {
+      "name": "FFS",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 0,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       },
+       {
+        "addr": 1114112,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       },
+       {
+        "addr": 1179648,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "error": {
+    "type": "FullflashError",
+    "message": "RawData() offset + size > prev. size"
+   }
+  }
+ },
+ "writes": {}
+}

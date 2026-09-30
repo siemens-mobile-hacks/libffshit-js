@@ -1,0 +1,38 @@
+{
+    "name": "@sie-js/libffshit-js",
+    "version": "0.1.0",
+    "description": "Siemens filesystem library: a TypeScript rewrite of libffshit",
+    "repository": {
+        "url": "git+https://github.com/siemens-mobile-hacks/libffshit-js.git"
+    },
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsc -p tsconfig.build.json",
+        "typecheck": "tsc --noEmit",
+        "test": "tsx --test --test-reporter=spec \"tests/**/*.test.ts\"",
+        "build:reference": "node scripts/build-reference.mjs"
+    },
+    "keywords": [],
+    "author": "Siemens Mobile Hackers",
+    "license": "MIT",
+    "engines": {
+        "node": ">=18"
+    },
+    "packageManager": "pnpm@10.12.4",
+    "devDependencies": {
+        "@types/node": "^24.0.10",
+        "tsx": "^4.20.3",
+        "typescript": "^5.8.3"
+    }
+}

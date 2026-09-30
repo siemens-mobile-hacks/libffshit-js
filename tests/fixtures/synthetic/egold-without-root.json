@@ -1,0 +1,557 @@
+{
+ "loads": {
+  "defaults": {
+   "stage": "filesystem",
+   "log": [
+    [
+     "W",
+     "Couldn't detect IMEI"
+    ],
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "EGOLD Base address: 00800000"
+    ],
+    [
+     "D",
+     "Searching partitions from 0x00000000"
+    ],
+    [
+     "D",
+     "Searching pattern: ?? 00 00 00 0? 00 ?? ?? ?? 0? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Found 4161504 matches"
+    ],
+    [
+     "D",
+     "00001000 00801000 02001000: Records count: 00000001, Blocks count: 0001, Segment addr: 02002000, Page addr: 00802000 00002000"
+    ],
+    [
+     "D",
+     "Table:     Page addr: 00802000 -> 00002000, Segment addr: 02002000, Records: "
+    ],
+    [
+     "D",
+     "  Segment addr: 02003000, Page addr: 00803000 -> 00003000"
+    ],
+    [
+     "D",
+     "    FFS    Block addr: 00900000 -> 00100000 WTF: 0000"
+    ],
+    [
+     "D",
+     "Found 1 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS      1"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS, Blocks 1"
+    ],
+    [
+     "D",
+     "Collecting FFS blocks"
+    ],
+    [
+     "D",
+     "  Block: 00100000, end: 00100000 ===="
+    ],
+    [
+     "D",
+     "Collecting FFS files"
+    ]
+   ],
+   "detector": {
+    "platform": "EGOLD_CE",
+    "model": "SYNE",
+    "imei": "",
+    "base": "8388608",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "EGOLD_CE",
+    "list": [
+     {
+      "name": "FFS",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 0,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "error": {
+    "type": "FilesystemError",
+    "message": "root block not found. Empty filesystem? FFS"
+   }
+  },
+  "skipping": {
+   "stage": "filesystem",
+   "log": [
+    [
+     "W",
+     "Couldn't detect IMEI"
+    ],
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "EGOLD Base address: 00800000"
+    ],
+    [
+     "D",
+     "Searching partitions from 0x00000000"
+    ],
+    [
+     "D",
+     "Searching pattern: ?? 00 00 00 0? 00 ?? ?? ?? 0? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Found 4161504 matches"
+    ],
+    [
+     "D",
+     "00001000 00801000 02001000: Records count: 00000001, Blocks count: 0001, Segment addr: 02002000, Page addr: 00802000 00002000"
+    ],
+    [
+     "D",
+     "Table:     Page addr: 00802000 -> 00002000, Segment addr: 02002000, Records: "
+    ],
+    [
+     "D",
+     "  Segment addr: 02003000, Page addr: 00803000 -> 00003000"
+    ],
+    [
+     "D",
+     "    FFS    Block addr: 00900000 -> 00100000 WTF: 0000"
+    ],
+    [
+     "D",
+     "Found 1 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS      1"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS, Blocks 1"
+    ],
+    [
+     "D",
+     "Collecting FFS blocks"
+    ],
+    [
+     "D",
+     "  Block: 00100000, end: 00100000 ===="
+    ],
+    [
+     "D",
+     "Collecting FFS files"
+    ]
+   ],
+   "detector": {
+    "platform": "EGOLD_CE",
+    "model": "SYNE",
+    "imei": "",
+    "base": "8388608",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "EGOLD_CE",
+    "list": [
+     {
+      "name": "FFS",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 0,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "error": {
+    "type": "FilesystemError",
+    "message": "root block not found. Empty filesystem? FFS"
+   }
+  },
+  "old search": {
+   "stage": "filesystem",
+   "log": [
+    [
+     "W",
+     "Couldn't detect IMEI"
+    ],
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "Searching pattern: ????FEFE ???????? ???????? FEFE???? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Block: 00100000 FFS 0000 0000 0000"
+    ],
+    [
+     "D",
+     "Detected block size: 00010000"
+    ],
+    [
+     "D",
+     "Found 1 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS      1"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS, Blocks 1"
+    ],
+    [
+     "D",
+     "Collecting FFS blocks"
+    ],
+    [
+     "D",
+     "  Block: 00100000, end: 00100000 ===="
+    ],
+    [
+     "D",
+     "Collecting FFS files"
+    ]
+   ],
+   "detector": {
+    "platform": "EGOLD_CE",
+    "model": "SYNE",
+    "imei": "",
+    "base": "8388608",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "EGOLD_CE",
+    "list": [
+     {
+      "name": "FFS",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 0,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "error": {
+    "type": "FilesystemError",
+    "message": "root block not found. Empty filesystem? FFS"
+   }
+  },
+  "verbosely": {
+   "stage": "filesystem",
+   "log": [
+    [
+     "W",
+     "Couldn't detect IMEI"
+    ],
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "EGOLD Base address: 00800000"
+    ],
+    [
+     "D",
+     "Searching partitions from 0x00000000"
+    ],
+    [
+     "D",
+     "Searching pattern: ?? 00 00 00 0? 00 ?? ?? ?? 0? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Found 4161504 matches"
+    ],
+    [
+     "D",
+     "00001000 00801000 02001000: Records count: 00000001, Blocks count: 0001, Segment addr: 02002000, Page addr: 00802000 00002000"
+    ],
+    [
+     "D",
+     "Table:     Page addr: 00802000 -> 00002000, Segment addr: 02002000, Records: "
+    ],
+    [
+     "D",
+     "  Segment addr: 02003000, Page addr: 00803000 -> 00003000"
+    ],
+    [
+     "D",
+     "    FFS    Block addr: 00900000 -> 00100000 WTF: 0000"
+    ],
+    [
+     "D",
+     "Found 1 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS      1"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS, Blocks 1"
+    ],
+    [
+     "D",
+     "Collecting FFS blocks"
+    ],
+    [
+     "D",
+     "  Block: 00100000, end: 00100000 ===="
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFF4 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     000A"
+    ],
+    [
+     "D",
+     "    Offset:   00900100 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 1771"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFE8 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0016"
+    ],
+    [
+     "D",
+     "    Offset:   0090010C 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 0002"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "Collecting FFS files"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFF4 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     000A"
+    ],
+    [
+     "D",
+     "    Offset:   00900100 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 1771"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ==== Offset: 0010FFE8 ===="
+    ],
+    [
+     "D",
+     "    Marker1:  00FC"
+    ],
+    [
+     "D",
+     "    Size:     0016"
+    ],
+    [
+     "D",
+     "    Offset:   0090010C 00100000"
+    ],
+    [
+     "D",
+     "    Block ID: 0002"
+    ],
+    [
+     "D",
+     "    Marker2:  FC00"
+    ],
+    [
+     "D",
+     "    ID:           0007 7"
+    ],
+    [
+     "D",
+     "    Parent:       0006 6"
+    ],
+    [
+     "D",
+     "    Timestamp:    00000000"
+    ],
+    [
+     "D",
+     "    Attributes:   0000"
+    ],
+    [
+     "D",
+     "    Data ID:      0001 1771"
+    ],
+    [
+     "D",
+     "    Unk4:         FFFF"
+    ],
+    [
+     "D",
+     "    Next part ID: FFFF"
+    ],
+    [
+     "D",
+     "    Name:      a.txt"
+    ]
+   ],
+   "detector": {
+    "platform": "EGOLD_CE",
+    "model": "SYNE",
+    "imei": "",
+    "base": "8388608",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "EGOLD_CE",
+    "list": [
+     {
+      "name": "FFS",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 0,
+        "u2": 0,
+        "u3": 0,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "error": {
+    "type": "FilesystemError",
+    "message": "root block not found. Empty filesystem? FFS"
+   }
+  }
+ },
+ "writes": {}
+}

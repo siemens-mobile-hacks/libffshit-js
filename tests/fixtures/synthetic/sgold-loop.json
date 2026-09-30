@@ -1,0 +1,685 @@
+{
+ "loads": {
+  "dumping the data": {
+   "stage": "done",
+   "log": [
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "Searching partitions from 0x00000000"
+    ],
+    [
+     "D",
+     "Searching pattern: 0050544F A??????? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Pattern find, addr: 00001000"
+    ],
+    [
+     "D",
+     "Table start addr: 00002000"
+    ],
+    [
+     "D",
+     "Header. Name addr: 00003000, Table addr: 00003800, size 00000008, FFS"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00100000, size: 00010000, table: 00003800"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0001, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00110000, size: 00010000, table: 00003808"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0002, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00120000, size: 00010000, table: 00003810"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0003, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00130000, size: 00010000, table: 00003818"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0004, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00140000, size: 00010000, table: 00003820"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0005, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00150000, size: 00010000, table: 00003828"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0006, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00160000, size: 00010000, table: 00003830"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0007, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00170000, size: 00010000, table: 00003838"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0008, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "Found 1 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS      8"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS, Blocks 8"
+    ],
+    [
+     "D",
+     "  Block 00100000 Size: 65536, end: 00110000"
+    ],
+    [
+     "D",
+     "  Block 00110000 Size: 65536, end: 00120000"
+    ],
+    [
+     "D",
+     "    01 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 "
+    ],
+    [
+     "D",
+     "    06 00 06 00 61 20 C5 36 07 00 10 00 FF FF FF FF "
+    ],
+    [
+     "D",
+     "    00 "
+    ],
+    [
+     "D",
+     "    07 26 45 64 83 A2 C1 E0 FF 1E "
+    ],
+    [
+     "D",
+     "    "
+    ],
+    [
+     "D",
+     "    0C 00 0A 00 05 39 A6 3A 0D 00 00 00 FF FF FF FF "
+    ],
+    [
+     "D",
+     "    61 2E 62 69 6E 00 "
+    ],
+    [
+     "D",
+     "    06 00 E8 6A 0C 00 CE B3 FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    0A 00 06 00 83 18 22 38 0B 00 10 00 FF FF FF FF "
+    ],
+    [
+     "D",
+     "    4C 6F 6F 70 00 "
+    ],
+    [
+     "D",
+     "    0A 00 C3 F7 FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "    FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF "
+    ],
+    [
+     "D",
+     "  Block 00120000 Size: 65536, end: 00130000"
+    ],
+    [
+     "D",
+     "  Block 00130000 Size: 65536, end: 00140000"
+    ],
+    [
+     "D",
+     "  Block 00140000 Size: 65536, end: 00150000"
+    ],
+    [
+     "D",
+     "  Block 00150000 Size: 65536, end: 00160000"
+    ],
+    [
+     "D",
+     "  Block 00160000 Size: 65536, end: 00170000"
+    ],
+    [
+     "D",
+     "  Block 00170000 Size: 65536, end: 00180000"
+    ],
+    [
+     "W",
+     "Skip. Broken file/directory: Directory id already in list"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ]
+   ],
+   "detector": {
+    "platform": "SGOLD",
+    "model": "SYN",
+    "imei": "490154203237518",
+    "base": "2684354560",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "SGOLD",
+    "list": [
+     {
+      "name": "FFS",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1114112,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1179648,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 3,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1245184,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 4,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1310720,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 5,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1376256,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 6,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1441792,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 7,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1507328,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 8,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "tree": {
+    "n": "FFS",
+    "p": "/",
+    "a": 16,
+    "t": 0,
+    "d": [
+     {
+      "n": "FFS",
+      "p": "/FFS/",
+      "a": 16,
+      "t": 1181034182,
+      "d": [
+       {
+        "n": "Loop",
+        "p": "FFS/",
+        "a": 16,
+        "t": 1199264646,
+        "d": [
+         {
+          "n": "",
+          "p": "FFS/Loop/",
+          "a": 16,
+          "t": 1181034182,
+          "d": [],
+          "f": []
+         }
+        ],
+        "f": [
+         {
+          "n": "a.bin",
+          "p": "FFS/Loop/",
+          "a": 0,
+          "t": 1241611690,
+          "s": 10,
+          "h": 795881280
+         }
+        ]
+       }
+      ],
+      "f": []
+     }
+    ],
+    "f": []
+   }
+  },
+  "skipping": {
+   "stage": "done",
+   "log": [
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "Searching partitions from 0x00000000"
+    ],
+    [
+     "D",
+     "Searching pattern: 0050544F A??????? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Pattern find, addr: 00001000"
+    ],
+    [
+     "D",
+     "Table start addr: 00002000"
+    ],
+    [
+     "D",
+     "Header. Name addr: 00003000, Table addr: 00003800, size 00000008, FFS"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00100000, size: 00010000, table: 00003800"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0001, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00110000, size: 00010000, table: 00003808"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0002, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00120000, size: 00010000, table: 00003810"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0003, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00130000, size: 00010000, table: 00003818"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0004, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00140000, size: 00010000, table: 00003820"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0005, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00150000, size: 00010000, table: 00003828"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0006, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00160000, size: 00010000, table: 00003830"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0007, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS, Addr: 00170000, size: 00010000, table: 00003838"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS, Unk1: 0008, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "Found 1 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS      8"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS, Blocks 8"
+    ],
+    [
+     "D",
+     "  Block 00100000 Size: 65536, end: 00110000"
+    ],
+    [
+     "D",
+     "  Block 00110000 Size: 65536, end: 00120000"
+    ],
+    [
+     "D",
+     "  Block 00120000 Size: 65536, end: 00130000"
+    ],
+    [
+     "D",
+     "  Block 00130000 Size: 65536, end: 00140000"
+    ],
+    [
+     "D",
+     "  Block 00140000 Size: 65536, end: 00150000"
+    ],
+    [
+     "D",
+     "  Block 00150000 Size: 65536, end: 00160000"
+    ],
+    [
+     "D",
+     "  Block 00160000 Size: 65536, end: 00170000"
+    ],
+    [
+     "D",
+     "  Block 00170000 Size: 65536, end: 00180000"
+    ],
+    [
+     "W",
+     "Skip. Broken file/directory: Directory id already in list"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ]
+   ],
+   "detector": {
+    "platform": "SGOLD",
+    "model": "SYN",
+    "imei": "490154203237518",
+    "base": "2684354560",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "SGOLD",
+    "list": [
+     {
+      "name": "FFS",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1114112,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1179648,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 3,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1245184,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 4,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1310720,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 5,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1376256,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 6,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1441792,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 7,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1507328,
+        "size": 65536,
+        "name": "4646530000000000",
+        "u1": 8,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "tree": {
+    "n": "FFS",
+    "p": "/",
+    "a": 16,
+    "t": 0,
+    "d": [
+     {
+      "n": "FFS",
+      "p": "/FFS/",
+      "a": 16,
+      "t": 1181034182,
+      "d": [
+       {
+        "n": "Loop",
+        "p": "FFS/",
+        "a": 16,
+        "t": 1199264646,
+        "d": [
+         {
+          "n": "",
+          "p": "FFS/Loop/",
+          "a": 16,
+          "t": 1181034182,
+          "d": [],
+          "f": []
+         }
+        ],
+        "f": [
+         {
+          "n": "a.bin",
+          "p": "FFS/Loop/",
+          "a": 0,
+          "t": 1241611690,
+          "s": 10,
+          "h": 795881280
+         }
+        ]
+       }
+      ],
+      "f": []
+     }
+    ],
+    "f": []
+   }
+  }
+ },
+ "writes": {}
+}

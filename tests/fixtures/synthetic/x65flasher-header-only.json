@@ -1,0 +1,18 @@
+{
+ "loads": {
+  "defaults": {
+   "stage": "fullflash",
+   "log": [
+    [
+     "W",
+     "x65flasher detected"
+    ]
+   ],
+   "error": {
+    "type": "FullflashError",
+    "message": "RawData() form prev. with offset, size. data_size == 0"
+   }
+  }
+ },
+ "writes": {}
+}

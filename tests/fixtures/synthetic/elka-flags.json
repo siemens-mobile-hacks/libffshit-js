@@ -1,0 +1,1141 @@
+{
+ "loads": {
+  "defaults": {
+   "stage": "filesystem",
+   "log": [
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "Searching partitions from 0x00000000"
+    ],
+    [
+     "D",
+     "Searching pattern: 0050544F A??????? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Pattern find, addr: 00001000"
+    ],
+    [
+     "D",
+     "Table start addr: 00002000"
+    ],
+    [
+     "D",
+     "Header. Name addr: 00003000, Table addr: 00003800, size 00000006, FFS_0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00100000, size: 00020000, table: 00003800"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0001, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00120000, size: 00020000, table: 00003808"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0002, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00140000, size: 00020000, table: 00003810"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0003, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00160000, size: 00020000, table: 00003818"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0004, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00180000, size: 00020000, table: 00003820"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0005, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 001A0000, size: 00020000, table: 00003828"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0006, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "Header. Name addr: 00003010, Table addr: 00003900, size 00000003, FFS_C"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_C, Addr: 001C0000, size: 00020000, table: 00003900"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_C, Unk1: 0001, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_C, Addr: 001E0000, size: 00020000, table: 00003908"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_C, Unk1: 0002, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_C, Addr: 00200000, size: 00020000, table: 00003910"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_C, Unk1: 0003, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "Found 2 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS_0    6"
+    ],
+    [
+     "D",
+     "  FFS_C    3"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS_0, Blocks 6"
+    ],
+    [
+     "D",
+     "  FFS_0 Block 00100000 00000001 00000000 fffffff0 Size: 131072"
+    ],
+    [
+     "D",
+     "FFS_0 0011FFC0: Flags: FFFFFFFF ID: FFFFFFFF Size: FFFFFFFF Offset: FFFFFFFF - End"
+    ],
+    [
+     "D",
+     "  FFS_0 Block 00120000 00000002 00000000 fffffff0 Size: 131072"
+    ],
+    [
+     "D",
+     "FFS_0 T  0013FFC0: Flags: FFFFFFC0 ID: 00000000 Size: 00000010 Offset: 00000000 - 0040"
+    ],
+    [
+     "D",
+     "FFS_0 T  0013FF80: Flags: FFFFFF00 ID: 0000000D Size: 00000064 Offset: 00000000 - 0100"
+    ],
+    [
+     "D",
+     "FFS_0 T  0013FE80: Flags: FFFFFFC0 ID: 0000000C Size: 00000032 Offset: 00000000 - 00A0"
+    ],
+    [
+     "D",
+     "FFS_0 O  0013FDE0: Flags: FFFFFFFE ID: 0000000F Size: 00000400 Offset: 00000000 - 0020"
+    ]
+   ],
+   "detector": {
+    "platform": "SGOLD2_ELKA",
+    "model": "SYN",
+    "imei": "490154203237518",
+    "base": "2684354560",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "SGOLD2_ELKA",
+    "list": [
+     {
+      "name": "FFS_0",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1179648,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1310720,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 3,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1441792,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 4,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1572864,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 5,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1703936,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 6,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       }
+      ]
+     },
+     {
+      "name": "FFS_C",
+      "blocks": [
+       {
+        "addr": 1835008,
+        "size": 131072,
+        "name": "4646535f43000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1966080,
+        "size": 131072,
+        "name": "4646535f43000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 2097152,
+        "size": 131072,
+        "name": "4646535f43000000",
+        "u1": 3,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "error": {
+    "type": "FilesystemError",
+    "message": "fs_block.header.flags == FFFFFFFE"
+   }
+  },
+  "skipping": {
+   "stage": "filesystem",
+   "log": [
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "Searching partitions from 0x00000000"
+    ],
+    [
+     "D",
+     "Searching pattern: 0050544F A??????? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Pattern find, addr: 00001000"
+    ],
+    [
+     "D",
+     "Table start addr: 00002000"
+    ],
+    [
+     "D",
+     "Header. Name addr: 00003000, Table addr: 00003800, size 00000006, FFS_0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00100000, size: 00020000, table: 00003800"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0001, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00120000, size: 00020000, table: 00003808"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0002, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00140000, size: 00020000, table: 00003810"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0003, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00160000, size: 00020000, table: 00003818"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0004, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00180000, size: 00020000, table: 00003820"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0005, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 001A0000, size: 00020000, table: 00003828"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0006, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "Header. Name addr: 00003010, Table addr: 00003900, size 00000003, FFS_C"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_C, Addr: 001C0000, size: 00020000, table: 00003900"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_C, Unk1: 0001, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_C, Addr: 001E0000, size: 00020000, table: 00003908"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_C, Unk1: 0002, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_C, Addr: 00200000, size: 00020000, table: 00003910"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_C, Unk1: 0003, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "Found 2 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS_0    6"
+    ],
+    [
+     "D",
+     "  FFS_C    3"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS_0, Blocks 6"
+    ],
+    [
+     "D",
+     "  FFS_0 Block 00100000 00000001 00000000 fffffff0 Size: 131072"
+    ],
+    [
+     "D",
+     "FFS_0 0011FFC0: Flags: FFFFFFFF ID: FFFFFFFF Size: FFFFFFFF Offset: FFFFFFFF - End"
+    ],
+    [
+     "D",
+     "  FFS_0 Block 00120000 00000002 00000000 fffffff0 Size: 131072"
+    ],
+    [
+     "D",
+     "FFS_0 T  0013FFC0: Flags: FFFFFFC0 ID: 00000000 Size: 00000010 Offset: 00000000 - 0040"
+    ],
+    [
+     "D",
+     "FFS_0 T  0013FF80: Flags: FFFFFF00 ID: 0000000D Size: 00000064 Offset: 00000000 - 0100"
+    ],
+    [
+     "D",
+     "FFS_0 T  0013FE80: Flags: FFFFFFC0 ID: 0000000C Size: 00000032 Offset: 00000000 - 00A0"
+    ],
+    [
+     "D",
+     "FFS_0 O  0013FDE0: Flags: FFFFFFFE ID: 0000000F Size: 00000400 Offset: 00000000 - 0020"
+    ]
+   ],
+   "detector": {
+    "platform": "SGOLD2_ELKA",
+    "model": "SYN",
+    "imei": "490154203237518",
+    "base": "2684354560",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "SGOLD2_ELKA",
+    "list": [
+     {
+      "name": "FFS_0",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1179648,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1310720,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 3,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1441792,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 4,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1572864,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 5,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1703936,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 6,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       }
+      ]
+     },
+     {
+      "name": "FFS_C",
+      "blocks": [
+       {
+        "addr": 1835008,
+        "size": 131072,
+        "name": "4646535f43000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1966080,
+        "size": 131072,
+        "name": "4646535f43000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 2097152,
+        "size": 131072,
+        "name": "4646535f43000000",
+        "u1": 3,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "error": {
+    "type": "FilesystemError",
+    "message": "fs_block.header.flags == FFFFFFFE"
+   }
+  },
+  "old search": {
+   "stage": "done",
+   "log": [
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "Found 0 FFS partitions"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ]
+   ],
+   "detector": {
+    "platform": "SGOLD2_ELKA",
+    "model": "SYN",
+    "imei": "490154203237518",
+    "base": "2684354560",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "SGOLD2_ELKA",
+    "list": []
+   },
+   "tree": {
+    "n": "FFS",
+    "p": "/",
+    "a": 16,
+    "t": 0,
+    "d": [],
+    "f": []
+   }
+  },
+  "verbosely": {
+   "stage": "filesystem",
+   "log": [
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "Searching partitions from 0x00000000"
+    ],
+    [
+     "D",
+     "Searching pattern: 0050544F A??????? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Pattern find, addr: 00001000"
+    ],
+    [
+     "D",
+     "Table start addr: 00002000"
+    ],
+    [
+     "D",
+     "Header. Name addr: 00003000, Table addr: 00003800, size 00000006, FFS_0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00100000, size: 00020000, table: 00003800"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0001, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00120000, size: 00020000, table: 00003808"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0002, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00140000, size: 00020000, table: 00003810"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0003, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00160000, size: 00020000, table: 00003818"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0004, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00180000, size: 00020000, table: 00003820"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0005, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 001A0000, size: 00020000, table: 00003828"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0006, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "Header. Name addr: 00003010, Table addr: 00003900, size 00000003, FFS_C"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_C, Addr: 001C0000, size: 00020000, table: 00003900"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_C, Unk1: 0001, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_C, Addr: 001E0000, size: 00020000, table: 00003908"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_C, Unk1: 0002, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_C, Addr: 00200000, size: 00020000, table: 00003910"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_C, Unk1: 0003, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "Found 2 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS_0    6"
+    ],
+    [
+     "D",
+     "  FFS_C    3"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS_0, Blocks 6"
+    ],
+    [
+     "D",
+     "  FFS_0 Block 00100000 00000001 00000000 fffffff0 Size: 131072"
+    ],
+    [
+     "D",
+     "FFS_0 0011FFC0: Flags: FFFFFFFF ID: FFFFFFFF Size: FFFFFFFF Offset: FFFFFFFF - End"
+    ],
+    [
+     "D",
+     "  FFS_0 Block 00120000 00000002 00000000 fffffff0 Size: 131072"
+    ],
+    [
+     "D",
+     "FFS_0 T  0013FFC0: Flags: FFFFFFC0 ID: 00000000 Size: 00000010 Offset: 00000000 - 0040"
+    ],
+    [
+     "D",
+     "FFS_0 T  0013FF80: Flags: FFFFFF00 ID: 0000000D Size: 00000064 Offset: 00000000 - 0100"
+    ],
+    [
+     "D",
+     "FFS_0 T  0013FE80: Flags: FFFFFFC0 ID: 0000000C Size: 00000032 Offset: 00000000 - 00A0"
+    ],
+    [
+     "D",
+     "FFS_0 O  0013FDE0: Flags: FFFFFFFE ID: 0000000F Size: 00000400 Offset: 00000000 - 0020"
+    ]
+   ],
+   "detector": {
+    "platform": "SGOLD2_ELKA",
+    "model": "SYN",
+    "imei": "490154203237518",
+    "base": "2684354560",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "SGOLD2_ELKA",
+    "list": [
+     {
+      "name": "FFS_0",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1179648,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1310720,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 3,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1441792,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 4,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1572864,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 5,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1703936,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 6,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       }
+      ]
+     },
+     {
+      "name": "FFS_C",
+      "blocks": [
+       {
+        "addr": 1835008,
+        "size": 131072,
+        "name": "4646535f43000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1966080,
+        "size": 131072,
+        "name": "4646535f43000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 2097152,
+        "size": 131072,
+        "name": "4646535f43000000",
+        "u1": 3,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "error": {
+    "type": "FilesystemError",
+    "message": "fs_block.header.flags == FFFFFFFE"
+   }
+  },
+  "dumping the data": {
+   "stage": "filesystem",
+   "log": [
+    [
+     "I",
+     "Loading partitions"
+    ],
+    [
+     "D",
+     "Searching partitions from 0x00000000"
+    ],
+    [
+     "D",
+     "Searching pattern: 0050544F A??????? "
+    ],
+    [
+     "D",
+     "Search end. Time: # ms"
+    ],
+    [
+     "D",
+     "Pattern find, addr: 00001000"
+    ],
+    [
+     "D",
+     "Table start addr: 00002000"
+    ],
+    [
+     "D",
+     "Header. Name addr: 00003000, Table addr: 00003800, size 00000006, FFS_0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00100000, size: 00020000, table: 00003800"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0001, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00120000, size: 00020000, table: 00003808"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0002, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00140000, size: 00020000, table: 00003810"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0003, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00160000, size: 00020000, table: 00003818"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0004, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 00180000, size: 00020000, table: 00003820"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0005, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_0, Addr: 001A0000, size: 00020000, table: 00003828"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_0, Unk1: 0006, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "Header. Name addr: 00003010, Table addr: 00003900, size 00000003, FFS_C"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_C, Addr: 001C0000, size: 00020000, table: 00003900"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_C, Unk1: 0001, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_C, Addr: 001E0000, size: 00020000, table: 00003908"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_C, Unk1: 0002, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "  Block:        Name: FFS_C, Addr: 00200000, size: 00020000, table: 00003910"
+    ],
+    [
+     "D",
+     "  Block header: Name: FFS_C, Unk1: 0003, Unk2: 0000, Unk3: FFFFFFF0"
+    ],
+    [
+     "D",
+     "Found 2 FFS partitions"
+    ],
+    [
+     "D",
+     "  FFS_0    6"
+    ],
+    [
+     "D",
+     "  FFS_C    3"
+    ],
+    [
+     "I",
+     "Done in # ms"
+    ],
+    [
+     "I",
+     "Loading filesystem"
+    ],
+    [
+     "D",
+     "Partition: FFS_0, Blocks 6"
+    ],
+    [
+     "D",
+     "  FFS_0 Block 00100000 00000001 00000000 fffffff0 Size: 131072"
+    ],
+    [
+     "D",
+     "FFS_0 0011FFC0: Flags: FFFFFFFF ID: FFFFFFFF Size: FFFFFFFF Offset: FFFFFFFF - End"
+    ],
+    [
+     "D",
+     "  FFS_0 Block 00120000 00000002 00000000 fffffff0 Size: 131072"
+    ],
+    [
+     "D",
+     "FFS_0 T  0013FFC0: Flags: FFFFFFC0 ID: 00000000 Size: 00000010 Offset: 00000000 - 0040"
+    ],
+    [
+     "D",
+     "    01 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 "
+    ],
+    [
+     "D",
+     "FFS_0 T  0013FF80: Flags: FFFFFF00 ID: 0000000D Size: 00000064 Offset: 00000000 - 0100"
+    ],
+    [
+     "D",
+     "FFS_0 T  0013FE80: Flags: FFFFFFC0 ID: 0000000C Size: 00000032 Offset: 00000000 - 00A0"
+    ],
+    [
+     "D",
+     "    0C 00 00 00 FF FF FF FF FF FF FF FF 0A 00 00 00 "
+    ],
+    [
+     "D",
+     "    64 00 00 00 05 39 A6 3A 00 00 0B 00 64 00 65 00 "
+    ],
+    [
+     "D",
+     "    6C 00 65 00 74 00 65 00 64 00 2E 00 62 00 69 00 "
+    ],
+    [
+     "D",
+     "    6E 00 "
+    ],
+    [
+     "D",
+     "FFS_0 O  0013FDE0: Flags: FFFFFFFE ID: 0000000F Size: 00000400 Offset: 00000000 - 0020"
+    ]
+   ],
+   "detector": {
+    "platform": "SGOLD2_ELKA",
+    "model": "SYN",
+    "imei": "490154203237518",
+    "base": "2684354560",
+    "sl75": false
+   },
+   "partitions": {
+    "fs_platform": "SGOLD2_ELKA",
+    "list": [
+     {
+      "name": "FFS_0",
+      "blocks": [
+       {
+        "addr": 1048576,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1179648,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1310720,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 3,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1441792,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 4,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1572864,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 5,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1703936,
+        "size": 131072,
+        "name": "4646535f30000000",
+        "u1": 6,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       }
+      ]
+     },
+     {
+      "name": "FFS_C",
+      "blocks": [
+       {
+        "addr": 1835008,
+        "size": 131072,
+        "name": "4646535f43000000",
+        "u1": 1,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 1966080,
+        "size": 131072,
+        "name": "4646535f43000000",
+        "u1": 2,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       },
+       {
+        "addr": 2097152,
+        "size": 131072,
+        "name": "4646535f43000000",
+        "u1": 3,
+        "u2": 0,
+        "u3": 4294967280,
+        "u4": 0
+       }
+      ]
+     }
+    ]
+   },
+   "error": {
+    "type": "FilesystemError",
+    "message": "fs_block.header.flags == FFFFFFFE"
+   }
+  }
+ },
+ "writes": {}
+}

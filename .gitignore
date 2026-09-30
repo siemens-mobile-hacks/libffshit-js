@@ -1,0 +1,6 @@
+dist/
+node_modules/
+tests/reference/build/
+tests/fullflashes
+.idea/
+.vscode/
