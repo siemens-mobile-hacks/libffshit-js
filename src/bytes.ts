@@ -69,6 +69,6 @@ export function isPrintable(bytes: Uint8Array): boolean {
     return bytes.every((byte) => byte >= 0x20 && byte <= 0x7E);
 }
 
-export function hex(value: number, width = 8): string {
-    return value.toString(16).toUpperCase().padStart(width, "0");
+export function hex(value: number): string {
+    return value.toString(16).toUpperCase().padStart(8, "0");
 }

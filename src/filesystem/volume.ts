@@ -5,7 +5,7 @@ import { isDirectory, WritableFormat, type Format, type Header, type Part } from
 import type { Records } from "./records.js";
 
 // Where a directory lists an entry: the id of its header, in a record of the directory's entries
-export interface EntryRef {
+interface EntryRef {
     record: number;
     offset: number;
     id: number;
@@ -18,7 +18,7 @@ export interface Child {
 }
 
 // The records a header's data is in
-export interface Chain {
+interface Chain {
     data: number[];
     parts: number[];
     // The header or part that ends it, which a directory grows after
@@ -63,16 +63,15 @@ export class Volume implements Filesystem {
         private readonly records: Records,
         private readonly format: Format,
         // Why it cannot be written to
-        readonly readOnly?: string,
+        private readonly readOnly?: string,
     ) {
     }
 
-    // Undefined when there is none. Throws when it is too short.
     root(): Header | undefined {
         return this.format.header(this.format.rootId);
     }
 
-    chain(header: Header): Chain {
+    private chain(header: Header): Chain {
         const none              = this.format.none;
         const chain: Chain      = { data: [], parts: [], last: header.id };
         const visited           = new Set<number>();
@@ -127,7 +126,7 @@ export class Volume implements Filesystem {
         return chain;
     }
 
-    dataSize(chain: Chain): number {
+    private dataSize(chain: Chain): number {
         return chain.data.reduce((size, id) => size + this.records.size(id), 0);
     }
 
@@ -169,7 +168,6 @@ export class Volume implements Filesystem {
         return listing;
     }
 
-    // The entries of a directory whose headers are there. What is not is reported.
     children(dir: Header, report: (problem: string) => void = () => {}): Child[] {
         const listing   = this.list(dir);
         const children: Child[] = [];
@@ -205,7 +203,6 @@ export class Volume implements Filesystem {
         return children;
     }
 
-    // As the firmware finds names: without regard to case, as far as it folds it
     find(dir: Header, name: string): Child | undefined {
         const key = this.format.fold(name);
 
@@ -228,7 +225,7 @@ export class Volume implements Filesystem {
     // Writing
 
     // Checks that the volume can be written to, the first time
-    prepareWrite(): WritableFormat {
+    private prepareWrite(): WritableFormat {
         const format = this.format;
 
         if (this.readOnly !== undefined || !(format instanceof WritableFormat)) {

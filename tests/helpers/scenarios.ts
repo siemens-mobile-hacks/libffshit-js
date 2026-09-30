@@ -1,10 +1,10 @@
 // Made-up fullflashes of every platform, with the files and the breakage the library has to cope with
+import { concat } from "../../src/bytes.js";
 import { pattern } from "./data.js";
 import { fatRecords, fatTime, filesystemRecords, layoutBlocks, patchFitEntry, RecordsBuilder, removeEgoldTable, type FatOptions, type FsFile, type ImageLayout } from "./synthetic.js";
 
 export const bytes = (...values: number[]) => Uint8Array.from(values);
 export const utf16 = (str: string) => Uint8Array.from(Buffer.from(str, "utf16le"));
-const concat = (...parts: Uint8Array[]) => Uint8Array.from(Buffer.concat(parts));
 
 // Files of the sizes around the chunk size, names of every kind, attributes and timestamps
 export function sampleTree(sgold: boolean): FsFile[] {
@@ -39,11 +39,11 @@ export function sampleTree(sgold: boolean): FsFile[] {
             { name: bytes(0x41, 0x00, 0x42), data: pattern(6, 13) },
             { name: bytes(0x00, 0xD8, 0x41, 0x00), data: pattern(7, 14) },
             { name: utf16("中中中"), data: pattern(8, 15) },
-            { name: concat(utf16("name"), bytes(0, 0), utf16("after")), data: pattern(10, 17) },
+            { name: concat([utf16("name"), bytes(0, 0), utf16("after")]), data: pattern(10, 17) },
             { name: utf16("﻿bom.txt"), data: pattern(11, 19) },
             // As the firmware's data exchange leaves them: two names, which it hashes apart
             { name: "inbox.lst", data: new Uint8Array(0) },
-            { name: concat(utf16("inbox.lst"), bytes(0, 0)), data: pattern(426, 18) },
+            { name: concat([utf16("inbox.lst"), bytes(0, 0)]), data: pattern(426, 18) },
         ]),
     ];
 }
@@ -235,7 +235,7 @@ export const SCENARIOS = {
         { name: "root again", children: [], headerId: 1 },
         { name: "nowhere", children: [], headerId: 0x800 },
     ]),
-    "x65flasher": () => concat(Buffer.from("FBK\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D"), recordImage(SGOLD_LAYOUT, { FFS: { files: sampleTree(true).slice(0, 6) } })),
+    "x65flasher": () => concat([Buffer.from("FBK\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D"), recordImage(SGOLD_LAYOUT, { FFS: { files: sampleTree(true).slice(0, 6) } })]),
 } satisfies Record<string, () => Uint8Array>;
 
 export type Scenario = keyof typeof SCENARIOS;

@@ -2,6 +2,7 @@
 // table the search finds, formatted blocks, and filesystems with what the loaders have to cope with.
 // They are small, and not the phones' firmware, so they can be part of the repository's tests.
 
+import { concat, le16, le32 } from "../../src/bytes.js";
 import { encodeName } from "../../src/filesystem/codepage.js";
 import { nameHash7bit, nameHash8bit, nameHashUtf16 } from "../../src/filesystem/hash.js";
 import { Records } from "../../src/filesystem/records.js";
@@ -20,18 +21,6 @@ function setU32(data: Uint8Array, offset: number, value: number): void {
 
 function setString(data: Uint8Array, offset: number, str: string): void {
     data.set(Buffer.from(str, "latin1"), offset);
-}
-
-function concat(...parts: Uint8Array[]): Uint8Array {
-    return Uint8Array.from(Buffer.concat(parts));
-}
-
-function u16(value: number): Uint8Array {
-    return Uint8Array.of(value & 0xFF, (value >>> 8) & 0xFF);
-}
-
-function u32(value: number): Uint8Array {
-    return Uint8Array.of(value & 0xFF, (value >>> 8) & 0xFF, (value >>> 16) & 0xFF, (value >>> 24) & 0xFF);
 }
 
 export function fatTime(year: number, month: number, day: number, hour: number, minute: number, second: number): number {
@@ -510,7 +499,7 @@ export function fatRecords(root: FsFile[], options: FatOptions = {}): Map<number
                     const chain = allocate(Math.max(1, Math.ceil(entriesOf(file.children) * 32 / clusterBytes)));
 
                     first = chain[0];
-                    store(chain, concat(...directory(file.children, first, cluster)));
+                    store(chain, concat(directory(file.children, first, cluster)));
                 }
             } else if (file.data?.length) {
                 const chain = allocate(Math.ceil(file.data.length / clusterBytes));
@@ -536,7 +525,7 @@ export function fatRecords(root: FsFile[], options: FatOptions = {}): Map<number
 
     // The volume label, and a deleted file's entry
     const deleted = entry(Buffer.from("\xE5ONE    BIN", "latin1"), 0, 0);
-    const rootDir = concat(entry(Buffer.from("SANVOL     ", "latin1"), 0x08, 0), deleted, ...directory(root, 0, 0));
+    const rootDir = concat([entry(Buffer.from("SANVOL     ", "latin1"), 0x08, 0), deleted, ...directory(root, 0, 0)]);
 
     for (let i = 0; i * 512 < rootDir.length; ++i) {
         sector(rootStart + i).set(rootDir.subarray(i * 512, (i + 1) * 512));
@@ -636,18 +625,18 @@ export function filesystemRecords(platform: Platform, root: FsFile[], options: F
 
     const header = (id: number, parentId: number, dataId: number, nextPart: number, size: number, fat: number, attributes: number, name: Uint8Array): Uint8Array => {
         if (sgold) {
-            return concat(u16(id), u16(parentId), u32(fat), u16(dataId), u32((0xFFFF0000 | attributes) >>> 0), u16(nextPart), padding, name, Uint8Array.of(0));
+            return concat([le16(id), le16(parentId), le32(fat), le16(dataId), le32((0xFFFF0000 | attributes) >>> 0), le16(nextPart), padding, name, Uint8Array.of(0)]);
         }
 
-        return concat(u32(id), u32(0xFFFFFFFF), u32(nextPart), u32(parentId), u32(size), u32(fat), u16(attributes), u16(name.length >> 1), name);
+        return concat([le32(id), le32(0xFFFFFFFF), le32(nextPart), le32(parentId), le32(size), le32(fat), le16(attributes), le16(name.length >> 1), name]);
     };
 
     const part = (id: number, dataId: number, prev: number, next: number, owner: { parentId: number, fat: number, attributes: number }): Uint8Array => {
         if (sgold) {
-            return concat(u16(id), u16(owner.parentId), u32(owner.fat), u16(dataId), u16(owner.attributes), u16(prev), u16(next), padding);
+            return concat([le16(id), le16(owner.parentId), le32(owner.fat), le16(dataId), le16(owner.attributes), le16(prev), le16(next), padding]);
         }
 
-        return concat(u32(id), u32(prev), u32(next));
+        return concat([le32(id), le32(prev), le32(next)]);
     };
 
     // Data in pieces: the first under the data id, the others under parts
@@ -678,7 +667,7 @@ export function filesystemRecords(platform: Platform, root: FsFile[], options: F
             const stored  = storedName(child.name);
             const hash    = egold ? nameHash7bit(stored) : sgold ? nameHash8bit(stored) : nameHashUtf16(String.fromCharCode(...Array.from({ length: stored.length >> 1 }, (_, i) => stored[i * 2] | (stored[i * 2 + 1] << 8))));
 
-            entries.push(hashless ? u16(childId) : sgold ? concat(u16(childId), u16(hash)) : concat(u32(childId), u32((0xFFFF0000 | hash) >>> 0)));
+            entries.push(hashless ? le16(childId) : sgold ? concat([le16(childId), le16(hash)]) : concat([le32(childId), le32((0xFFFF0000 | hash) >>> 0)]));
 
             if (child.children) {
                 directory(childId, id, child.children, child.fat ?? fatTime(2008, 1, 2, 3, 4, 6), 0x10 | (child.attributes ?? 0), stored);
@@ -710,13 +699,13 @@ export function filesystemRecords(platform: Platform, root: FsFile[], options: F
 
     // The configuration record: the chunk size, and EGOLD's the other sizes as the phones have them
     if (hashless) {
-        records.set(0, concat(u16(0x100), u16(chunk), u16(0x20), u16(options.headerSize ?? 16), u16(0x3C)));
+        records.set(0, concat([le16(0x100), le16(chunk), le16(0x20), le16(options.headerSize ?? 16), le16(0x3C)]));
         records.set(1, new Uint8Array(0x3C).fill(0xFF));
     } else if (egold) {
-        records.set(0, concat(u16(0x200), u16(chunk), u16(0x20), u16(0x80), u16(options.headerSize ?? 16), u16(0x3C), u16(0x80)));
+        records.set(0, concat([le16(0x200), le16(chunk), le16(0x20), le16(0x80), le16(options.headerSize ?? 16), le16(0x3C), le16(0x80)]));
         records.set(1, new Uint8Array(0x3C).fill(0xFF));
     } else {
-        records.set(0, sgold ? concat(u16(1), u16(chunk), new Uint8Array(12)) : concat(u32(1), u32(chunk), new Uint8Array(8)));
+        records.set(0, sgold ? concat([le16(1), le16(chunk), new Uint8Array(12)]) : concat([le32(1), le32(chunk), new Uint8Array(8)]));
     }
 
     directory(rootId, rootId, root, options.rootFat ?? fatTime(2007, 6, 5, 4, 3, 2), 0x10, options.rootName ?? new Uint8Array(0));

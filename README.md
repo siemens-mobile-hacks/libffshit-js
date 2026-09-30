@@ -116,8 +116,9 @@ else the one in `PATH`, and it needs `--headless`. Without it the tests skip the
 The phones boot one at a time. Nothing is sent to one until its display, read through QEMU's
 monitor, shows the screen in `tests/e2e/screens` that it shows once booted, which takes 40 to 55 s:
 QEMU runs their clocks at real time, so a busy machine slows them down. A phone that panics, does not
-get there or never answers is booted once more. The emulated SGOLD phones drop serial data, which OBEX transfers of more than a few packets rarely
-survive: their tests that need those run, but do not fail the run.
+get there or never answers is booted once more. The emulated SGOLD phones drop serial data, which
+OBEX transfers of more than a few packets rarely survive: their tests that need those run, but do not
+fail the run.
 
 pmb887x-emu runs no EGOLD phones: what the library writes to them is only checked against the
 phones' fullflashes.
