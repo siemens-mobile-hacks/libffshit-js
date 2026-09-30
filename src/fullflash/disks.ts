@@ -64,6 +64,14 @@ function contains(data: Uint8Array, needle: Uint8Array): boolean {
     return false;
 }
 
+// Where the partition's drive comes among the platform's, from 0: or A: on, and a partition of no
+// drive after them
+export function driveOrder(platform: Platform, partition: string): number {
+    const order = Object.keys(DRIVES[platform] ?? {}).indexOf(partition);
+
+    return order < 0 ? Number.MAX_SAFE_INTEGER : order;
+}
+
 // The name the phone knows a partition by, where its firmware has one for the partition's drive
 export function diskName(data: Uint8Array, platform: Platform, partition: string): string | undefined {
     const drive = DRIVES[platform]?.[partition];

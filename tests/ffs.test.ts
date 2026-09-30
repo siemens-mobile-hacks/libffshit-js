@@ -214,6 +214,19 @@ describe("FFS", () => {
         assert.deepEqual(names(driveRoots(SCENARIOS.sgold(), "A")), ["FFS"]);
     });
 
+    it("lists the partitions in their drives' order, whatever the partition table's", () => {
+        const tree  = { files: [{ name: "a.txt", data: pattern(10, 1) }] };
+        const names = (image: Uint8Array) => FFS.open(image).readDir("/").map((entry) => entry.name);
+        const sgold = { ...SGOLD_LAYOUT, partitions: [{ name: "FFS_C", blocks: 2 }, { name: "FFS_B", blocks: 2 }, { name: "FFS", blocks: 4 }] };
+        const egold = { ...EGOLD_LAYOUT, partitions: [{ name: "FFS_C", blocks: 2 }, { name: "FFS_B", blocks: 2 }, { name: "FFS", blocks: 4 }] };
+
+        assert.deepEqual(names(recordImage(sgold, { FFS: tree, FFS_B: tree, FFS_C: tree }, (image) => driveNames(image))), ["Data", "Cache", "Config"]);
+        // Drive 3:, of no letter, after the lettered ones
+        assert.deepEqual(names(recordImage(egold, { FFS: tree, FFS_B: tree, FFS_C: tree }, (image) => driveRoots(image, "A", "B"))), ["A", "B", "FFS_C"]);
+        // In the drives' order also where the firmware doesn't name them
+        assert.deepEqual(names(recordImage(sgold, { FFS: tree, FFS_B: tree, FFS_C: tree })), ["FFS", "FFS_B", "FFS_C"]);
+    });
+
     it("tells which partitions it does not write to", () => {
         assert.equal(FFS.open(SCENARIOS.egold()).statfs("/FFS").readonly, true);
         assert.equal(FFS.open(SCENARIOS.egold(), { experimentalEgoldWrites: true }).statfs("/FFS").readonly, false);

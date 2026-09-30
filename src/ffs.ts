@@ -8,7 +8,7 @@ import { Records } from "./filesystem/records.js";
 import { PROTOTYPE_ID_OFFSET, SgoldFormat } from "./filesystem/sgold.js";
 import { Volume, type Filesystem } from "./filesystem/volume.js";
 import { detect, PLATFORMS, type Platform } from "./fullflash/detector.js";
-import { diskName } from "./fullflash/disks.js";
+import { diskName, driveOrder } from "./fullflash/disks.js";
 import { findPartitions, LBA_FS } from "./fullflash/partitions.js";
 import { Image } from "./image.js";
 import { Log, type Logger } from "./log.js";
@@ -225,7 +225,10 @@ export class FFS {
         const image                     = new Image(data);
         const volumes                   = new Map<string, Filesystem>();
 
-        for (const partition of partitions) {
+        // In their drives' order, as the phones list them, whatever the partition table's
+        const ordered = [...partitions].sort((a, b) => driveOrder(platform, a.name) - driveOrder(platform, b.name));
+
+        for (const partition of ordered) {
             const records = Records.open(platform, image, partition, base);
 
             for (const problem of records.problems) {
