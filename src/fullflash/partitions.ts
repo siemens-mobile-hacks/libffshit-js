@@ -125,8 +125,9 @@ function formattedBlockName(data: Uint8Array, header: number): string | undefine
 class Search {
     readonly partitions = new Map<string, Block[]>();
     readonly problems: string[] = [];
-    // Of a dump cut short, by partition: the addresses of the blocks past its end
-    private readonly cut = new Map<string, number[]>();
+    // Of a dump cut short, by partition: the first block past its end, and how many there are, which
+    // a broken table may claim millions of
+    private readonly cut = new Map<string, { first: number, count: number }>();
 
     constructor(readonly data: Uint8Array, readonly log: Log) {
     }
@@ -140,7 +141,13 @@ class Search {
         }
 
         if (block.addr + block.size > this.data.length) {
-            this.cut.set(name, [...this.cut.get(name) ?? [], block.addr]);
+            const cut = this.cut.get(name);
+
+            if (cut) {
+                ++cut.count;
+            } else {
+                this.cut.set(name, { first: block.addr, count: 1 });
+            }
 
             return;
         }
@@ -163,9 +170,9 @@ class Search {
     }
 
     found(platform: Platform): Found | undefined {
-        for (const [name, [first, ...others]] of this.cut) {
-            this.problems.push(others.length
-                ? `${others.length + 1} blocks of ${name}, starting from ${hex(first)}, end past the end of the fullflash`
+        for (const [name, { first, count }] of this.cut) {
+            this.problems.push(count > 1
+                ? `${count} blocks of ${name}, starting from ${hex(first)}, end past the end of the fullflash`
                 : `The block of ${name} at ${hex(first)} ends past the end of the fullflash`);
         }
 

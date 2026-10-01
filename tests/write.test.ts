@@ -4,7 +4,7 @@
 
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
-import { FFS, FFSError, type FFSTreeEntry, type OpenOptions, type Platform } from "../src/index.js";
+import { FFS, FFSError, type FFSTreeEntry, type Platform } from "../src/index.js";
 import { equalBytes, pattern } from "./helpers/data.js";
 import { NO_FULLFLASHES, readFullflash } from "./helpers/fullflashes.js";
 import { fatTime, filesystemRecords, RecordsBuilder, type FsFile, type ImageLayout } from "./helpers/synthetic.js";
@@ -19,7 +19,6 @@ interface Phone {
     dir: string;
     // What a partition holds several times over
     churnSize: number;
-    options?: OpenOptions;
 }
 
 // SGOLD and EGOLD keep names of 8-bit characters, and fold only their ASCII letters
@@ -46,7 +45,6 @@ function syntheticPhone(platform: Platform, partition: string, headerSize?: numb
         partition,
         dir: "Misc",
         churnSize: 256 * 1024,
-        options: platform === "EGOLD_CE" ? { experimentalEgoldWrites: true } : {},
         image: () => {
             const builder = new RecordsBuilder(layout);
 
@@ -161,11 +159,11 @@ for (const phone of PHONES) {
 
         const dirPath       = (name?: string) => `/${phone.partition}/${phone.dir}${name ? `/${name}` : ""}`;
         const write         = (path: string, data: Uint8Array) => ffs.writeFile(path, data, WRITE_TIME);
-        const reopen        = () => FFS.open(ffs.save(), { ...phone.options, strict: true });
+        const reopen        = () => FFS.open(ffs.save(), { strict: true });
         const unchanged     = () => assert.ok(equalBytes(ffs.save(), image!), "the fullflash changed");
 
         beforeEach(() => {
-            ffs = FFS.open(image!, { ...phone.options, strict: true });
+            ffs = FFS.open(image!, { strict: true });
 
             assert.equal(ffs.platform, phone.platform);
             assert.ok(ffs.stat(dirPath())?.isDirectory, dirPath());

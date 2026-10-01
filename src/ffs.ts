@@ -18,9 +18,6 @@ export interface OpenOptions {
     platform?: Platform;
     // Fails on anything broken, instead of leaving it out with a warning
     strict?: boolean;
-    // Writes the filesystems of EGOLD phones with Card-Explorer, as far as they are known from the
-    // phones' fullflashes. No phone has read what the library writes to them.
-    experimentalEgoldWrites?: boolean;
     logger?: Logger;
 }
 
@@ -132,7 +129,7 @@ function isWritable(volume: Filesystem): boolean {
 }
 
 // Of the partition of that name in the partition table, named as the phone names it
-function createVolume(platform: Platform, partition: string, name: string, records: Records, options: OpenOptions, log: Log): Filesystem {
+function createVolume(platform: Platform, partition: string, name: string, records: Records, log: Log): Filesystem {
     if (partition === LBA_FS) {
         return new FatVolume(name, records);
     }
@@ -156,12 +153,10 @@ function createVolume(platform: Platform, partition: string, name: string, recor
             return new Volume(name, records, new NewSgoldFormat(records));
         }
 
+        // Written as far as the phones' fullflashes tell the format: no phone has read what the
+        // library writes to them
         case "EGOLD_CE": {
             const format = new EgoldFormat(records);
-
-            if (!options.experimentalEgoldWrites) {
-                return new Volume(name, records, format, "writes to EGOLD are experimental, and made with experimentalEgoldWrites only");
-            }
 
             return new Volume(name, records, format, format.version1 ? "writes to version 1 of EGOLD's filesystem are not supported" : undefined);
         }
@@ -244,7 +239,7 @@ export class FFS {
                 log.warn(problem);
             }
 
-            const volume    = createVolume(platform, partition.name, diskName(data, platform, partition.name) ?? partition.name, records, options, log);
+            const volume    = createVolume(platform, partition.name, diskName(data, platform, partition.name) ?? partition.name, records, log);
             const problem   = rootProblem(volume);
 
             if (problem) {

@@ -146,7 +146,7 @@ describe("FFS", () => {
 
     it("tells how much of every platform's partitions files take up", () => {
         for (const [scenario, partition] of [["sgold2", "FFS_0"], ["elka", "FFS_0"], ["egold", "FFS"]] as const) {
-            const ffs    = FFS.open(SCENARIOS[scenario](), { experimentalEgoldWrites: true });
+            const ffs    = FFS.open(SCENARIOS[scenario]());
             const before = ffs.statfs(`/${partition}`);
 
             ffs.writeFile(`/${partition}/b.bin`, pattern(5000, 9));
@@ -219,7 +219,7 @@ describe("FFS", () => {
         const layout    = { ...EGOLD_LAYOUT, partitions: [{ name: "FFS", blocks: 4 }, { name: "FFS_B", blocks: 2 }, { name: "FFS_C", blocks: 2 }] };
         const trees     = { FFS: { files: [{ name: "a.txt", data: pattern(10, 1) }] }, FFS_B: { files: [] }, FFS_C: { files: [] } };
         const names     = (image: Uint8Array) => FFS.open(image).readDir("/").map((entry) => entry.name);
-        const ffs       = FFS.open(recordImage(layout, trees, (image) => driveRoots(image, "A", "B")), { experimentalEgoldWrites: true });
+        const ffs       = FFS.open(recordImage(layout, trees, (image) => driveRoots(image, "A", "B")));
 
         // FFS_C is drive 3:, which has no letter
         assert.deepEqual(ffs.readDir("/").map((entry) => entry.path), ["/A", "/B", "/FFS_C"]);
@@ -254,9 +254,8 @@ describe("FFS", () => {
     });
 
     it("tells which partitions it does not write to", () => {
-        assert.equal(FFS.open(SCENARIOS.egold()).statfs("/FFS").readonly, true);
-        assert.equal(FFS.open(SCENARIOS.egold(), { experimentalEgoldWrites: true }).statfs("/FFS").readonly, false);
-        assert.equal(FFS.open(SCENARIOS["egold without card-explorer"](), { experimentalEgoldWrites: true }).statfs("/FFS").readonly, true);
+        assert.equal(FFS.open(SCENARIOS.egold()).statfs("/FFS").readonly, false);
+        assert.equal(FFS.open(SCENARIOS["egold without card-explorer"]()).statfs("/FFS").readonly, true);
         assert.equal(FFS.open(SCENARIOS["sgold prototype"]()).statfs("/FFS").readonly, true);
         assert.equal(FFS.open(SCENARIOS["sgold broken"]()).statfs("/FFS").readonly, true);
     });
@@ -374,26 +373,22 @@ describe("FFS", () => {
             assert.throws(() => FFS.open(SCENARIOS.sgold2()).writeFile("/FFS_0/\uD800", pattern(1, 1)), { name: "FFSError", message: "'\uD800' is not valid Unicode" });
         });
 
-        it("not to EGOLD, unless asked to", () => {
+        it("to EGOLD with Card-Explorer", () => {
             const ffs = FFS.open(SCENARIOS.egold());
 
-            assert.throws(() => ffs.writeFile("/FFS/a", pattern(1, 1)), { name: "FFSError", message: "FFS: writes to EGOLD are experimental, and made with experimentalEgoldWrites only" });
-            assert.throws(() => ffs.remove("/FFS"), { name: "FFSError", message: "/FFS: is a partition's root directory" });
+            ffs.writeFile("/FFS/a", pattern(1, 1));
 
-            const asked = FFS.open(SCENARIOS.egold(), { experimentalEgoldWrites: true });
-
-            asked.writeFile("/FFS/a", pattern(1, 1));
-
-            assert.ok(equalBytes(FFS.open(asked.save()).readFile("/FFS/a"), pattern(1, 1)));
+            assert.ok(equalBytes(FFS.open(ffs.save(), { strict: true }).readFile("/FFS/a"), pattern(1, 1)));
             // No longer than the phones' own
-            assert.throws(() => asked.writeFile(`/FFS/${"x".repeat(63)}`, pattern(1, 1)), { name: "FFSError", message: "Names are up to 62 bytes long" });
+            assert.throws(() => ffs.writeFile(`/FFS/${"x".repeat(63)}`, pattern(1, 1)), { name: "FFSError", message: "Names are up to 62 bytes long" });
         });
 
         it("not to EGOLD without Card-Explorer", () => {
-            const ffs = FFS.open(SCENARIOS["egold without card-explorer"](), { experimentalEgoldWrites: true });
+            const ffs = FFS.open(SCENARIOS["egold without card-explorer"]());
 
             assert.throws(() => ffs.writeFile("/FFS/a", pattern(1, 1)), { name: "FFSError", message: "FFS: writes to EGOLD without Card-Explorer are not supported" });
             assert.throws(() => ffs.remove("/FFS/one.bin"), { name: "FFSError", message: "FFS: writes to EGOLD without Card-Explorer are not supported" });
+            assert.throws(() => ffs.remove("/FFS"), { name: "FFSError", message: "/FFS: is a partition's root directory" });
 
             const fat = FFS.open(SCENARIOS["egold lba_fs"]());
 
@@ -403,7 +398,7 @@ describe("FFS", () => {
 
         it("not to EGOLD's filesystem of version 1, whose directory entries are 2 bytes", () => {
             const image = recordImage(EGOLD_LAYOUT, { FFS: { files: [{ name: "a.bin", data: pattern(10, 1) }], egoldVersion: 1 } });
-            const ffs   = FFS.open(image, { experimentalEgoldWrites: true, strict: true });
+            const ffs   = FFS.open(image, { strict: true });
 
             assert.equal(ffs.statfs("/FFS").readonly, true);
             assert.throws(() => ffs.writeFile("/FFS/b.bin", pattern(1, 1)), { name: "FFSError", message: "FFS: writes to version 1 of EGOLD's filesystem are not supported" });

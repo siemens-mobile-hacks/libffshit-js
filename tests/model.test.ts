@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { foldCase8bit, foldCaseUtf16 } from "../src/filesystem/hash.js";
-import { FFS, FFSError, type FFSTreeEntry, type OpenOptions } from "../src/index.js";
+import { FFS, FFSError, type FFSTreeEntry } from "../src/index.js";
 import { equalBytes, pattern, random } from "./helpers/data.js";
 import { NO_FULLFLASHES, readFullflash } from "./helpers/fullflashes.js";
 import { SCENARIOS } from "./helpers/scenarios.js";
@@ -145,8 +145,8 @@ function expectModel(ffs: FFS, model: Model): void {
     }
 }
 
-function run(image: Uint8Array, dir: string, seed: number, options: OpenOptions): void {
-    let   ffs       = FFS.open(image, { ...options, strict: true });
+function run(image: Uint8Array, dir: string, seed: number): void {
+    let   ffs       = FFS.open(image, { strict: true });
     const model     = Model.of(ffs);
     // Of names the library writes: the firmware's may have 0s in them
     const firmware  = [...model.entries.values()]
@@ -159,7 +159,7 @@ function run(image: Uint8Array, dir: string, seed: number, options: OpenOptions)
         const what = `operation ${i}: ${op.op} ${"path" in op ? op.path : ""}`;
 
         if (op.op === "reopen") {
-            ffs = FFS.open(ffs.save(), { ...options, strict: true });
+            ffs = FFS.open(ffs.save(), { strict: true });
 
             continue;
         }
@@ -205,31 +205,29 @@ function run(image: Uint8Array, dir: string, seed: number, options: OpenOptions)
     }
 
     expectModel(ffs, model);
-    expectModel(FFS.open(ffs.save(), { ...options, strict: true }), model);
+    expectModel(FFS.open(ffs.save(), { strict: true }), model);
 
     assert.ok(compacted < OPS / 2, "most writes did not fit");
 }
 
-const EGOLD: OpenOptions = { experimentalEgoldWrites: true };
-
-const TARGETS: [string, () => Uint8Array | undefined, string, OpenOptions?][] = [
+const TARGETS: [string, () => Uint8Array | undefined, string][] = [
     ["made-up SGOLD", SCENARIOS.sgold, "/FFS/Misc"],
     ["made-up SGOLD2", SCENARIOS.sgold2, "/FFS_0/Misc"],
     ["made-up SGOLD2_ELKA", SCENARIOS.elka, "/FFS_0/Misc"],
-    ["made-up EGOLD_CE", SCENARIOS.egold, "/FFS/Misc", EGOLD],
-    ["made-up EGOLD_CE with 20-byte headers", SCENARIOS["egold 20-byte headers"], "/FFS/Misc", EGOLD],
+    ["made-up EGOLD_CE", SCENARIOS.egold, "/FFS/Misc"],
+    ["made-up EGOLD_CE with 20-byte headers", SCENARIOS["egold 20-byte headers"], "/FFS/Misc"],
     ["CX70", () => readFullflash("CX70v56lg3.bin"), "/Data/Misc"],
     ["SL65", () => readFullflash("SL65v49lg1_TIM.bin"), "/Data/Misc"],
     ["S75", () => readFullflash("S75v40lg1.bin"), "/Data/Misc"],
     ["EL71", () => readFullflash("EL71v41lg91.bin"), "/Data/Misc"],
 ];
 
-for (const [name, image, dir, options] of TARGETS) {
+for (const [name, image, dir] of TARGETS) {
     const data = image();
 
     describe(`Random writes to ${name}`, { skip: !data && NO_FULLFLASHES }, () => {
         for (let seed = 1; seed <= SEEDS; ++seed) {
-            it(`seed ${seed}`, () => run(data!, dir, seed * 7919 + name.length, options ?? {}));
+            it(`seed ${seed}`, () => run(data!, dir, seed * 7919 + name.length));
         }
     });
 }

@@ -1,8 +1,8 @@
 # node-sie-ffs
 
-The filesystem in Siemens phones' fullflashes, in TypeScript: reading, and writing — creating and
-replacing files, creating directories, removing files and empty directories. It started as a
-rewrite of [libffshit](https://github.com/siemens-mobile-hacks/libffshit).
+The filesystem in Siemens phones' fullflashes, in TypeScript: reading, writing, creating and
+replacing files, creating directories, removing files and empty directories. 
+This library wouldn't be possible without research done by Pentium02 in [libffshit](https://github.com/siemens-mobile-hacks/libffshit).
 
 It has no dependencies and runs wherever JavaScript of ES2024 does: Node 20 and later, and browsers
 from late 2023 on.
@@ -12,7 +12,9 @@ from late 2023 on.
 - SGOLD
 - SGOLD2
 - SGOLD2 ELKA
-- EGOLD with Card-Explorer, where writing is experimental
+- EGOLD with Card-Explorer, where writing is experimental: the library writes their filesystems as
+  the phones' fullflashes have them, but no emulator runs these phones, so none has read what it
+  writes. Keep a backup of the fullflash.
 - EGOLD without Card-Explorer, for reading only: the A55, A56, A57, C55 and S46, and the S45, S45i,
   M50, MT50 and SL42, whose filesystem is a FAT disk
 
@@ -56,26 +58,18 @@ and partitions of no drive after them. Paths take the partition table's names to
 leads to "/Data/Misc".
 
 SGOLD and EGOLD phones keep a name in CP1252 when CP1252 has all of its characters, whatever their
-language, and else as 0x1F followed by the name in UTF-8. The library writes names as they do, and
-reads them as they do: a name without the 0x1F in CP1252, even one in UTF-8, and the bytes CP1252
-has no characters for as spaces.
+language, and else as 0x1F followed by the name in UTF-8. The library writes names as they do.
 
 `FFS.open()` takes options:
 
 - `platform`, when it is not to be detected: `"SGOLD"`, `"SGOLD2"`, `"SGOLD2_ELKA"`, `"EGOLD_CE"` or
-  `"EGOLD"`, which is without Card-Explorer.
+  `"EGOLD"`, which is EGOLD without Card-Explorer.
 - `strict`: fail on anything broken, instead of leaving it out with a warning.
-- `experimentalEgoldWrites`: write to the filesystems of EGOLD phones with Card-Explorer. The library
-  writes them as the phones' fullflashes have them, but no emulator runs EGOLD phones, so none has
-  read what it writes: keep a backup of the fullflash.
 - `logger`: `{ debug?(message), warn?(message) }`.
 
-`statfs()` tells a partition's size and free space as the phones' firmware reckons them, which they
-tell of their data partition over OBEX: the blocks but one, less a reserve of 4 % or more, and less
-what the parts and FIT entries of files would take. The CX70, SL65, S75 and EL71 tell the same in
-pmb887x-emu. An EGOLD phone's, whose firmware reckons them in a way not known, are in bytes of the
-flash, and a FAT disk's in clusters. `readonly` tells a partition the library does not write to. The
-root's size and free space are of all partitions, and it is read only, since partitions are neither
+`statfs()` tells a partition's size and free space the same way a phone's firmware does.
+`readonly` marks a partition the library does not write to.
+The root's size and free space are of all partitions, and it is read only, since partitions are neither
 created nor removed.
 
 Entries have FAT's attributes, read-only, hidden, system and archive, and `protected`, 0x40, which
