@@ -151,6 +151,13 @@ fail the run.
 pmb887x-emu doesn't support EGOLD phones, so the library writes to them are only verified against the
 fullflashes.
 
+## Publishing a new version on npm:
+```
+npm version patch   # commits the bump and tags it, e.g. v0.1.1
+git push --follow-tags
+gh release create v0.1.1 --generate-notes
+```
+
 ## Thanks
 
 - pentium02 for the research and the original library!!!
