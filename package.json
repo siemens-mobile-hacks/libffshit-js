@@ -1,6 +1,6 @@
 {
     "name": "@sie-js/ffs",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "Reads and writes the filesystem of Siemens phones' fullflashes",
     "repository": {
         "type": "git",
