@@ -15,7 +15,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.x'
-          registry-url: 'https://registry.npmjs.org'
       - run: npm install --global corepack@latest npm@latest
       - run: corepack enable pnpm
       - run: pnpm install --frozen-lockfile
