@@ -17,8 +17,12 @@
         }
     },
     "files": [
-        "dist"
+        "dist",
+        "src"
     ],
+    "publishConfig": {
+        "access": "public"
+    },
     "scripts": {
         "build": "tsc -p tsconfig.build.json",
         "prepack": "pnpm build",
