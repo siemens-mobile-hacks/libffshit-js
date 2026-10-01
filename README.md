@@ -1,7 +1,7 @@
 # node-sie-ffs
 
 The filesystem in Siemens phones' fullflashes, in TypeScript: reading, writing, creating and
-replacing files, creating directories, removing files and empty directories. 
+replacing files, creating directories, renaming and moving both, removing files and empty directories. 
 This library wouldn't be possible without research done by Pentium02 in [libffshit](https://github.com/siemens-mobile-hacks/libffshit).
 
 It has no dependencies and runs wherever JavaScript of ES2024 does: Node 20 and later, and browsers
@@ -46,7 +46,10 @@ ffs.statfs("/Data/Misc");           // { size, free, readonly }, of the partitio
 
 ffs.mkdir("/Data/Misc/New");
 ffs.writeFile("/Data/Misc/New/b.txt", data, new Date());
+ffs.writeFile("/Data/Misc/New/c.txt", data, { timestamp: new Date(), readonly: true, hidden: true });
+ffs.rename("/Data/Misc/New", "/Data/Other");
 ffs.remove("/Data/Misc/a.txt");
+ffs.removeStaleEntries();           // of directories that warn "record N is missing"
 fs.writeFileSync("EL71-new.bin", ffs.save());
 ```
 
@@ -79,7 +82,13 @@ The root's size and free space are of all partitions, and it is read only, since
 created nor removed.
 
 Entries have FAT's attributes, read-only, hidden, system and archive, and `protected`, 0x40, which
-SGOLD phones set on some of their T9 dictionaries.
+SGOLD phones set on some of their T9 dictionaries. `writeFile()` and `mkdir()` take them, and the
+timestamp, as options, of which an entry has all: `writeFile(path, data, ffs.stat(other))` copies
+another file's. An attribute left out is the one of the file replaced, else not set.
+
+`rename()` moves a file or directory within its partition, keeping its timestamp, attributes, and
+what a directory holds, whatever their names. Nothing may be where it goes, but itself in another
+case.
 
 Timestamps are kept to 2 seconds. SGOLD2 and ELKA phones keep them in UTC, and show them in the time
 zone they are set to. SGOLD and EGOLD phones keep them in their local time, which the library assumes to be
@@ -90,6 +99,11 @@ Broken files are left out of the file system, with a warning in `warnings`, or w
 `remove()` removes it, and `mkdir()` finds that the name exists. 
 A directory which has a broken file list, lists what can be read them, and nothing can be written into it.
 Duplicate files are only listed once.
+`remove()` removes a directory that holds nothing but broken files and entries that lead to no file,
+and them with it. `removeStaleEntries()` removes the entries that lead to no record, of the warnings
+"record N is missing", from a directory and the ones in it: a phone would list the next file it
+writes there as well. The library never gives a new record an id that an entry or a broken file
+names, and removes no more of a broken file than the records that are its own.
 
 When using in Node, the fullflash is read in place, so it must not change while in use.
 Writes go to a copy, which `save()` returns: the fullflash given is never changed. An operation that fails

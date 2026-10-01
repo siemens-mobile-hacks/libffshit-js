@@ -26,6 +26,8 @@ interface Chain {
     last: number;
     // What breaks it
     problem?: string;
+    // The ids it names that no record has
+    missing: number[];
 }
 
 interface Listing {
@@ -72,6 +74,7 @@ export interface Filesystem {
 export class Volume implements Filesystem {
     // What writing to it takes, read on the first write
     private chunkSize = 0;
+    private missingReserved = false;
 
     constructor(
         readonly name: string,
@@ -108,16 +111,22 @@ export class Volume implements Filesystem {
         return isPieceSize(size) ? size : undefined;
     }
 
+    // Of the parts that name the record before them as theirs: one that does not is another's, which
+    // a part that was missing when it was written leads to
     private chain(header: Header): Chain {
         const none              = this.format.none;
-        const chain: Chain      = { data: [], parts: [], last: header.id };
+        const chain: Chain      = { data: [], parts: [], last: header.id, missing: [] };
         const visited           = new Set<number>();
 
         // A file without data is empty, but a directory always has a record of entries
         if (this.records.has(header.dataId)) {
             chain.data.push(header.dataId);
-        } else if (header.nextPart !== none || isDirectory(header)) {
-            chain.problem = `its data record ${header.dataId} is missing`;
+        } else {
+            chain.missing.push(header.dataId);
+
+            if (header.nextPart !== none || isDirectory(header)) {
+                chain.problem = `its data record ${header.dataId} is missing`;
+            }
         }
 
         for (let next = header.nextPart; next !== none;) {
@@ -145,6 +154,19 @@ export class Volume implements Filesystem {
 
             if (!part) {
                 chain.problem = `its part ${next} is missing`;
+                chain.missing.push(next);
+
+                break;
+            }
+
+            if (part.id !== next) {
+                chain.problem = `record ${next} holds the part of ${part.id}`;
+
+                break;
+            }
+
+            if (part.prev !== chain.last) {
+                chain.problem = `record ${next} is not its part`;
 
                 break;
             }
@@ -156,6 +178,7 @@ export class Volume implements Filesystem {
                 chain.data.push(part.dataId);
             } else {
                 chain.problem ??= `the data record ${part.dataId} of its part ${next} is missing`;
+                chain.missing.push(part.dataId);
             }
 
             next = part.next;
@@ -184,8 +207,7 @@ export class Volume implements Filesystem {
         return concat(chain.data.map((id) => this.records.read(id)));
     }
 
-    private list(dir: Header): Listing {
-        const chain                 = this.chain(dir);
+    private list(dir: Header, chain = this.chain(dir)): Listing {
         const { entrySize, none }   = this.format;
         const listing: Listing      = { entries: [], free: undefined, last: chain.last, problem: chain.problem };
 
@@ -215,30 +237,41 @@ export class Volume implements Filesystem {
         }
 
         for (const entry of listing.entries) {
-            let header: Header | undefined;
+            const header = this.entryHeader(entry, report);
 
-            try {
-                header = this.format.header(entry.id);
-            } catch (e) {
-                if (!(e instanceof FFSError)) {
-                    throw e;
-                }
-
-                report(e.message);
-
-                continue;
-            }
-
-            if (!header) {
-                report(`record ${entry.id} is missing`);
-            } else if (header.id !== entry.id) {
-                report(`record ${entry.id} holds the header of ${header.id}`);
-            } else {
+            if (header) {
                 children.push({ entry, header, name: this.format.name(header) });
             }
         }
 
         return children;
+    }
+
+    // The header an entry leads to, unless it leads to none, which is reported
+    private entryHeader(entry: EntryRef, report: (problem: string) => void = () => {}): Header | undefined {
+        let header: Header | undefined;
+
+        try {
+            header = this.format.header(entry.id);
+        } catch (e) {
+            if (!(e instanceof FFSError)) {
+                throw e;
+            }
+
+            report(e.message);
+
+            return undefined;
+        }
+
+        if (!header) {
+            report(`record ${entry.id} is missing`);
+        } else if (header.id !== entry.id) {
+            report(`record ${entry.id} holds the header of ${header.id}`);
+        } else {
+            return header;
+        }
+
+        return undefined;
     }
 
     find(dir: Header, name: string): Child | undefined {
@@ -251,8 +284,31 @@ export class Volume implements Filesystem {
         return this.format.fold(name);
     }
 
+    // The broken files of a directory that holds nothing else but entries that lead to no header,
+    // or undefined when it holds anything else
+    private brokenContents(dir: Header): Header[] | undefined {
+        const broken: Header[] = [];
+
+        for (const entry of this.list(dir).entries) {
+            const header = this.entryHeader(entry);
+
+            if (!header) {
+                continue;
+            }
+
+            if (isDirectory(header) || !this.chain(header).problem) {
+                return undefined;
+            }
+
+            broken.push(header);
+        }
+
+        return broken;
+    }
+
+    // Whether it holds nothing but what is broken, which delete() removes with it
     isEmpty(dir: Header): boolean {
-        return this.list(dir).entries.length === 0;
+        return this.brokenContents(dir) !== undefined;
     }
 
     // What breaks the records of a directory's entries, which it would grow after
@@ -307,6 +363,35 @@ export class Volume implements Filesystem {
         return format;
     }
 
+    // What the headers and entries from the directory down name that no record has
+    private reserveMissing(dir: Header, visited: Set<number>): void {
+        const chain = this.chain(dir);
+
+        visited.add(dir.id);
+        chain.missing.forEach((id) => this.records.reserve(id));
+
+        for (const entry of this.list(dir, chain).entries) {
+            if (!this.records.has(entry.id)) {
+                this.records.reserve(entry.id);
+
+                continue;
+            }
+
+            const header = this.entryHeader(entry);
+
+            if (!header || visited.has(header.id)) {
+                continue;
+            }
+
+            if (isDirectory(header)) {
+                this.reserveMissing(header, visited);
+            } else {
+                visited.add(header.id);
+                this.chain(header).missing.forEach((id) => this.records.reserve(id));
+            }
+        }
+    }
+
     writable(): Volume {
         this.prepareWrite();
 
@@ -325,14 +410,20 @@ export class Volume implements Filesystem {
         return this.prepareWrite().encodeName(name);
     }
 
-    // Everything the operation writes, or on an error nothing
+    // Everything the operation writes, or on an error nothing. Before the first, what the filesystem
+    // names without a record is reserved, while all of it is where the root leads.
     transaction(operation: () => void): void {
+        if (!this.missingReserved) {
+            this.reserveMissing(this.root()!, new Set());
+            this.missingReserved = true;
+        }
+
         this.records.transaction(operation);
     }
 
     // A file is a header, its data in pieces of the chunk size, and a part for every piece after
-    // the first
-    createFile(dir: Header, name: Uint8Array, data: Uint8Array, fatTime: number): void {
+    // the first. The attributes are of Attributes, the directory's aside.
+    createFile(dir: Header, name: Uint8Array, data: Uint8Array, fatTime: number, attributes = 0): void {
         const format    = this.prepareWrite();
         const chunkSize = this.chunkSize;
         const pieces    = Math.ceil(data.length / chunkSize);
@@ -345,7 +436,7 @@ export class Volume implements Filesystem {
             dataId:     id + 1,
             nextPart:   partIds[0] ?? format.none,
             fatTime,
-            attributes: format.fileAttributes,
+            attributes: (format.fileAttributes | attributes) >>> 0,
             size:       data.length,
             name,
         };
@@ -374,7 +465,7 @@ export class Volume implements Filesystem {
         this.addEntry(dir, id, name);
     }
 
-    createDirectory(dir: Header, name: Uint8Array, fatTime: number): void {
+    createDirectory(dir: Header, name: Uint8Array, fatTime: number, attributes = 0): void {
         const format = this.prepareWrite();
         const id     = this.allocate();
 
@@ -384,7 +475,7 @@ export class Volume implements Filesystem {
             dataId:     id + 1,
             nextPart:   format.none,
             fatTime,
-            attributes: format.directoryAttributes,
+            attributes: (format.directoryAttributes | attributes) >>> 0,
             size:       0,
             name,
         };
@@ -394,20 +485,72 @@ export class Volume implements Filesystem {
         this.addEntry(dir, id, name);
     }
 
-    // Removes the file's or directory's records and its entry
+    // Removes the file's or directory's records and its entry, and the broken files of a directory,
+    // which must hold nothing else
     delete(child: Child): void {
-        const format = this.prepareWrite();
-        const chain  = this.chain(child.header);
+        this.prepareWrite();
 
-        for (const id of [child.header.id, ...chain.data, ...chain.parts]) {
+        if (isDirectory(child.header)) {
+            for (const header of this.brokenContents(child.header) ?? []) {
+                this.removeRecords(header);
+            }
+        }
+
+        this.removeRecords(child.header);
+        this.removeEntry(child.entry);
+    }
+
+    // Moves the file or directory into the directory under the name. Only its header changes: the
+    // firmware does not keep its parts' copies of their owner's parent id up to date either.
+    move(child: Child, dir: Header, name: Uint8Array): void {
+        const format = this.prepareWrite();
+        const header = { ...child.header, parentId: dir.id, name };
+
+        this.removeEntry(child.entry);
+        this.records.remove(header.id);
+        this.records.add(header.id, format.encodeHeader(header));
+        this.addEntry(dir, header.id, name);
+    }
+
+    // Removes the entries that lead to no record from the directory and the ones in it, and tells
+    // how many it removed
+    removeStaleEntries(dir: Header, visited = new Set<number>()): number {
+        let removed = 0;
+
+        this.prepareWrite();
+
+        visited.add(dir.id);
+
+        for (const entry of this.list(dir).entries) {
+            const header = this.entryHeader(entry);
+
+            if (!this.records.has(entry.id)) {
+                this.removeEntry(entry);
+
+                ++removed;
+            } else if (header && isDirectory(header) && !visited.has(header.id)) {
+                removed += this.removeStaleEntries(header, visited);
+            }
+        }
+
+        return removed;
+    }
+
+    // Its header, and the records of its data and parts that are its own
+    private removeRecords(header: Header): void {
+        const chain = this.chain(header);
+
+        for (const id of [header.id, ...chain.data, ...chain.parts]) {
             if (this.records.has(id)) {
                 this.records.remove(id);
             }
         }
+    }
 
-        const { record, offset } = child.entry;
+    private removeEntry(entry: EntryRef): void {
+        const format = this.format as WritableFormat;
 
-        this.records.patch(record, offset, format.deletedEntry(this.records.read(record), offset));
+        this.records.patch(entry.record, entry.offset, format.deletedEntry(this.records.read(entry.record), entry.offset));
     }
 
     private allocate(): number {

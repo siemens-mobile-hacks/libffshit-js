@@ -54,11 +54,12 @@ export abstract class Records {
     // id -> block and entry of its valid record
     private readonly index = new Map<number, [number, number]>();
 
-    // ids that are taken: by a valid record, by an operation that has not written them yet, or
-    // because the firmware's own records mention them
+    // ids that are taken: by a valid record, by an operation that has not written them yet, because
+    // the firmware's own records mention them, or because the filesystem names them without a record
     private readonly used       = new Uint8Array(MAX_ID + 2);
     private readonly pending    = new Uint8Array(MAX_ID + 2);
     private readonly excluded   = new Uint8Array(MAX_ID + 2);
+    private readonly reserved   = new Uint8Array(MAX_ID + 2);
     // every pair below it is taken
     private freeHint = 0;
 
@@ -258,6 +259,14 @@ export abstract class Records {
         return id;
     }
 
+    // Never handed out: what a directory entry, header or part names but no record has, which a new
+    // record would join to whatever names it
+    reserve(id: number): void {
+        if (id <= MAX_ID) {
+            this.reserved[id] = 1;
+        }
+    }
+
     // What the blocks but the one left alone can hold, and how much of it the valid records leave:
     // what compacting every block would leave free
     space(): Space {
@@ -334,7 +343,7 @@ export abstract class Records {
             return true;
         }
 
-        return this.used[id] !== 0 || this.pending[id] !== 0 || this.excluded[id] !== 0;
+        return this.used[id] !== 0 || this.pending[id] !== 0 || this.excluded[id] !== 0 || this.reserved[id] !== 0;
     }
 
     private markUsed(id: number, isUsed: boolean): void {

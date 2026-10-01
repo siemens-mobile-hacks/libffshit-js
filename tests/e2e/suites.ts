@@ -19,7 +19,16 @@ interface TestFile {
     // Below /Data on the phone, below the partition for the library
     path: string;
     data: Uint8Array;
+    // Where the library writes it, before RENAMES move it to its path
+    writtenAs?: string;
 }
+
+// What the library renames, the directories with what is in them
+const RENAMES = [
+    ["Misc/sie-ffs-e2e/to rename.bin", "Misc/sie-ffs-e2e/renamed.bin"],
+    ["Misc/sie-ffs-e2e/to move", "Misc/sie-ffs-e2e/sub/moved"],
+    ["Misc/sie-ffs-phone/sub/to move.bin", "Misc/sie-ffs-phone/moved.bin"],
+];
 
 const text = (content: string) => new TextEncoder().encode(`${content}\r\n`);
 
@@ -115,6 +124,8 @@ function libraryFiles(phone: Phone): TestFile[] {
         // SGOLD keeps the first in CP1252, and the second as 0x1F and UTF-8
         { path: `${dir}/Ärger.txt`, data: text("Written by node-sie-ffs, with a name in CP1252") },
         { path: `${dir}/файл.txt`, data: text("Written by node-sie-ffs, with a name beyond CP1252") },
+        { path: `${dir}/renamed.bin`, data: pattern(phone.chunkSize + 1, 8), writtenAs: `${dir}/to rename.bin` },
+        { path: `${dir}/sub/moved/moved.txt`, data: text("Written by node-sie-ffs, and moved with its directory"), writtenAs: `${dir}/to move/moved.txt` },
     ];
 }
 
@@ -132,7 +143,7 @@ export function phoneSuite(name: string, phone: Phone): void {
     const dir       = "Misc/sie-ffs-e2e";
     const files     = libraryFiles(phone);
     // Long enough for the emulated SGOLD phones to lose the session
-    const big       = { path: `${dir}/big.bin`, data: pattern(50000, 4) };
+    const big: TestFile = { path: `${dir}/big.bin`, data: pattern(50000, 4) };
     const removed   = `${dir}/removed.bin`;
 
     // What the phone changes of the library's files, and writes
@@ -144,7 +155,10 @@ export function phoneSuite(name: string, phone: Phone): void {
         { path: `${phoneDir}/two pieces.bin`, data: pattern(phone.chunkSize + 1, 14) },
         { path: `${phoneDir}/Ärger.txt`, data: text("Deleted by the phone") },
         { path: `${phoneDir}/sub/nested.txt`, data: text("Deleted by the phone, and then its directory") },
+        { path: `${phoneDir}/moved.bin`, data: pattern(phone.chunkSize + 1, 23), writtenAs: `${phoneDir}/sub/to move.bin` },
     ];
+    // Into the directory the library moved
+    const intoMoved: TestFile       = { path: `${dir}/sub/moved/by phone.bin`, data: pattern(500, 22) };
     const written: TestFile[]       = [
         { path: `${phoneDir}/by phone/small.bin`, data: pattern(100, 15) },
         { path: `${phoneDir}/by phone/one piece.bin`, data: pattern(phone.chunkSize, 16) },
@@ -179,9 +193,10 @@ export function phoneSuite(name: string, phone: Phone): void {
             }
 
             ffs.remove(`${root}/${dir}/churn.bin`);
+            ffs.mkdir(`${root}/${dir}/to move`, TIMESTAMP);
 
             for (const file of [...files, big]) {
-                ffs.writeFile(`${root}/${file.path}`, file.data, TIMESTAMP);
+                ffs.writeFile(`${root}/${file.writtenAs ?? file.path}`, file.data, TIMESTAMP);
             }
 
             ffs.writeFile(`${root}/${removed}`, pattern(5000, 7), TIMESTAMP);
@@ -191,7 +206,11 @@ export function phoneSuite(name: string, phone: Phone): void {
             ffs.mkdir(`${root}/${phoneDir}/sub`);
 
             for (const file of [kept, { ...replaced, data: pattern(5000, 19) }, ...deleted]) {
-                ffs.writeFile(`${root}/${file.path}`, file.data);
+                ffs.writeFile(`${root}/${file.writtenAs ?? file.path}`, file.data);
+            }
+
+            for (const [from, to] of RENAMES) {
+                ffs.rename(`${root}/${from}`, `${root}/${to}`);
             }
 
             work    = workDir(phone, ffs.save());
@@ -228,10 +247,15 @@ export function phoneSuite(name: string, phone: Phone): void {
         });
 
         it("lists the library's files and directories, with their sizes and timestamps", { timeout: TEST_TIMEOUT }, async () => {
-            const entries = await listing(session!, ["Misc", dir, `${dir}/sub`]);
+            const entries = await listing(session!, ["Misc", dir, `${dir}/sub`, `${dir}/sub/moved`]);
 
             assert.equal(entries.get(dir)?.isDir, true);
             assert.equal(entries.get(`${dir}/sub`)?.isDir, true);
+            assert.equal(entries.get(`${dir}/sub/moved`)?.isDir, true);
+
+            for (const [from] of RENAMES) {
+                assert.ok(!entries.has(from), from);
+            }
 
             for (const file of [...files, big]) {
                 const entry = entries.get(file.path);
@@ -278,6 +302,9 @@ export function phoneSuite(name: string, phone: Phone): void {
             }
 
             await obex.deleteFile(`/Data/${phoneDir}/sub`);
+            await obex.putFile(`/Data/${intoMoved.path}`, intoMoved.data);
+
+            assert.deepEqual((await listing(session!, [`${dir}/sub/moved`])).get(intoMoved.path)?.size, intoMoved.data.length);
 
             listed = await listing(session!, [phoneDir, `${phoneDir}/by phone`]);
 
@@ -309,7 +336,7 @@ export function phoneSuite(name: string, phone: Phone): void {
 
             assert.deepEqual(ffs.readDir(`/${phone.partition}/${phoneDir}`).map((entry) => entry.name).sort(), ["by phone", "kept.bin", "replaced.bin"]);
 
-            for (const file of [kept, replaced, ...written]) {
+            for (const file of [kept, replaced, ...written, intoMoved]) {
                 assertFile(ffs, phone.partition, file);
             }
 

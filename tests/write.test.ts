@@ -108,6 +108,10 @@ function snapshot(ffs: FFS): Tree {
     return tree;
 }
 
+function entries(entry: FFSTreeEntry): FFSTreeEntry[] {
+    return (entry.children ?? []).flatMap((child) => [child, ...entries(child)]);
+}
+
 function fileEntry(data: Uint8Array): Entry {
     return { isDirectory: false, data: Buffer.from(data).toString("hex"), timestamp: WRITE_TIME.getTime() };
 }
@@ -275,6 +279,32 @@ for (const phone of PHONES) {
             assert.throws(() => ffs.remove(dir), { name: "FFSError", message: `${dir}: directory not empty` });
 
             unchanged();
+        });
+
+        it("renames and moves directories and files, which keep their attributes and what they hold", () => {
+            const before    = snapshot(ffs);
+            const all       = (fs: FFS) => entries(fs.tree(`/${phone.partition}`));
+            // The directory a name the library does not write is in, if there is one, else one with
+            // something in it
+            const odd       = all(ffs).find((entry) => /[\x00-\x1F]/.test(entry.name));
+            const dir       = odd ? odd.path.slice(0, odd.path.lastIndexOf("/")) : firmwareDirectory(before, phone.partition);
+            const file      = all(ffs).find((entry) => !entry.isDirectory && entry.size && !entry.path.startsWith(`${dir}/`))!;
+            const moved     = `/${phone.partition}/sie-ffs-moved`;
+            const newPath   = (path: string) => path === dir || path.startsWith(`${dir}/`) ? `${moved}${path.slice(dir.length)}` : path === file.path ? `${moved}/sie-ffs-file` : path;
+            const described = (entry: FFSTreeEntry, path = entry.path) => JSON.stringify([path, entry.isDirectory, entry.size, entry.timestamp, entry.readonly, entry.hidden, entry.system, entry.archive, entry.protected]);
+
+            assert.ok(dir && file);
+
+            ffs.rename(dir, moved);
+            ffs.rename(file.path, `${moved}/sie-ffs-file`);
+            // In another case, and back
+            ffs.rename(moved, moved.toUpperCase());
+            ffs.rename(moved.toUpperCase(), moved);
+
+            const reopened = reopen();
+
+            expectTree(snapshot(reopened), new Map([...before].map(([path, entry]) => [newPath(path), entry])));
+            assert.deepEqual(all(reopened).map((entry) => described(entry)).sort(), all(FFS.open(image!)).map((entry) => described(entry, newPath(entry.path))).sort());
         });
 
         it("grows a directory beyond its first record", () => {

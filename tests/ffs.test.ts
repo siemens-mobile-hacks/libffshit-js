@@ -1,12 +1,56 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { FFS, FFSError } from "../src/index.js";
+import { FFS, FFSError, type FFSTreeEntry } from "../src/index.js";
 import { equalBytes, pattern } from "./helpers/data.js";
-import { EGOLD_LAYOUT, recordImage, SCENARIOS, SGOLD_LAYOUT, SGOLD2_LAYOUT, utf16 } from "./helpers/scenarios.js";
-import { fatTime, layoutBlocks, patchFitEntry, type FsFile } from "./helpers/synthetic.js";
+import { EGOLD_LAYOUT, ELKA_LAYOUT, recordImage, SCENARIOS, SGOLD_LAYOUT, SGOLD2_LAYOUT, utf16 } from "./helpers/scenarios.js";
+import { fatTime, filesystemRecords, layoutBlocks, patchFitEntry, RecordsBuilder, type FsFile, type ImageLayout } from "./helpers/synthetic.js";
 
 function sgoldImage(files: FsFile[]): Uint8Array {
     return recordImage(SGOLD_LAYOUT, { FFS: { files } });
+}
+
+// The layouts of the platforms the library writes to, and the partition the tests write into
+const WRITABLE: [ImageLayout, string][] = [[SGOLD_LAYOUT, "FFS"], [SGOLD2_LAYOUT, "FFS_0"], [ELKA_LAYOUT, "FFS_0"], [EGOLD_LAYOUT, "FFS"]];
+
+const newSgold = (layout: ImageLayout) => layout.platform === "SGOLD2" || layout.platform === "SGOLD2_ELKA";
+const idOffset = (layout: ImageLayout) => layout.platform === "EGOLD_CE" ? 6000 : 0;
+// The id of the first file the filesystem's records have
+const firstId  = (layout: ImageLayout) => (newSgold(layout) ? 12 : 10) + idOffset(layout);
+
+// Dir, with a stale entry of the id after other.bin's last part, and broken.bin, whose next part
+// is the id after that, or `next`; other.bin, of two parts. A write would take the stale entry's
+// pair first, and then the broken file's part, which a phone does.
+function danglingImage(layout: ImageLayout, next?: number): Uint8Array {
+    const first     = firstId(layout);
+    const files     = [
+        { name: "Dir", children: [{ name: "gone", data: pattern(10, 0), headerId: first + 10 - idOffset(layout) }, { name: "broken.bin", data: pattern(100, 1) }] },
+        { name: "other.bin", data: pattern(3000, 2) },
+    ];
+    const records   = filesystemRecords(layout.platform, files, { chunkSize: 1024 });
+    const builder   = new RecordsBuilder(layout);
+    const broken    = records.get(first + 2)!;
+    const stored    = (next ?? first + 12) - idOffset(layout);
+
+    records.delete(first + 10);
+    records.delete(first + 11);
+
+    if (newSgold(layout)) {
+        new DataView(broken.buffer, broken.byteOffset).setUint32(8, stored, true);
+    } else {
+        broken.set([stored & 0xFF, stored >>> 8], 14);
+    }
+
+    for (const partition of layout.partitions) {
+        for (const [id, data] of partition.name === layout.partitions[0].name ? records : filesystemRecords(layout.platform, [], { chunkSize: 1024 })) {
+            builder.add(partition.name, id, data);
+        }
+    }
+
+    return builder.build();
+}
+
+function danglingWarnings(layout: ImageLayout, partition: string, problem = `its part ${firstId(layout) + 12} is missing`): string[] {
+    return [`/${partition}/Dir: record ${firstId(layout) + 10} is missing`, `/${partition}/Dir/broken.bin: ${problem}`];
 }
 
 const FILES: FsFile[] = [
@@ -341,6 +385,82 @@ describe("FFS", () => {
             assert.ok(equalBytes(reopened.readFile("/FFS/B.BIN"), pattern(10000, 9)));
         });
 
+        it("attributes, given or of the file it replaces", () => {
+            const ffs   = open();
+            const photo = ffs.stat("/FFS/Misc/Photo.JPG")!;
+
+            ffs.writeFile("/FFS/a.txt", pattern(1, 1), { timestamp: new Date(2020, 1, 2, 3, 4, 6), readonly: true, hidden: true });
+            ffs.writeFile("/FFS/a.txt", pattern(2, 2), { hidden: false, archive: true });
+            ffs.writeFile("/FFS/empty.txt", pattern(3, 3));
+            ffs.mkdir("/FFS/Dir", { system: true, protected: true });
+            // An entry's, with its timestamp
+            ffs.writeFile("/FFS/copy.jpg", ffs.readFile(photo.path), photo);
+
+            const reopened  = FFS.open(ffs.save(), { strict: true });
+            const described = (path: string) => {
+                const { readonly, hidden, system, archive, protected: isProtected, isDirectory, timestamp } = reopened.stat(path)!;
+
+                return { readonly, hidden, system, archive, protected: isProtected, isDirectory, timestamp };
+            };
+
+            assert.deepEqual(described("/FFS/a.txt"), { readonly: true, hidden: false, system: false, archive: true, protected: false, isDirectory: false, timestamp: described("/FFS/a.txt").timestamp });
+            assert.notDeepEqual(described("/FFS/a.txt").timestamp, new Date(2020, 1, 2, 3, 4, 6));
+            assert.deepEqual(described("/FFS/empty.txt"), { readonly: false, hidden: true, system: true, archive: false, protected: false, isDirectory: false, timestamp: described("/FFS/empty.txt").timestamp });
+            assert.deepEqual(described("/FFS/Dir"), { readonly: false, hidden: false, system: true, archive: false, protected: true, isDirectory: true, timestamp: described("/FFS/Dir").timestamp });
+            assert.deepEqual(described("/FFS/copy.jpg"), { readonly: true, hidden: false, system: false, archive: false, protected: false, isDirectory: false, timestamp: photo.timestamp });
+            assert.deepEqual(reopened.readDir("/FFS/Dir"), []);
+        });
+
+        it("renames and moves files and directories, which keep their timestamps, attributes and contents", () => {
+            const ffs       = open();
+            const before    = ffs.tree("/FFS");
+
+            ffs.mkdir("/FFS/Misc/Sub", new Date(2019, 1, 2, 3, 4, 6));
+            ffs.writeFile("/FFS/Misc/Sub/b.bin", pattern(2500, 3), new Date(2019, 1, 2, 3, 4, 8));
+            ffs.rename("/ffs/misc", "/FFS/Other");
+            ffs.rename("/FFS/empty.txt", "/FFS/Other/Sub/EMPTY.TXT");
+            ffs.rename("/FFS/other/photo.jpg", "/FFS/Other/PHOTO.jpg");
+            ffs.rename("/FFS/Ärger", "/FFS/Ärger");
+
+            const reopened  = FFS.open(ffs.save(), { strict: true });
+            const entry     = (tree: FFSTreeEntry, path: string) => {
+                const { name: _, path: __, children: ___, ...rest } = tree.children!.find((child) => child.path === path) ?? {};
+
+                return rest;
+            };
+
+            // In the first free entries
+            assert.deepEqual(reopened.tree("/FFS").children!.map((child) => child.path), ["/FFS/ôàéë", "/FFS/Other", "/FFS/Ärger"]);
+            assert.deepEqual(entry(reopened.tree("/FFS"), "/FFS/Other"), entry(before, "/FFS/Misc"));
+            assert.deepEqual(entry(reopened.tree("/FFS/Other"), "/FFS/Other/PHOTO.jpg"), entry(ffs.tree("/FFS/Other"), "/FFS/Other/PHOTO.jpg"));
+            assert.deepEqual(entry(reopened.tree("/FFS/Other/Sub"), "/FFS/Other/Sub/EMPTY.TXT"), entry(before, "/FFS/empty.txt"));
+            assert.equal(reopened.stat("/FFS/Other/PHOTO.jpg")?.readonly, true);
+            assert.ok(equalBytes(reopened.readFile("/FFS/Other/Photo.jpg"), pattern(3000, 1)));
+            assert.ok(equalBytes(reopened.readFile("/FFS/Other/Sub/b.bin"), pattern(2500, 3)));
+            assert.equal(reopened.stat("/FFS/Other/Sub")?.timestamp.getTime(), new Date(2019, 1, 2, 3, 4, 6).getTime());
+        });
+
+        it("renames nothing it cannot, and changes nothing then", () => {
+            const ffs = open();
+
+            ffs.mkdir("/FFS/Misc/Sub");
+
+            const image = ffs.save();
+
+            assert.throws(() => ffs.rename("/FFS/nope", "/FFS/b"), { name: "FFSError", message: "/FFS/nope: no such file or directory" });
+            assert.throws(() => ffs.rename("/FFS/Misc", "/FFS/EMPTY.TXT"), { name: "FFSError", message: "/FFS/EMPTY.TXT: exists already" });
+            assert.throws(() => ffs.rename("/FFS/Misc", "/FFS/Misc/Sub/Misc"), { name: "FFSError", message: "/FFS/Misc/Sub/Misc: is in /FFS/Misc" });
+            assert.throws(() => ffs.rename("/FFS/Misc", "/FFS/misc/x"), { name: "FFSError", message: "/FFS/Misc/x: is in /FFS/Misc" });
+            assert.throws(() => ffs.rename("/FFS/Misc", "/FFS/a:b"), { name: "FFSError", message: "Invalid name 'a:b': no control characters and none of \\/:*?\"<>|" });
+            assert.throws(() => ffs.rename("/FFS", "/FFS/x"), { name: "FFSError", message: "/FFS: is a partition's root directory" });
+            assert.throws(() => ffs.rename("/FFS/Misc", "/FFS/nope/x"), { name: "FFSError", message: "/FFS/nope: no such directory" });
+
+            assert.ok(equalBytes(ffs.save(), image));
+
+            assert.throws(() => FFS.open(SCENARIOS.sgold2()).rename("/FFS_0/one.bin", "/FFS_C/one.bin"), { name: "FFSError", message: "/FFS_C/one.bin: not in the partition of /FFS_0/one.bin" });
+            assert.throws(() => FFS.open(SCENARIOS["sgold broken records"]()).rename("/FFS/loop.bin", "/FFS/x"), { name: "FFSError", message: "/FFS/loop.bin: its parts loop, not moving it" });
+        });
+
         it("replaces a file whichever way its name is kept", () => {
             // "Ärger" as 0x1F and UTF-8, which the phones list, but do not find by that name
             const ffs = FFS.open(sgoldImage([{ name: Uint8Array.of(0x1F, 0xC3, 0x84, 0x72, 0x67, 0x65, 0x72), data: pattern(5, 1) }]));
@@ -443,4 +563,71 @@ describe("FFS", () => {
             assert.throws(() => ffs.mkdir("/FFS/a"), FFSError);
         });
     });
+
+    for (const [layout, partition] of WRITABLE) {
+        describe(`on ${layout.platform}, where an entry or part names an id no record has`, () => {
+            it("never hands that id out", () => {
+                const ffs = FFS.open(danglingImage(layout));
+
+                assert.deepEqual(ffs.warnings, danglingWarnings(layout, partition));
+
+                ffs.writeFile(`/${partition}/Dir/a.bin`, pattern(3000, 3));
+                ffs.writeFile(`/${partition}/b.bin`, pattern(10, 4));
+                ffs.mkdir(`/${partition}/New`);
+
+                // Nothing joins the stale entry or the broken file's parts
+                assert.deepEqual(ffs.readDir(`/${partition}/Dir`).map((entry) => entry.name), ["a.bin"]);
+                assert.deepEqual(FFS.open(ffs.save()).warnings, danglingWarnings(layout, partition));
+
+                ffs.writeFile(`/${partition}/Dir/broken.bin`, pattern(5, 5));
+
+                assert.ok(equalBytes(ffs.readFile(`/${partition}/Dir/a.bin`), pattern(3000, 3)));
+                assert.deepEqual(FFS.open(ffs.save()).warnings, danglingWarnings(layout, partition).slice(0, 1));
+            });
+
+            it("removes no more of a broken file than its own records, when another's follow it", () => {
+                // As the phone leaves it once it has written there: the broken file's part is
+                // another's header, or another's part
+                for (const next of [firstId(layout) + 4, firstId(layout) + 6]) {
+                    const ffs = FFS.open(danglingImage(layout, next));
+
+                    assert.deepEqual(ffs.warnings, danglingWarnings(layout, partition, `record ${next} is not its part`));
+                    assert.ok(equalBytes(ffs.readFile(`/${partition}/other.bin`), pattern(3000, 2)));
+
+                    ffs.remove(`/${partition}/Dir/broken.bin`);
+
+                    const reopened = FFS.open(ffs.save());
+
+                    assert.ok(equalBytes(reopened.readFile(`/${partition}/other.bin`), pattern(3000, 2)));
+                    assert.deepEqual(reopened.warnings, danglingWarnings(layout, partition).slice(0, 1));
+                }
+            });
+
+            it("removes a directory that holds only broken files and stale entries, with them", () => {
+                const ffs = FFS.open(danglingImage(layout));
+
+                ffs.writeFile(`/${partition}/Dir/fine.bin`, pattern(10, 1));
+
+                assert.throws(() => ffs.remove(`/${partition}/Dir`), { name: "FFSError", message: `/${partition}/Dir: directory not empty` });
+
+                ffs.remove(`/${partition}/Dir/fine.bin`);
+                ffs.remove(`/${partition}/Dir`);
+
+                const reopened = FFS.open(ffs.save(), { strict: true });
+
+                assert.deepEqual(reopened.readDir(`/${partition}`).map((entry) => entry.name), ["other.bin"]);
+                // Of the root's and other.bin's records, and the configuration's
+                assert.equal(reopened.statfs(`/${partition}`).free, FFS.open(recordImage(layout, Object.fromEntries(layout.partitions.map((p, i) => [p.name, { files: i ? [] : [{ name: "other.bin", data: pattern(3000, 2) }] }])))).statfs(`/${partition}`).free);
+            });
+
+            it("removes stale entries, and nothing else", () => {
+                const ffs = FFS.open(danglingImage(layout));
+
+                assert.equal(ffs.removeStaleEntries(`/${partition}/Dir`), 1);
+                assert.equal(ffs.removeStaleEntries(), 0);
+                assert.deepEqual(ffs.readDir(`/${partition}/Dir`), []);
+                assert.deepEqual(FFS.open(ffs.save()).warnings, danglingWarnings(layout, partition).slice(1));
+            });
+        });
+    }
 });

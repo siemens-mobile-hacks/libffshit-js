@@ -56,6 +56,11 @@ class Model {
         this.entries.delete(this.fold(path));
     }
 
+    // Whether the path is the directory's, or of something in it
+    inside(path: string, dir: string): boolean {
+        return `${this.fold(path)}/`.startsWith(`${this.fold(dir)}/`);
+    }
+
     children(path: string): Entry[] {
         const prefix = `${this.fold(path)}/`;
 
@@ -67,6 +72,7 @@ type Op =
     | { op: "write", path: string, data: Uint8Array }
     | { op: "mkdir", path: string }
     | { op: "remove", path: string }
+    | { op: "rename", path: string, to: string }
     | { op: "reopen" };
 
 function parentPath(path: string): string {
@@ -97,8 +103,10 @@ function randomOps(dir: string, firmware: string[], seed: number): Op[] {
             ops.push({ op: "mkdir", path: pick(dirs.slice(1)) });
         } else if (roll < 0.65 && firmware.length) {
             ops.push({ op: "write", path: pick(firmware), data: pattern(Math.floor(next() * 9000), i) });
-        } else if (roll < 0.95) {
+        } else if (roll < 0.9) {
             ops.push({ op: "remove", path: next() < 0.2 ? pick(dirs.slice(1)) : path });
+        } else if (roll < 0.97) {
+            ops.push({ op: "rename", path: next() < 0.3 ? pick(dirs.slice(1)) : path, to: `${pick(dirs)}/${pick(names)}` });
         } else {
             ops.push({ op: "reopen" });
         }
@@ -116,10 +124,27 @@ function allowed(model: Model, op: Exclude<Op, { op: "reopen" }>): boolean {
         case "write":   return !!parent?.isDirectory && !existing?.isDirectory;
         case "mkdir":   return !!parent?.isDirectory && !existing;
         case "remove":  return !!existing && !(existing.isDirectory && model.children(existing.path).length);
+        // Not over another entry, nor into itself
+        case "rename": {
+            const target = model.get(op.to);
+
+            return !!existing && !!model.get(parentPath(op.to))?.isDirectory && (!target || target === existing) && !model.inside(parentPath(op.to), existing.path);
+        }
     }
 }
 
 function apply(model: Model, op: Exclude<Op, { op: "reopen" }>): void {
+    if (op.op === "rename") {
+        const source = model.get(op.path)!;
+        const moved  = [...model.entries.values()].filter((entry) => model.inside(entry.path, source.path));
+        const to     = `${model.get(parentPath(op.to))!.path}${op.to.slice(op.to.lastIndexOf("/"))}`;
+
+        moved.forEach((entry) => model.delete(entry.path));
+        moved.forEach((entry) => model.set({ ...entry, path: `${to}${entry.path.slice(source.path.length)}` }));
+
+        return;
+    }
+
     const parent = model.get(parentPath(op.path))!;
     const path   = `${parent.path}${op.path.slice(op.path.lastIndexOf("/"))}`;
 
@@ -156,7 +181,7 @@ function run(image: Uint8Array, dir: string, seed: number): void {
     let   compacted = 0;
 
     for (const [i, op] of randomOps(dir, firmware, seed).entries()) {
-        const what = `operation ${i}: ${op.op} ${"path" in op ? op.path : ""}`;
+        const what = `operation ${i}: ${op.op} ${"path" in op ? op.path : ""}${"to" in op ? ` to ${op.to}` : ""}`;
 
         if (op.op === "reopen") {
             ffs = FFS.open(ffs.save(), { strict: true });
@@ -171,6 +196,7 @@ function run(image: Uint8Array, dir: string, seed: number): void {
                 case "write":   ffs.writeFile(op.path, op.data); break;
                 case "mkdir":   ffs.mkdir(op.path); break;
                 case "remove":  ffs.remove(op.path); break;
+                case "rename":  ffs.rename(op.path, op.to); break;
             }
 
             assert.ok(expected, `${what} should have failed`);
@@ -189,12 +215,12 @@ function run(image: Uint8Array, dir: string, seed: number): void {
             }
         }
 
-        const parent = parentPath(op.path);
+        for (const parent of [parentPath(op.path), ...op.op === "rename" ? [parentPath(op.to)] : []]) {
+            if (model.get(parent)?.isDirectory) {
+                const children = model.children(parent).map((entry) => ({ ...entry, size: entry.data?.length ?? 0 }));
 
-        if (model.get(parent)?.isDirectory) {
-            const children = model.children(parent).map((entry) => ({ ...entry, size: entry.data?.length ?? 0 }));
-
-            assert.deepEqual(listing(ffs.readDir(parent)), listing(children), what);
+                assert.deepEqual(listing(ffs.readDir(parent)), listing(children), what);
+            }
         }
 
         const written = model.get(op.path);

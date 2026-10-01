@@ -37,6 +37,18 @@ export interface FFSEntry {
     protected: boolean;
 }
 
+// What writeFile() and mkdir() take besides the path, of which an FFSEntry has all. An attribute left
+// out is the file's it replaces, else not set.
+export interface FFSWriteOptions {
+    // Now by default
+    timestamp?: Date | number;
+    readonly?: boolean;
+    hidden?: boolean;
+    system?: boolean;
+    archive?: boolean;
+    protected?: boolean;
+}
+
 export interface FFSTreeEntry extends FFSEntry {
     // Of a directory
     children?: FFSTreeEntry[];
@@ -65,6 +77,31 @@ type Report = (problem: string) => void;
 // The root, which holds the partitions
 function rootEntry(): FFSEntry {
     return { name: "", path: "/", isDirectory: true, size: 0, timestamp: new Date(0), readonly: false, hidden: false, system: false, archive: false, protected: false };
+}
+
+const ATTRIBUTES = {
+    readonly:   Attributes.READONLY,
+    hidden:     Attributes.HIDDEN,
+    system:     Attributes.SYSTEM,
+    archive:    Attributes.ARCHIVE,
+    protected:  Attributes.PROTECTED,
+} as const;
+
+function writeOptions(options: Date | number | FFSWriteOptions): FFSWriteOptions {
+    return typeof options === "number" || options instanceof Date ? { timestamp: options } : options;
+}
+
+// Of FFSEntry's attributes, the ones the options set, and else the ones given
+function attributeBits(options: FFSWriteOptions, kept = 0): number {
+    let bits = 0;
+
+    for (const [key, bit] of Object.entries(ATTRIBUTES)) {
+        if (options[key as keyof typeof ATTRIBUTES] ?? (kept & bit) !== 0) {
+            bits |= bit;
+        }
+    }
+
+    return bits;
 }
 
 // x65flasher puts a 16 byte header before the fullflash
@@ -334,9 +371,11 @@ export class FFS {
     }
 
     // Creates the file, or replaces the file of that name. The directory it is in must exist.
-    writeFile(path: string, data: Uint8Array, timestamp: Date | number = new Date()): void {
+    writeFile(path: string, data: Uint8Array, options: Date | number | FFSWriteOptions = {}): void {
         const target = this.parentOf(path);
         const { volume, parent, name } = target;
+
+        const { timestamp = new Date(), ...attributes } = writeOptions(options);
 
         const fatTime   = volume.fatTime(timestamp);
         const stored    = volume.encodeName(name);
@@ -351,14 +390,16 @@ export class FFS {
                 volume.delete(existing);
             }
 
-            volume.createFile(parent.header, stored, data, fatTime);
+            volume.createFile(parent.header, stored, data, fatTime, attributeBits(attributes, existing?.header.attributes));
         });
     }
 
     // The directory it is in must exist
-    mkdir(path: string, timestamp: Date | number = new Date()): void {
+    mkdir(path: string, options: Date | number | FFSWriteOptions = {}): void {
         const target = this.parentOf(path);
         const { volume, parent, name } = target;
+
+        const { timestamp = new Date(), ...attributes } = writeOptions(options);
 
         const fatTime   = volume.fatTime(timestamp);
         const stored    = volume.encodeName(name);
@@ -367,10 +408,50 @@ export class FFS {
             throw new FFSError(`${target.path}: exists already`);
         }
 
-        volume.transaction(() => volume.createDirectory(parent.header, stored, fatTime));
+        volume.transaction(() => volume.createDirectory(parent.header, stored, fatTime, attributeBits(attributes)));
     }
 
-    // Removes a file or an empty directory
+    // Moves a file or directory to another path in its partition, keeping its timestamp, attributes
+    // and what a directory holds. The directory it goes to must exist, and nothing be there but
+    // itself in another case.
+    rename(from: string, to: string): void {
+        const source = this.parentOf(from);
+        const target = this.parentOf(to);
+        const volume = source.volume;
+
+        const child = volume.find(source.parent.header, source.name);
+
+        if (!child) {
+            throw new FFSError(`${source.path}: no such file or directory`);
+        }
+
+        if (target.volume !== volume) {
+            throw new FFSError(`${target.path}: not in the partition of ${source.path}`);
+        }
+
+        const existing = volume.find(target.parent.header, target.name);
+
+        if (existing && existing.header.id !== child.header.id) {
+            throw new FFSError(`${target.path}: exists already`);
+        }
+
+        if (target.parent.ancestors.includes(child.header.id)) {
+            throw new FFSError(`${target.path}: is in ${source.path}`);
+        }
+
+        const problem = isDirectory(child.header) ? volume.directoryProblem(child.header) : volume.size(child.header);
+
+        if (typeof problem === "string") {
+            throw new FFSError(`${source.path}: ${problem}, not moving it`);
+        }
+
+        const stored = volume.encodeName(target.name);
+
+        volume.transaction(() => volume.move(child, target.parent.header, stored));
+    }
+
+    // Removes a file, or a directory that holds nothing, or nothing but broken files and entries that
+    // lead to no header
     remove(path: string): void {
         const target = this.parentOf(path);
         const { volume, parent, name } = target;
@@ -386,6 +467,19 @@ export class FFS {
         }
 
         volume.transaction(() => volume.delete(child));
+    }
+
+    // Removes the entries that lead to no record from the directory and every one in it, as on a
+    // fullflash that warns "record N is missing": a phone would list the next record it writes there
+    // as well. The root's are of every partition written to. Tells how many it removed.
+    removeStaleEntries(path = "/"): number {
+        const node = this.directory(path);
+
+        if (!node) {
+            return this.partitions().filter((partition) => isWritable(partition.volume)).reduce((removed, partition) => removed + this.removeStale(partition), 0);
+        }
+
+        return this.removeStale(node);
     }
 
     // The fullflash, with what was written to it
@@ -417,6 +511,15 @@ export class FFS {
 
     private partitions(): Node[] {
         return [...this.volumes.values()].map((volume) => this.partition(volume));
+    }
+
+    private removeStale(dir: Node): number {
+        const volume    = dir.volume.writable();
+        let   removed   = 0;
+
+        volume.transaction(() => removed = volume.removeStaleEntries(dir.header));
+
+        return removed;
     }
 
     // The partition and the files and directories the names lead to, as far as they are found
