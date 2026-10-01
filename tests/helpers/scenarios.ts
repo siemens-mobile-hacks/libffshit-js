@@ -164,11 +164,18 @@ export const SCENARIOS = {
         records.get(24)!.set([0, 1], 0);
         records.delete(27);
     }),
+    // A path leads only to the first of the entries whose names SGOLD folds alike, broken or not
     "sgold names no path leads to": () => recordImage(SGOLD_LAYOUT, { FFS: { files: [
         { name: bytes(), data: pattern(1, 1) },
         { name: ".", data: pattern(2, 2) },
         { name: "a/b", data: pattern(3, 3) },
         { name: "fine.bin", data: pattern(4, 4) },
+        { name: "Twice.bin", data: pattern(5, 5) },
+        { name: "TWICE.BIN", data: pattern(6, 6) },
+        { name: "broken.bin", data: pattern(3000, 7), brokenPart: true },
+        { name: "BROKEN.BIN", data: pattern(8, 8) },
+        { name: "ärger", data: pattern(9, 9) },
+        { name: "Ärger", data: pattern(10, 10) },
     ] } }),
     "sgold loop": () => recordImage(SGOLD_LAYOUT, { FFS: { files: [{ name: "Loop", children: [{ name: "root again", headerId: 6 }, { name: "a.bin", data: pattern(10, 1) }] }] } }),
     "sgold prototype": () => recordImage(SGOLD_LAYOUT, { FFS: { files: sampleTree(true).slice(0, 7), idOffset: 6000 } }),

@@ -73,8 +73,15 @@ const EXPECTED: Record<Scenario, Expected> = {
     },
     "sgold names no path leads to": {
         platform: "SGOLD", model: "SYN", imei: IMEI,
-        tree: under("/FFS", ["fine.bin 4"]),
-        warnings: ["/FFS: an entry without a name", "/FFS: an entry named '.'", "/FFS: an entry named 'a/b'"],
+        tree: under("/FFS", ["fine.bin 4", "Twice.bin 5", "ärger 9", "Ärger 10"]),
+        warnings: [
+            "/FFS: an entry without a name",
+            "/FFS: an entry named '.'",
+            "/FFS: an entry named 'a/b'",
+            "/FFS: an entry named 'TWICE.BIN' after another of that name",
+            "/FFS/broken.bin: its part 30583 is missing",
+            "/FFS: an entry named 'BROKEN.BIN' after another of that name",
+        ],
     },
     "sgold loop": {
         platform: "SGOLD", model: "SYN", imei: IMEI,

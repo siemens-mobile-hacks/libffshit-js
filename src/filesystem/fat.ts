@@ -186,9 +186,13 @@ export class FatVolume implements Filesystem {
     }
 
     find(dir: Header, name: string): Child | undefined {
-        const key = foldAscii(name);
+        const key = this.fold(name);
 
-        return this.children(dir).find((child) => foldAscii(child.name) === key);
+        return this.children(dir).find((child) => this.fold(child.name) === key);
+    }
+
+    fold(name: string): string {
+        return foldAscii(name);
     }
 
     timestamp(header: Header): Date {

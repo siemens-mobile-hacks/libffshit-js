@@ -61,6 +61,8 @@ export interface Filesystem {
     children(dir: Header, report?: (problem: string) => void): Child[];
     // As the firmware finds names: without regard to case, as far as it folds it
     find(dir: Header, name: string): Child | undefined;
+    // The same for two names find() takes for the same one
+    fold(name: string): string;
     timestamp(header: Header): Date;
     // What writes to it, once it is checked that it can be written to
     writable(): Volume;
@@ -240,9 +242,13 @@ export class Volume implements Filesystem {
     }
 
     find(dir: Header, name: string): Child | undefined {
-        const key = this.format.fold(name);
+        const key = this.fold(name);
 
-        return this.children(dir).find((child) => this.format.fold(child.name) === key);
+        return this.children(dir).find((child) => this.fold(child.name) === key);
+    }
+
+    fold(name: string): string {
+        return this.format.fold(name);
     }
 
     isEmpty(dir: Header): boolean {

@@ -534,25 +534,40 @@ export class FFS {
         };
     }
 
-    // The files and directories in a directory, except the broken ones, which are reported
+    // The files and directories in a directory that their paths lead to, except the broken ones,
+    // which are reported
     private list(dir: Node | null, report: Report = () => {}): [Node, FFSEntry][] {
         if (!dir) {
             return this.partitions().map((node) => [node, this.describe(node) as FFSEntry]);
         }
 
         const result: [Node, FFSEntry][] = [];
+        // A path leads to the first entry of a name, as the firmware folds it, broken or not
+        const names = new Set<string>();
 
         for (const child of dir.volume.children(dir.header, (problem) => report(`${dir.path}: ${problem}`))) {
+            const problem   = nameProblem(child.name);
+            const key       = problem ? undefined : dir.volume.fold(child.name);
+            const taken     = key !== undefined && names.has(key);
+
+            if (key !== undefined) {
+                names.add(key);
+            }
+
             if (isDirectory(child.header) && dir.ancestors.includes(child.header.id)) {
                 report(`${dir.path}: entry ${child.header.id} leads back to a directory it is in`);
 
                 continue;
             }
 
-            const problem = nameProblem(child.name);
-
             if (problem) {
                 report(`${dir.path}: ${problem}`);
+
+                continue;
+            }
+
+            if (taken) {
+                report(`${dir.path}: an entry named '${child.name}' after another of that name`);
 
                 continue;
             }
