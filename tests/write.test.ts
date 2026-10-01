@@ -7,7 +7,7 @@ import { beforeEach, describe, it } from "node:test";
 import { FFS, FFSError, type FFSTreeEntry, type Platform } from "../src/index.js";
 import { equalBytes, pattern } from "./helpers/data.js";
 import { NO_FULLFLASHES, readFullflash } from "./helpers/fullflashes.js";
-import { fatTime, filesystemRecords, RecordsBuilder, type FsFile, type ImageLayout } from "./helpers/synthetic.js";
+import { fatTime, filesystemRecords, isErased, layoutBlocks, RecordsBuilder, type FsFile, type ImageLayout } from "./helpers/synthetic.js";
 
 interface Phone {
     name: string;
@@ -19,6 +19,8 @@ interface Phone {
     dir: string;
     // What a partition holds several times over
     churnSize: number;
+    // Of a made-up one whose every block of the partition has records: its blocks
+    filledBlocks?: { addr: number, size: number }[];
 }
 
 // SGOLD and EGOLD keep names of 8-bit characters, and fold only their ASCII letters
@@ -26,7 +28,9 @@ function eightBit(platform: Platform): boolean {
     return platform === "SGOLD" || platform === "EGOLD_CE";
 }
 
-function syntheticPhone(platform: Platform, partition: string, headerSize?: number): Phone {
+// `filled`: every block of the partition has records, as the firmware may leave them, so none is
+// left for it to reclaim into
+function syntheticPhone(platform: Platform, partition: string, { headerSize, filled = false }: { headerSize?: number, filled?: boolean } = {}): Phone {
     const layout: ImageLayout = {
         platform,
         size: 0x1000000,
@@ -40,11 +44,12 @@ function syntheticPhone(platform: Platform, partition: string, headerSize?: numb
     ];
 
     return {
-        name: `made-up ${platform}${headerSize ? ` with ${headerSize}-byte headers` : ""}`,
+        name: `made-up ${platform}${headerSize ? ` with ${headerSize}-byte headers` : ""}${filled ? " without an empty block" : ""}`,
         platform,
         partition,
         dir: "Misc",
         churnSize: 256 * 1024,
+        filledBlocks: filled ? layoutBlocks(layout, partition) : undefined,
         image: () => {
             const builder = new RecordsBuilder(layout);
 
@@ -52,6 +57,11 @@ function syntheticPhone(platform: Platform, partition: string, headerSize?: numb
                 for (const [id, data] of filesystemRecords(platform, [...tree], { chunkSize: eightBit(platform) ? 1024 : 2048, headerSize })) {
                     builder.add(name, id, data);
                 }
+            }
+
+            // Records of no file, of ids the filesystem does not have
+            if (filled) {
+                builder.fillEmptyBlocks(partition, "FFS_C", 0x8000, pattern(300, 5));
             }
 
             return builder.build();
@@ -73,7 +83,11 @@ const PHONES: Phone[] = [
     syntheticPhone("SGOLD2", "FFS_0"),
     syntheticPhone("SGOLD2_ELKA", "FFS_0"),
     syntheticPhone("EGOLD_CE", "FFS"),
-    syntheticPhone("EGOLD_CE", "FFS", 20),
+    syntheticPhone("EGOLD_CE", "FFS", { headerSize: 20 }),
+    syntheticPhone("SGOLD", "FFS", { filled: true }),
+    syntheticPhone("SGOLD2", "FFS_0", { filled: true }),
+    syntheticPhone("SGOLD2_ELKA", "FFS_0", { filled: true }),
+    syntheticPhone("EGOLD_CE", "FFS", { filled: true }),
 ];
 
 const WRITE_TIME = new Date(2024, 4, 17, 13, 37, 42);
@@ -352,6 +366,26 @@ for (const phone of PHONES) {
 
             assert.deepEqual(ffs.statfs(dirPath()), before);
             assert.deepEqual(reopen().statfs(dirPath()), before);
+        });
+
+        // Else the firmware has nowhere to reclaim into once the blocks are full, and an SGOLD phone
+        // exits at boot with "FFS"
+        it("leaves a block without records for the firmware to reclaim into", { skip: !phone.filledBlocks && "only the made-up ones without such a block" }, () => {
+            const erased = () => {
+                const saved = ffs.save();
+
+                return phone.filledBlocks!.filter((block) => isErased(saved, phone.platform, block)).length;
+            };
+
+            assert.equal(erased(), 0);
+
+            // Most of the free space, which fills the blocks
+            const data = pattern(Math.floor(ffs.statfs(dirPath()).free * 0.9), 1);
+
+            write(dirPath("sie-ffs-large.bin"), data);
+
+            assert.equal(erased(), 1);
+            assert.ok(equalBytes(reopen().readFile(dirPath("sie-ffs-large.bin")), data));
         });
 
         it("rejects a file that does not fit", () => {

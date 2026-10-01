@@ -8,7 +8,9 @@
 // would, with its erase counter incremented. So are the blocks an operation wrote to once it is
 // done, as the firmware leaves next to no deleted records: an ELKA phone reclaims them all when it
 // boots, which takes it minutes. One block without valid records is left alone, for the firmware
-// to reclaim into.
+// to reclaim into. A partition without one gets one on its first write, as the firmware's reclaim
+// would: the records of the block they take up the least of are moved to the others. Without it,
+// the firmware finds nowhere to reclaim into once the blocks are full, and exits at boot.
 
 import { concat, hex, le16, le32, u16, u32 } from "../bytes.js";
 import { FFSError } from "../errors.js";
@@ -194,6 +196,10 @@ export abstract class Records {
             throw new FFSError(`${this.partition}: record ${id} exists already`);
         }
 
+        if (this.spare < 0 && this.blocks.length > 1) {
+            this.makeSpare();
+        }
+
         const blockIndex    = this.findBlock(data.length);
         const block         = this.blocks[blockIndex];
 
@@ -267,13 +273,14 @@ export abstract class Records {
         }
     }
 
-    // What the blocks but the one left alone can hold, and how much of it the valid records leave:
-    // what compacting every block would leave free
+    // What the blocks but the one left alone, or to be, can hold, and how much of it the valid
+    // records leave: what compacting every block would leave free
     space(): Space {
-        let size = 0;
+        const spare = this.spareToBe();
+        let   size  = 0;
 
         for (let i = 0; i < this.blocks.length; ++i) {
-            if (i !== this.spare) {
+            if (i !== spare) {
                 size += this.capacity(this.blocks[i]);
             }
         }
@@ -305,6 +312,8 @@ export abstract class Records {
     // Everything the operation writes, or on an error nothing. They do not nest: the operation
     // starts no other.
     transaction(operation: () => void): void {
+        const spare = this.spare;
+
         this.inTransaction = true;
         this.savedBlocks.clear();
 
@@ -316,6 +325,7 @@ export abstract class Records {
                 this.image.writable().set(saved, this.blocks[blockIndex].addr);
             }
 
+            this.spare = spare;
             this.scan();
 
             throw e;
@@ -422,6 +432,57 @@ export abstract class Records {
         }
 
         throw new FFSError(`Not enough free space in ${this.partition}`);
+    }
+
+    // The block left alone, else the one the first write empties: of the blocks, the one whose valid
+    // records take up the least. -1 for a partition of one block.
+    private spareToBe(): number {
+        if (this.spare >= 0 || this.blocks.length < 2) {
+            return this.spare;
+        }
+
+        let   spare = -1;
+        let   least = Infinity;
+        const taken = (block: RecordsBlock) => block.entries.reduce((cost, entry) => entry.flags === FLAGS_VALID ? cost + this.cost(entry.size) : cost, 0);
+
+        for (let i = 0; i < this.blocks.length; ++i) {
+            const cost = taken(this.blocks[i]);
+
+            if (cost < least) {
+                least = cost;
+                spare = i;
+            }
+        }
+
+        return spare;
+    }
+
+    // Moves the valid records of the block to be left alone to the others, which leaves it to be
+    // erased once the operation is done
+    private makeSpare(): void {
+        this.spare = this.spareToBe();
+
+        const block = this.blocks[this.spare];
+
+        this.touch(this.spare);
+
+        for (const entry of block.entries) {
+            if (entry.flags !== FLAGS_VALID) {
+                continue;
+            }
+
+            const data          = this.readEntry(block, entry).slice();
+            const targetIndex   = this.findBlock(data.length);
+            const target        = this.blocks[targetIndex];
+
+            this.touch(targetIndex);
+            this.append(target, entry.id, data, entry);
+            this.markDeleted(block, entry);
+
+            entry.flags = FLAGS_DELETED;
+
+            this.index.set(entry.id, [targetIndex, target.entries.length - 1]);
+        }
     }
 
     // Leaves no deleted records in the blocks the operation wrote to

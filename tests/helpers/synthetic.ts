@@ -7,6 +7,7 @@ import { encodeName } from "../../src/filesystem/codepage.js";
 import { nameHash7bit, nameHash8bit, nameHashUtf16 } from "../../src/filesystem/hash.js";
 import { fitSize, Records } from "../../src/filesystem/records.js";
 import type { Platform } from "../../src/fullflash/detector.js";
+import { EGOLD_HEADER_SIZE, egoldLayout } from "../../src/fullflash/partitions.js";
 import { Image } from "../../src/image.js";
 
 function setU16(data: Uint8Array, offset: number, value: number): void {
@@ -254,6 +255,24 @@ export class RecordsBuilder {
         records.add(id, data);
     }
 
+    // Gives every block of the partition without records one of these, from the id on, which leaves
+    // it without a block for the firmware to reclaim into, as the firmware leaves some. The library
+    // keeps one such block empty, so it is written through another partition's erased block, which it
+    // takes for that one instead.
+    fillEmptyBlocks(partition: string, other: string, id: number, data: Uint8Array): void {
+        const { platform } = this.layout;
+        const decoy = layoutBlocks(this.layout, other).find((block) => isErased(this.image.data, platform, block))!;
+
+        for (const block of layoutBlocks(this.layout, partition)) {
+            if (isErased(this.image.data, platform, block)) {
+                Records.open(platform, this.image, { name: partition, blocks: [decoy, block] }, egoldBase(this.layout)).add(id, data);
+                id += 2;
+            }
+        }
+
+        this.records.delete(partition);
+    }
+
     build(): Uint8Array {
         return this.image.data;
     }
@@ -309,6 +328,16 @@ export function patchFitEntry(image: Uint8Array, platform: Platform, blocks: { a
     }
 
     throw new Error(`No record ${id}`);
+}
+
+// Whether the block holds nothing but its header, as an erase leaves it
+export function isErased(image: Uint8Array, platform: Platform, block: { addr: number, size: number }): boolean {
+    const elka      = platform === "SGOLD2_ELKA";
+    const egold     = platform === "EGOLD_CE" || platform === "EGOLD";
+    const header    = elka ? block.size - 0x20 : egold ? egoldLayout(platform).header : 0;
+    const end       = elka ? block.size : header + (egold ? EGOLD_HEADER_SIZE : 16);
+
+    return image.subarray(block.addr, block.addr + block.size).every((byte, i) => byte === 0xFF || (i >= header && i < end));
 }
 
 // The blocks of a partition of an image made by formattedImage()
