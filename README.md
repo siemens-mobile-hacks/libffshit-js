@@ -76,20 +76,17 @@ Entries have FAT's attributes, read-only, hidden, system and archive, and `prote
 SGOLD phones set on some of their T9 dictionaries.
 
 Timestamps are kept to 2 seconds. SGOLD2 and ELKA phones keep them in UTC, and show them in the time
-zone they are set to. SGOLD and EGOLD phones keep them in their local time, which the library takes
-for the local time where it runs.
+zone they are set to. SGOLD and EGOLD phones keep them in their local time, which the library assumes to be
+the local time where it runs.
 
-What is found broken is left out, with a warning in `warnings`, or with `strict` an `FFSError`: a
-fullflash none of whose partitions has a root directory opens with none. A file whose data is broken
-is left out of listings, and `stat()` and `exists()` do not find it, but its path leads to it:
-`readFile()` throws what is broken, `writeFile()` replaces it, `remove()` removes it, and `mkdir()`
-finds that the name exists. A directory whose records of entries are broken lists what can be read of
-them, and nothing is written into it.
+Broken files are left out of the file system, with a warning in `warnings`, or with `strict` an `FFSError`.
+`stat()` and `exists()` do not find broken files, `readFile()` throws if trying to read it, `writeFile()` replaces it,
+`remove()` removes it, and `mkdir()` finds that the name exists. 
+A directory which has a broken file list, lists what can be read them, and nothing can be written into it.
+Duplicate files are only listed once.
 
-Everything the library throws about a fullflash, a path or an operation is an `FFSError`.
-
-The fullflash is read where it is, so it must not change while in use. Writes go to a copy made on
-the first one, which `save()` returns: the fullflash given is never changed. An operation that fails
+When using in Node, the fullflash is read in place, so it must not change while in use.
+Writes go to a copy, which `save()` returns: the fullflash given is never changed. An operation that fails
 changes nothing.
 
 ## Tests
@@ -99,9 +96,9 @@ pnpm install
 pnpm test
 ```
 
-They run on made-up fullflashes of every platform, and on the phones' fullflashes where there are
-any: `SIE_FFS_TEST_FULLFLASHES` lists the directories holding them, else `tests/fullflashes`, their
-subdirectories included.
+They run on made-up fullflashes of every platform, and on real phones' fullflashes.
+`SIE_FFS_TEST_FULLFLASHES` can be specified to run recursively on a directory containing arbitrary fullflashes. 
+If it is not specified, it runs against `tests/fullflashes`.
 
 - `tests/scenarios.test.ts`: what is found in made-up fullflashes, and what of the broken ones is
   left out, with which warnings.
@@ -145,8 +142,8 @@ get there or never answers is booted once more. The emulated SGOLD phones drop s
 OBEX transfers of more than a few packets rarely survive: their tests that need those run, but do not
 fail the run.
 
-pmb887x-emu runs no EGOLD phones: what the library writes to them is only checked against the
-phones' fullflashes.
+pmb887x-emu doesn't support EGOLD phones, so the library writes to them are only verified against the
+fullflashes.
 
 ## Thanks
 
